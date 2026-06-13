@@ -68,6 +68,7 @@ $string['fillwithai'] = 'StudioLMS';
 $string['gamification_profile'] = 'Gamification profile';
 $string['generate_heading'] = 'Generate course with StudioLMS';
 $string['generating'] = 'Generating course...';
+$string['glossary_default_title'] = 'Course glossary';
 $string['invalidairesponse'] = 'The AI did not return a valid course outline. Please try again.';
 $string['mode_gamified'] = 'Gamified';
 $string['mode_gamified_detected'] = 'PlayerHUD detected';

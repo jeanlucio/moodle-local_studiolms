@@ -100,6 +100,8 @@ class outline_generator {
 
         $types = implode(', ', self::ALLOWED_TYPES);
         $lines[] = "Each activity has a type from this exact list: {$types}.";
+        $lines[] = 'Include exactly one glossary activity for the whole course and place it as '
+            . 'the first activity of the first section.';
         $lines[] = 'Return ONLY a valid JSON object, with no markdown fences or commentary, '
             . 'using exactly this shape: '
             . '{"objectives": ["..."], "sections": [{"title": "...", '
@@ -198,6 +200,40 @@ class outline_generator {
             ];
         }
 
+        $sections = self::enforce_single_glossary($sections);
+
         return ['objectives' => $objectives, 'sections' => $sections];
+    }
+
+    /**
+     * Ensures the course has exactly one glossary, as the first activity of the first section.
+     *
+     * @param array $sections Sections with their activities.
+     * @return array Sections with the glossary deduplicated and repositioned.
+     */
+    private static function enforce_single_glossary(array $sections): array {
+        if (empty($sections)) {
+            return $sections;
+        }
+
+        $glossarytitle = null;
+        foreach ($sections as $index => $section) {
+            $kept = [];
+            foreach ($section['activities'] as $activity) {
+                if ($activity['type'] === 'glossary') {
+                    $glossarytitle = $glossarytitle ?? $activity['title'];
+                    continue;
+                }
+                $kept[] = $activity;
+            }
+            $sections[$index]['activities'] = $kept;
+        }
+
+        if ($glossarytitle === null) {
+            $glossarytitle = get_string('glossary_default_title', 'local_studiolms');
+        }
+        array_unshift($sections[0]['activities'], ['type' => 'glossary', 'title' => $glossarytitle]);
+
+        return $sections;
     }
 }
