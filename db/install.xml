@@ -4,7 +4,7 @@
     xsi:noNamespaceSchemaLocation="../../../lib/xmldb/xmldb.xsd"
 >
   <TABLES>
-    <TABLE NAME="studiolms_generation_log" COMMENT="Audit record for each course generation run.">
+    <TABLE NAME="local_studiolms_generation_log" COMMENT="Audit record for each course generation run.">
       <FIELDS>
         <FIELD NAME="id" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="true"/>
         <FIELD NAME="userid" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="false" COMMENT="Teacher who ran the generation."/>
@@ -26,7 +26,7 @@
         <INDEX NAME="courseid" UNIQUE="false" FIELDS="courseid"/>
       </INDEXES>
     </TABLE>
-    <TABLE NAME="studiolms_outline" COMMENT="Draft outline persisted between wizard steps.">
+    <TABLE NAME="local_studiolms_outline" COMMENT="Draft outline persisted between wizard steps.">
       <FIELDS>
         <FIELD NAME="id" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="true"/>
         <FIELD NAME="userid" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="false" COMMENT="Teacher who owns the draft."/>
@@ -44,10 +44,10 @@
         <INDEX NAME="useridcourseid" UNIQUE="false" FIELDS="userid, courseid"/>
       </INDEXES>
     </TABLE>
-    <TABLE NAME="studiolms_progress" COMMENT="Background generation progress polled by step 3.">
+    <TABLE NAME="local_studiolms_progress" COMMENT="Background generation progress polled by step 3.">
       <FIELDS>
         <FIELD NAME="id" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="true"/>
-        <FIELD NAME="outlineid" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="false" COMMENT="FK to studiolms_outline."/>
+        <FIELD NAME="outlineid" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="false" COMMENT="FK to local_studiolms_outline."/>
         <FIELD NAME="userid" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="false" COMMENT="Teacher (validates polling access)."/>
         <FIELD NAME="step" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0" SEQUENCE="false" COMMENT="Current completed step."/>
         <FIELD NAME="total" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0" SEQUENCE="false" COMMENT="Total planned steps."/>
@@ -61,7 +61,7 @@
       </FIELDS>
       <KEYS>
         <KEY NAME="primary" TYPE="primary" FIELDS="id"/>
-        <KEY NAME="outlineid" TYPE="foreign" FIELDS="outlineid" REFTABLE="studiolms_outline" REFFIELDS="id"/>
+        <KEY NAME="outlineid" TYPE="foreign" FIELDS="outlineid" REFTABLE="local_studiolms_outline" REFFIELDS="id"/>
       </KEYS>
       <INDEXES>
         <INDEX NAME="userid" UNIQUE="false" FIELDS="userid"/>
