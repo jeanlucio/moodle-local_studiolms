@@ -75,8 +75,6 @@ class page_builder {
      * @return string The rendered callout HTML.
      */
     private static function pretraining(array $glossaryterms): string {
-        global $OUTPUT;
-
         $items = '';
         foreach (array_slice($glossaryterms, 0, self::PRETRAINING_TERMS) as $term) {
             $items .= \html_writer::tag(
@@ -87,12 +85,12 @@ class page_builder {
         $content = \html_writer::tag('p', \html_writer::tag('strong', get_string('pretraining_title', 'local_studiolms')))
             . \html_writer::tag('ul', $items);
 
-        return $OUTPUT->render_from_template('tiny_studiolms/block_callout', [
+        return block_builder::render('callout', [
             'backgroundColor' => '#eef2ff',
             'borderLeftWidth' => 4,
             'borderColor' => '#6366f1',
             'borderRadius' => 6,
-            'hasIcon' => true,
+            'hoverEffect' => 'none',
             'icon' => '💡',
             'textColor' => '#3730a3',
             'contentHtml' => $content,
@@ -100,37 +98,34 @@ class page_builder {
     }
 
     /**
-     * Renders a single content block through the matching StudioLMS template.
+     * Renders a single AI content block as an editable StudioLMS block.
      *
      * @param array $block The block definition (type and fields).
      * @return string The rendered block HTML.
      */
     private static function render_block(array $block): string {
-        global $OUTPUT;
-
         switch ($block['type'] ?? '') {
             case 'heading':
                 if (empty($block['text'])) {
                     return '';
                 }
-                return $OUTPUT->render_from_template('tiny_studiolms/block_heading', [
-                    'isH3' => true,
-                    'isH4' => false,
+                return block_builder::render('stylizedHeading', [
+                    'text' => clean_param($block['text'], PARAM_TEXT),
+                    'level' => 'h3',
+                    'icon' => '',
                     'bgColor' => '#e3f2fd',
                     'textColor' => '#0d47a1',
-                    'icon' => '',
-                    'text' => clean_param($block['text'], PARAM_TEXT),
                 ]);
             case 'callout':
                 if (empty($block['html'])) {
                     return '';
                 }
-                return $OUTPUT->render_from_template('tiny_studiolms/block_callout', [
+                return block_builder::render('callout', [
                     'backgroundColor' => '#fef9c3',
                     'borderLeftWidth' => 4,
                     'borderColor' => '#eab308',
                     'borderRadius' => 6,
-                    'hasIcon' => true,
+                    'hoverEffect' => 'none',
                     'icon' => '📌',
                     'textColor' => '#854d0e',
                     'contentHtml' => clean_text($block['html'], FORMAT_HTML),
@@ -139,15 +134,21 @@ class page_builder {
                 if (empty($block['content'])) {
                     return '';
                 }
-                return $OUTPUT->render_from_template('tiny_studiolms/block_card', [
+                return block_builder::render('advancedCard', [
                     'bg' => '#ffffff',
-                    'text' => '#333333',
+                    'text' => '#212529',
                     'border' => '#0d47a1',
-                    'radius' => '8',
-                    'shadowCss' => '0 1px 3px rgba(0,0,0,.1)',
-                    'hasMedia' => false,
-                    'hasButton' => false,
-                    'isAlignLeft' => true,
+                    'radius' => 8,
+                    'shadow' => 'sm',
+                    'mediaType' => 'none',
+                    'mediaUrl' => '',
+                    'layout' => 'vertical',
+                    'btnText' => '',
+                    'btnUrl' => '#',
+                    'btnBg' => '#0d47a1',
+                    'btnTextCol' => '#ffffff',
+                    'btnAlign' => 'left',
+                    'hoverEffect' => 'none',
                     'content' => clean_text($block['content'], FORMAT_HTML),
                 ]);
             default:
