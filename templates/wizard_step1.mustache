@@ -49,7 +49,7 @@
 <div class="local-studiolms-wizard">
     <div class="d-flex justify-content-between align-items-center mb-3">
         <h3 class="mb-0">{{#str}}generate_heading, local_studiolms{{/str}}</h3>
-        <span class="badge local-studiolms-step">{{steplabel}}</span>
+        <span class="badge bg-light text-dark border">{{steplabel}}</span>
     </div>
 
     <div class="alert alert-danger d-none" role="alert" data-region="error"></div>
@@ -147,8 +147,8 @@
             {{#str}}briefing_wipe_warning, local_studiolms{{/str}}
         </div>
 
-        <div class="d-flex justify-content-end local-studiolms-actions">
-            <a class="btn btn-secondary" href="{{cancelurl}}">{{#str}}btn_cancel, local_studiolms{{/str}}</a>
+        <div class="d-flex justify-content-start">
+            <a class="btn btn-secondary me-2" href="{{cancelurl}}">{{#str}}btn_cancel, local_studiolms{{/str}}</a>
             <button type="submit" class="btn btn-primary" data-action="generate">
                 <span class="spinner-border spinner-border-sm d-none" role="status"
                     aria-hidden="true" data-region="spinner"></span>

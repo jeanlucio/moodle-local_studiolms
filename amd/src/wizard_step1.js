@@ -37,6 +37,7 @@ export const init = () => {
     const wipeCheckbox = form.querySelector('#studiolms-wipe');
     const spinner = form.querySelector('[data-region="spinner"]');
     const submitButton = form.querySelector('[data-action="generate"]');
+    const buttonLabel = form.querySelector('[data-region="btnlabel"]');
 
     // Reveal the gamification profiles only when the gamified mode is selected.
     const modeRadios = form.querySelectorAll('input[name="mode"]');
@@ -68,5 +69,6 @@ export const init = () => {
         // arrives in phase 2.
         spinner.classList.remove('d-none');
         submitButton.setAttribute('disabled', 'disabled');
+        buttonLabel.textContent = await getString('generating', 'local_studiolms');
     });
 };
