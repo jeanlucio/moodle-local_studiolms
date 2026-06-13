@@ -105,7 +105,11 @@ class glossary_builder {
             . 'Produce between 8 and 12 concise, essential terms.';
         $user = "Course theme or focus: {$theme}";
 
-        $decoded = ai_json::decode(ai_resolver::generate_text($system, $user));
+        try {
+            $decoded = ai_json::decode(ai_resolver::generate_text($system, $user));
+        } catch (\Throwable $e) {
+            return [];
+        }
         if ($decoded === null || empty($decoded['terms']) || !is_array($decoded['terms'])) {
             return [];
         }

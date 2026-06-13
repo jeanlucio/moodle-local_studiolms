@@ -163,7 +163,11 @@ class page_builder {
             . "Write everything in the language identified by the code: {$language}.";
         $user = "Course theme: {$theme}\nSection: {$sectiontitle}\nPage title: {$pagetitle}";
 
-        $decoded = ai_json::decode(ai_resolver::generate_text($system, $user));
+        try {
+            $decoded = ai_json::decode(ai_resolver::generate_text($system, $user));
+        } catch (\Throwable $e) {
+            return [];
+        }
         if ($decoded === null || empty($decoded['blocks']) || !is_array($decoded['blocks'])) {
             return [];
         }
