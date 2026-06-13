@@ -1,0 +1,159 @@
+{{!
+    This file is part of Moodle - https://moodle.org/
+
+    Moodle is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    Moodle is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with Moodle.  If not, see <https://www.gnu.org/licenses/>.
+}}
+{{!
+    @template local_studiolms/wizard_step1
+
+    Briefing step of the StudioLMS course builder wizard.
+
+    Context variables required for this template:
+    * courseid - Target course id.
+    * sesskey - Session key.
+    * cancelurl - URL back to the course.
+    * steplabel - "Step 1 of 3" label.
+    * playerhud - Whether block_playerhud is installed.
+    * bloomlevels - Array of {value, label, checked} cognitive levels.
+    * profiles - Array of {value, label, checked} gamification profiles.
+
+    Example context (json):
+    {
+        "courseid": 5,
+        "sesskey": "abc123",
+        "cancelurl": "https://example.com/course/view.php?id=5",
+        "steplabel": "Step 1 of 3",
+        "playerhud": true,
+        "bloomlevels": [
+            {"value": "remember", "label": "Remember", "checked": false},
+            {"value": "apply", "label": "Apply", "checked": true}
+        ],
+        "profiles": [
+            {"value": "conquest", "label": "Conquest", "checked": false},
+            {"value": "narrative", "label": "Narrative", "checked": true},
+            {"value": "social", "label": "Social", "checked": false}
+        ]
+    }
+}}
+<div class="local-studiolms-wizard">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h3 class="mb-0">{{#str}}generate_heading, local_studiolms{{/str}}</h3>
+        <span class="badge bg-secondary">{{steplabel}}</span>
+    </div>
+
+    <div class="alert alert-danger d-none" role="alert" data-region="error"></div>
+
+    <form id="local-studiolms-step1" data-courseid="{{courseid}}">
+        <input type="hidden" name="sesskey" value="{{sesskey}}">
+
+        <div class="mb-3">
+            <label class="form-label" for="studiolms-theme">
+                {{#str}}briefing_theme, local_studiolms{{/str}} <span class="text-danger">*</span>
+            </label>
+            <input type="text" class="form-control" id="studiolms-theme" name="theme" required
+                placeholder="{{#str}}briefing_theme_placeholder, local_studiolms{{/str}}">
+        </div>
+
+        <div class="mb-3">
+            <label class="form-label" for="studiolms-reference">
+                {{#str}}briefing_reference, local_studiolms{{/str}}
+            </label>
+            <textarea class="form-control" id="studiolms-reference" name="reference" rows="4"
+                placeholder="{{#str}}briefing_reference_placeholder, local_studiolms{{/str}}"></textarea>
+        </div>
+
+        <fieldset class="mb-3">
+            <legend class="form-label">{{#str}}briefing_bloom, local_studiolms{{/str}}</legend>
+            {{#bloomlevels}}
+                <div class="form-check">
+                    <input class="form-check-input" type="radio" name="bloom"
+                        id="studiolms-bloom-{{value}}" value="{{value}}" {{#checked}}checked{{/checked}}>
+                    <label class="form-check-label" for="studiolms-bloom-{{value}}">{{label}}</label>
+                </div>
+            {{/bloomlevels}}
+        </fieldset>
+
+        <fieldset class="mb-3">
+            <legend class="form-label">{{#str}}briefing_structure, local_studiolms{{/str}}</legend>
+            <div class="form-check">
+                <input class="form-check-input" type="radio" name="structure"
+                    id="studiolms-structure-free" value="free" checked>
+                <label class="form-check-label" for="studiolms-structure-free">
+                    {{#str}}structure_free, local_studiolms{{/str}}
+                </label>
+            </div>
+            <div class="form-check">
+                <input class="form-check-input" type="radio" name="structure"
+                    id="studiolms-structure-abc" value="abc">
+                <label class="form-check-label" for="studiolms-structure-abc">
+                    {{#str}}structure_abc, local_studiolms{{/str}}
+                </label>
+            </div>
+        </fieldset>
+
+        <fieldset class="mb-3">
+            <legend class="form-label">{{#str}}briefing_mode, local_studiolms{{/str}}</legend>
+            <div class="form-check">
+                <input class="form-check-input" type="radio" name="mode"
+                    id="studiolms-mode-standard" value="standard" checked>
+                <label class="form-check-label" for="studiolms-mode-standard">
+                    {{#str}}mode_standard, local_studiolms{{/str}}
+                </label>
+            </div>
+            <div class="form-check">
+                <input class="form-check-input" type="radio" name="mode"
+                    id="studiolms-mode-gamified" value="gamified" {{^playerhud}}disabled{{/playerhud}}>
+                <label class="form-check-label" for="studiolms-mode-gamified">
+                    {{#str}}mode_gamified, local_studiolms{{/str}}
+                    {{#playerhud}}
+                        <span class="badge bg-success">{{#str}}mode_gamified_detected, local_studiolms{{/str}}</span>
+                    {{/playerhud}}
+                    {{^playerhud}}
+                        <span class="text-muted">— {{#str}}mode_gamified_disabled, local_studiolms{{/str}}</span>
+                    {{/playerhud}}
+                </label>
+            </div>
+        </fieldset>
+
+        <fieldset class="mb-3 d-none" data-region="profiles">
+            <legend class="form-label">{{#str}}gamification_profile, local_studiolms{{/str}}</legend>
+            {{#profiles}}
+                <div class="form-check">
+                    <input class="form-check-input" type="radio" name="profile"
+                        id="studiolms-profile-{{value}}" value="{{value}}" {{#checked}}checked{{/checked}}>
+                    <label class="form-check-label" for="studiolms-profile-{{value}}">{{label}}</label>
+                </div>
+            {{/profiles}}
+        </fieldset>
+
+        <div class="form-check mb-2">
+            <input class="form-check-input" type="checkbox" name="wipe" id="studiolms-wipe" value="1">
+            <label class="form-check-label" for="studiolms-wipe">
+                {{#str}}briefing_wipe, local_studiolms{{/str}}
+            </label>
+        </div>
+        <div class="alert alert-warning d-none" role="alert" data-region="wipewarning">
+            {{#str}}briefing_wipe_warning, local_studiolms{{/str}}
+        </div>
+
+        <div class="d-flex justify-content-between">
+            <a class="btn btn-secondary" href="{{cancelurl}}">{{#str}}btn_cancel, local_studiolms{{/str}}</a>
+            <button type="submit" class="btn btn-primary" data-action="generate">
+                <span class="spinner-border spinner-border-sm d-none" role="status"
+                    aria-hidden="true" data-region="spinner"></span>
+                <span data-region="btnlabel">{{#str}}btn_generate_outline, local_studiolms{{/str}}</span>
+            </button>
+        </div>
+    </form>
+</div>
