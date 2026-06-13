@@ -17,7 +17,9 @@
 {{!
     @template local_studiolms/wizard_step2
 
-    Outline review step of the StudioLMS course builder wizard.
+    Course review step of the StudioLMS course builder wizard. Objectives,
+    sections and activities can be renamed, removed or added before the course
+    is populated.
 
     Context variables required for this template:
     * outlineid - Stored outline id.
@@ -26,7 +28,8 @@
     * steplabel - "Step 2 of 3" label.
     * hasobjectives - Whether there is at least one objective.
     * objectives - Array of objective strings.
-    * sections - Array of {title, activities: [{type, typelabel, title}]}.
+    * sections - Array of {title, activities: [{title, typeoptions: [{value, label, selected}]}]}.
+    * activitytypes - Array of {value, label} used for newly added activities.
 
     Example context (json):
     {
@@ -40,10 +43,19 @@
             {
                 "title": "Fundamentals",
                 "activities": [
-                    {"type": "page", "typelabel": "Page", "title": "What is the topic?"},
-                    {"type": "quiz", "typelabel": "Quiz", "title": "Check your understanding"}
+                    {
+                        "title": "What is the topic?",
+                        "typeoptions": [
+                            {"value": "page", "label": "Page", "selected": true},
+                            {"value": "quiz", "label": "Quiz", "selected": false}
+                        ]
+                    }
                 ]
             }
+        ],
+        "activitytypes": [
+            {"value": "page", "label": "Page"},
+            {"value": "quiz", "label": "Quiz"}
         ]
     }
 }}
@@ -53,21 +65,32 @@
         <span class="badge bg-light text-dark border">{{steplabel}}</span>
     </div>
 
-    {{#hasobjectives}}
-        <div class="card mb-3">
-            <div class="card-header h6 mb-0">{{#str}}objectives_heading, local_studiolms{{/str}}</div>
-            <ul class="list-group list-group-flush">
-                {{#objectives}}
-                    <li class="list-group-item">{{.}}</li>
-                {{/objectives}}
-            </ul>
+    <div class="card mb-3">
+        <div class="card-header h6 mb-0">{{#str}}objectives_heading, local_studiolms{{/str}}</div>
+        <ul class="list-group list-group-flush" data-region="objectives">
+            {{#objectives}}
+                <li class="list-group-item d-flex align-items-center" data-region="objective">
+                    <input type="text" class="form-control flex-fill me-2" value="{{.}}"
+                        data-field="objective" aria-label="{{#str}}aria_objective, local_studiolms{{/str}}">
+                    <button type="button" class="btn btn-outline-danger btn-sm" data-action="remove-objective"
+                        aria-label="{{#str}}aria_remove_objective, local_studiolms{{/str}}">
+                        <i class="icon fa fa-trash m-0" aria-hidden="true"></i>
+                    </button>
+                </li>
+            {{/objectives}}
+        </ul>
+        <div class="card-body py-2">
+            <button type="button" class="btn btn-sm btn-outline-primary" data-action="add-objective">
+                {{#str}}add_objective, local_studiolms{{/str}}
+            </button>
         </div>
-    {{/hasobjectives}}
+    </div>
 
     <div data-region="sections">
         {{#sections}}
             <div class="card mb-3" data-region="section">
                 <div class="card-header d-flex align-items-center">
+                    <span class="badge bg-light text-dark border me-2" data-region="sectionnum"></span>
                     <input type="text" class="form-control flex-fill me-2" value="{{title}}"
                         data-field="sectiontitle" aria-label="{{#str}}aria_section_title, local_studiolms{{/str}}">
                     <button type="button" class="btn btn-outline-danger btn-sm" data-action="remove-section"
@@ -78,7 +101,12 @@
                 <ul class="list-group list-group-flush" data-region="activities">
                     {{#activities}}
                         <li class="list-group-item d-flex align-items-center" data-region="activity">
-                            <span class="badge bg-light text-dark border me-2">{{typelabel}}</span>
+                            <select class="form-select form-select-sm w-auto me-2" data-field="activitytype"
+                                aria-label="{{#str}}aria_activity_type, local_studiolms{{/str}}">
+                                {{#typeoptions}}
+                                    <option value="{{value}}" {{#selected}}selected{{/selected}}>{{label}}</option>
+                                {{/typeoptions}}
+                            </select>
                             <input type="text" class="form-control flex-fill me-2" value="{{title}}"
                                 data-field="activitytitle"
                                 aria-label="{{#str}}aria_activity_title, local_studiolms{{/str}}">
@@ -89,8 +117,19 @@
                         </li>
                     {{/activities}}
                 </ul>
+                <div class="card-body py-2">
+                    <button type="button" class="btn btn-sm btn-outline-primary" data-action="add-activity">
+                        {{#str}}add_activity, local_studiolms{{/str}}
+                    </button>
+                </div>
             </div>
         {{/sections}}
+    </div>
+
+    <div class="mb-3">
+        <button type="button" class="btn btn-outline-primary" data-action="add-section">
+            {{#str}}add_section, local_studiolms{{/str}}
+        </button>
     </div>
 
     <div class="d-flex justify-content-start">
@@ -99,4 +138,52 @@
         </button>
         <a class="btn btn-outline-secondary" href="{{cancelurl}}">{{#str}}btn_cancel, local_studiolms{{/str}}</a>
     </div>
+
+    <template data-template="objective">
+        <li class="list-group-item d-flex align-items-center" data-region="objective">
+            <input type="text" class="form-control flex-fill me-2" value=""
+                data-field="objective" aria-label="{{#str}}aria_objective, local_studiolms{{/str}}">
+            <button type="button" class="btn btn-outline-danger btn-sm" data-action="remove-objective"
+                aria-label="{{#str}}aria_remove_objective, local_studiolms{{/str}}">
+                <i class="icon fa fa-trash m-0" aria-hidden="true"></i>
+            </button>
+        </li>
+    </template>
+
+    <template data-template="activity">
+        <li class="list-group-item d-flex align-items-center" data-region="activity">
+            <select class="form-select form-select-sm w-auto me-2" data-field="activitytype"
+                aria-label="{{#str}}aria_activity_type, local_studiolms{{/str}}">
+                {{#activitytypes}}
+                    <option value="{{value}}">{{label}}</option>
+                {{/activitytypes}}
+            </select>
+            <input type="text" class="form-control flex-fill me-2" value=""
+                data-field="activitytitle" aria-label="{{#str}}aria_activity_title, local_studiolms{{/str}}">
+            <button type="button" class="btn btn-outline-danger btn-sm" data-action="remove-activity"
+                aria-label="{{#str}}aria_remove_activity, local_studiolms{{/str}}">
+                <i class="icon fa fa-trash m-0" aria-hidden="true"></i>
+            </button>
+        </li>
+    </template>
+
+    <template data-template="section">
+        <div class="card mb-3" data-region="section">
+            <div class="card-header d-flex align-items-center">
+                <span class="badge bg-light text-dark border me-2" data-region="sectionnum"></span>
+                <input type="text" class="form-control flex-fill me-2" value=""
+                    data-field="sectiontitle" aria-label="{{#str}}aria_section_title, local_studiolms{{/str}}">
+                <button type="button" class="btn btn-outline-danger btn-sm" data-action="remove-section"
+                    aria-label="{{#str}}aria_remove_section, local_studiolms{{/str}}">
+                    <i class="icon fa fa-trash m-0" aria-hidden="true"></i>
+                </button>
+            </div>
+            <ul class="list-group list-group-flush" data-region="activities"></ul>
+            <div class="card-body py-2">
+                <button type="button" class="btn btn-sm btn-outline-primary" data-action="add-activity">
+                    {{#str}}add_activity, local_studiolms{{/str}}
+                </button>
+            </div>
+        </div>
+    </template>
 </div>

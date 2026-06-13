@@ -22,7 +22,7 @@
  */
 
 import {call as fetchMany} from 'core/ajax';
-import {get_string as getString} from 'core/str';
+import {get_string as getString, get_strings as getStrings} from 'core/str';
 import Templates from 'core/templates';
 import Config from 'core/config';
 import * as Step2 from 'local_studiolms/wizard_step2';
@@ -48,14 +48,31 @@ const showStep2 = async(form, response) => {
     const courseid = form.dataset.courseid;
 
     const steplabel = await getString('step_of', 'local_studiolms', {current: 2, total: 3});
+
+    const typeKeys = ['page', 'label', 'quiz', 'forum', 'assign', 'glossary'];
+    const typeLabels = await getStrings(typeKeys.map(key => ({key: 'activity_' + key, component: 'local_studiolms'})));
+    const activitytypes = typeKeys.map((value, index) => ({value: value, label: typeLabels[index]}));
+
+    const sections = response.sections.map(section => ({
+        title: section.title,
+        activities: section.activities.map(activity => ({
+            title: activity.title,
+            typeoptions: activitytypes.map(option => ({
+                value: option.value,
+                label: option.label,
+                selected: option.value === activity.type,
+            })),
+        })),
+    }));
+
     const context = {
         outlineid: response.outlineid,
         courseid: parseInt(courseid, 10),
         cancelurl: Config.wwwroot + '/course/view.php?id=' + courseid,
         steplabel: steplabel,
-        hasobjectives: response.objectives.length > 0,
         objectives: response.objectives,
-        sections: response.sections,
+        sections: sections,
+        activitytypes: activitytypes,
     };
 
     const {html, js} = await Templates.renderForPromise('local_studiolms/wizard_step2', context);
