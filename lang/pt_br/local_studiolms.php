@@ -100,3 +100,4 @@ $string['structure_free'] = 'Livre (IA decide)';
 $string['studiolms:generate'] = 'Preencher um curso com IA usando o StudioLMS';
 $string['studiolms:viewlog'] = 'Ver o log de gerações do StudioLMS';
 $string['task_generate_course'] = 'Preencher um curso com o StudioLMS';
+$string['warnings_heading'] = 'Algumas atividades usaram conteúdo simplificado por indisponibilidade da IA:';

@@ -15,7 +15,7 @@
 // along with Moodle.  If not, see <https://www.gnu.org/licenses/>.
 
 /**
- * Version details for the local_studiolms plugin.
+ * Upgrade steps for the local_studiolms plugin.
  *
  * @package    local_studiolms
  * @copyright  2026 Jean Lúcio <jeanlucio@gmail.com>
@@ -24,12 +24,24 @@
 
 defined('MOODLE_INTERNAL') || die();
 
-$plugin->version = 2026061305;
-$plugin->requires = 2024100700; // Requires Moodle 4.5+ (Compatible with 5.x).
-$plugin->supported = [405, 502];
-$plugin->component = 'local_studiolms';
-$plugin->maturity = MATURITY_ALPHA;
-$plugin->release = 'v0.1.0';
-$plugin->dependencies = [
-    'tiny_studiolms' => ANY_VERSION,
-];
+/**
+ * Runs the local_studiolms upgrade steps.
+ *
+ * @param int $oldversion The currently installed plugin version.
+ * @return bool Always true on success.
+ */
+function xmldb_local_studiolms_upgrade($oldversion): bool {
+    global $DB;
+    $dbman = $DB->get_manager();
+
+    if ($oldversion < 2026061305) {
+        $table = new xmldb_table('local_studiolms_progress');
+        $field = new xmldb_field('warnings', XMLDB_TYPE_TEXT, null, null, null, null, null, 'errormsg');
+        if (!$dbman->field_exists($table, $field)) {
+            $dbman->add_field($table, $field);
+        }
+        upgrade_plugin_savepoint(true, 2026061305, 'local', 'studiolms');
+    }
+
+    return true;
+}

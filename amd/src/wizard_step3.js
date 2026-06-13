@@ -36,8 +36,25 @@ export const init = (root, options = {}) => {
     const bar = root.querySelector('[data-region="bar"]');
     const message = root.querySelector('[data-region="message"]');
     const errorRegion = root.querySelector('[data-region="error"]');
+    const warningsRegion = root.querySelector('[data-region="warnings"]');
     const done = root.querySelector('[data-region="done"]');
     const backLink = root.querySelector('[data-region="backtocourse"]');
+
+    const showWarnings = async warnings => {
+        if (!Array.isArray(warnings) || warnings.length === 0) {
+            return;
+        }
+        warningsRegion.textContent = await getString('warnings_heading', 'local_studiolms');
+        const list = document.createElement('ul');
+        list.classList.add('mb-0', 'mt-2');
+        warnings.forEach(warning => {
+            const item = document.createElement('li');
+            item.textContent = warning;
+            list.appendChild(item);
+        });
+        warningsRegion.appendChild(list);
+        warningsRegion.classList.remove('d-none');
+    };
 
     const setBar = (step, total) => {
         const percent = total > 0 ? Math.round((step / total) * 100) : 0;
@@ -71,6 +88,7 @@ export const init = (root, options = {}) => {
         if (progress.status === 'completed') {
             setBar(1, 1);
             stopAnimation();
+            await showWarnings(progress.warnings);
             backLink.setAttribute('href', Config.wwwroot + '/course/view.php?id=' + progress.courseid);
             done.classList.remove('d-none');
             return;

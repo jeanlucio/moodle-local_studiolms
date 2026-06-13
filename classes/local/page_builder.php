@@ -38,16 +38,27 @@ class page_builder {
      * @param string $sectiontitle The section title.
      * @param string $pagetitle The page title.
      * @param array $glossaryterms Glossary terms ([term, definition]) for the pre-training block.
+     * @param bool $degraded Set to true when the AI body could not be generated.
      * @return string The page HTML.
      */
-    public static function render(string $theme, string $sectiontitle, string $pagetitle, array $glossaryterms): string {
+    public static function render(
+        string $theme,
+        string $sectiontitle,
+        string $pagetitle,
+        array $glossaryterms,
+        bool &$degraded = false
+    ): string {
         $html = '';
 
         if (!empty($glossaryterms)) {
             $html .= self::pretraining($glossaryterms);
         }
 
-        foreach (self::generate_blocks($theme, $sectiontitle, $pagetitle) as $block) {
+        $blocks = self::generate_blocks($theme, $sectiontitle, $pagetitle);
+        if (empty($blocks)) {
+            $degraded = true;
+        }
+        foreach ($blocks as $block) {
             $html .= self::render_block($block);
         }
 

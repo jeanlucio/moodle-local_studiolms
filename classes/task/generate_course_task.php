@@ -52,6 +52,9 @@ class generate_course_task extends \core\task\adhoc_task {
     /** @var array Glossary terms used for the page pre-training block. */
     private $glossaryterms = [];
 
+    /** @var string[] Activities that used simplified content because the AI was unavailable. */
+    private $warnings = [];
+
     #[\Override]
     public function get_name(): string {
         return get_string('task_generate_course', 'local_studiolms');
@@ -145,40 +148,47 @@ class generate_course_task extends \core\task\adhoc_task {
     private function add_activity(int $sectionnum, string $sectiontitle, array $activity, string $theme): void {
         $type = $activity['type'];
         $title = $activity['title'];
+        $degraded = false;
 
         switch ($type) {
             case 'page':
-                $html = page_builder::render($theme, $sectiontitle, $title, $this->glossaryterms);
+                $html = page_builder::render($theme, $sectiontitle, $title, $this->glossaryterms, $degraded);
                 $result = course_builder::add_page($this->course, $sectionnum, $title, $html);
                 break;
             case 'label':
                 $result = course_builder::add_label($this->course, $sectionnum, \html_writer::tag('h4', s($title)));
                 break;
             case 'forum':
-                $intro = $this->generate_html('forum', $theme, $sectiontitle, $title);
+                $intro = $this->generate_html('forum', $theme, $sectiontitle, $title, $degraded);
                 $result = course_builder::add_forum($this->course, $sectionnum, $title, $intro);
                 break;
             case 'assign':
-                $intro = $this->generate_html('assign', $theme, $sectiontitle, $title);
+                $intro = $this->generate_html('assign', $theme, $sectiontitle, $title, $degraded);
                 $result = course_builder::add_assign($this->course, $sectionnum, $title, $intro);
                 break;
             case 'glossary':
                 $result = glossary_builder::create($this->course, $sectionnum, $title, $theme);
                 $this->glossaryterms = glossary_builder::get_terms($result->instance);
+                $degraded = empty($this->glossaryterms);
                 break;
             case 'quiz':
                 $intro = \html_writer::tag('p', s($title));
                 $result = course_builder::add_quiz($this->course, $sectionnum, $title, $intro);
                 try {
-                    quiz_builder::create($result->coursemodule, $result->instance, $theme, $title, 5);
+                    $degraded = quiz_builder::create($result->coursemodule, $result->instance, $theme, $title, 5) === 0;
                 } catch (\Throwable $e) {
                     debugging('StudioLMS quiz questions failed: ' . $e->getMessage(), DEBUG_DEVELOPER);
+                    $degraded = true;
                 }
                 break;
             default:
-                $html = $this->generate_html('page', $theme, $sectiontitle, $title);
+                $html = $this->generate_html('page', $theme, $sectiontitle, $title, $degraded);
                 $result = course_builder::add_page($this->course, $sectionnum, $title, $html);
                 break;
+        }
+
+        if ($degraded) {
+            $this->warnings[] = get_string('activity_' . $type, 'local_studiolms') . ': ' . $title;
         }
 
         $this->created['cmids'][] = $result->coursemodule;
@@ -192,9 +202,16 @@ class generate_course_task extends \core\task\adhoc_task {
      * @param string $theme The course theme.
      * @param string $sectiontitle The section title.
      * @param string $title The activity title.
+     * @param bool $degraded Set to true when the AI content could not be generated.
      * @return string The cleaned HTML content.
      */
-    private function generate_html(string $kind, string $theme, string $sectiontitle, string $title): string {
+    private function generate_html(
+        string $kind,
+        string $theme,
+        string $sectiontitle,
+        string $title,
+        bool &$degraded = false
+    ): string {
         $language = current_language();
         $instructions = [
             'page' => 'Write the body of a course page with headings, paragraphs and lists.',
@@ -215,6 +232,7 @@ class generate_course_task extends \core\task\adhoc_task {
             }
             return clean_text($html, FORMAT_HTML);
         } catch (\Throwable $e) {
+            $degraded = true;
             return \html_writer::tag('p', s($title));
         }
     }
@@ -288,6 +306,7 @@ class generate_course_task extends \core\task\adhoc_task {
     private function update(): void {
         global $DB;
         $this->progress->createditems = json_encode($this->created);
+        $this->progress->warnings = json_encode($this->warnings);
         $this->progress->timemodified = time();
         $DB->update_record('local_studiolms_progress', $this->progress);
     }

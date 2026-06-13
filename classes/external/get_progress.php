@@ -26,6 +26,7 @@ namespace local_studiolms\external;
 
 use core_external\external_api;
 use core_external\external_function_parameters;
+use core_external\external_multiple_structure;
 use core_external\external_single_structure;
 use core_external\external_value;
 
@@ -64,6 +65,8 @@ class get_progress extends external_api {
         self::validate_context($context);
         require_capability('local/studiolms:generate', $context);
 
+        $warnings = json_decode((string) ($progress->warnings ?? ''), true);
+
         return [
             'step' => (int) $progress->step,
             'total' => (int) $progress->total,
@@ -71,6 +74,7 @@ class get_progress extends external_api {
             'status' => $progress->status,
             'errormsg' => (string) ($progress->errormsg ?? ''),
             'courseid' => (int) $progress->courseid,
+            'warnings' => is_array($warnings) ? array_values($warnings) : [],
         ];
     }
 
@@ -87,6 +91,9 @@ class get_progress extends external_api {
             'status' => new external_value(PARAM_ALPHA, 'queued, running, completed or failed.'),
             'errormsg' => new external_value(PARAM_TEXT, 'Error message when failed.'),
             'courseid' => new external_value(PARAM_INT, 'Target course id.'),
+            'warnings' => new external_multiple_structure(
+                new external_value(PARAM_TEXT, 'An activity that used simplified content.')
+            ),
         ]);
     }
 }

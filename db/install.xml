@@ -56,6 +56,7 @@
         <FIELD NAME="courseid" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="false" COMMENT="Target course of the generation."/>
         <FIELD NAME="createditems" TYPE="text" NOTNULL="false" SEQUENCE="false" COMMENT="JSON of created ids (sectionids, cmids) for surgical rollback."/>
         <FIELD NAME="errormsg" TYPE="text" NOTNULL="false" SEQUENCE="false" COMMENT="Error message when status is failed."/>
+        <FIELD NAME="warnings" TYPE="text" NOTNULL="false" SEQUENCE="false" COMMENT="JSON list of activities that used simplified content."/>
         <FIELD NAME="timecreated" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="false"/>
         <FIELD NAME="timemodified" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="false"/>
       </FIELDS>
