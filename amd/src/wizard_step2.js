@@ -42,6 +42,30 @@ export const init = (root, callbacks = {}) => {
         }
     };
 
+    const serialize = () => {
+        const objectives = Array.from(root.querySelectorAll('[data-region="objectives"] [data-field="objective"]'))
+            .map(input => input.value.trim())
+            .filter(value => value !== '');
+
+        const sections = Array.from(root.querySelectorAll('[data-region="sections"] > [data-region="section"]'))
+            .map(section => ({
+                title: section.querySelector('[data-field="sectiontitle"]').value.trim(),
+                activities: Array.from(section.querySelectorAll('[data-region="activities"] > [data-region="activity"]'))
+                    .map(activity => ({
+                        type: activity.querySelector('[data-field="activitytype"]').value,
+                        title: activity.querySelector('[data-field="activitytitle"]').value.trim(),
+                    }))
+                    .filter(activity => activity.title !== ''),
+            }))
+            .filter(section => section.title !== '');
+
+        return {
+            outlineid: parseInt(root.dataset.outlineid, 10),
+            objectives: objectives,
+            sections: sections,
+        };
+    };
+
     const renumberSections = async() => {
         const sections = Array.from(root.querySelectorAll('[data-region="sections"] > [data-region="section"]'));
         if (sections.length === 0) {
@@ -100,6 +124,16 @@ export const init = (root, callbacks = {}) => {
             case 'back':
                 if (typeof callbacks.onBack === 'function') {
                     callbacks.onBack();
+                }
+                break;
+            case 'populate':
+                if (typeof callbacks.onPopulate === 'function') {
+                    const spinner = trigger.querySelector('[data-region="spinner"]');
+                    if (spinner !== null) {
+                        spinner.classList.remove('d-none');
+                    }
+                    trigger.setAttribute('disabled', 'disabled');
+                    callbacks.onPopulate(serialize());
                 }
                 break;
         }

@@ -25,7 +25,9 @@ import {call as fetchMany} from 'core/ajax';
 import {get_string as getString, get_strings as getStrings} from 'core/str';
 import Templates from 'core/templates';
 import Config from 'core/config';
+import Notification from 'core/notification';
 import * as Step2 from 'local_studiolms/wizard_step2';
+import * as Step3 from 'local_studiolms/wizard_step3';
 
 const SELECTORS = {
     form: 'local-studiolms-step1',
@@ -86,7 +88,39 @@ const showStep2 = async(form, response) => {
             step2Container.innerHTML = '';
             wrapper.classList.remove('d-none');
         },
+        onPopulate: outline => populate(form, step2Container, outline),
     });
+};
+
+// Queues the background population and shows the progress step.
+const populate = async(form, step2Container, outline) => {
+    try {
+        const response = await fetchMany([{
+            methodname: 'local_studiolms_populate_course',
+            args: {
+                courseid: parseInt(form.dataset.courseid, 10),
+                outlineid: outline.outlineid,
+                wipe: form.querySelector('#studiolms-wipe').checked,
+                objectives: outline.objectives,
+                sections: outline.sections,
+            },
+        }])[0];
+
+        const steplabel = await getString('step_of', 'local_studiolms', {current: 3, total: 3});
+        const {html, js} = await Templates.renderForPromise('local_studiolms/wizard_step3', {steplabel: steplabel});
+        Templates.replaceNodeContents(step2Container, html, js);
+        Step3.init(step2Container.firstElementChild, {progressid: response.progressid});
+    } catch (error) {
+        const button = step2Container.querySelector('[data-action="populate"]');
+        if (button !== null) {
+            button.removeAttribute('disabled');
+            const spinner = button.querySelector('[data-region="spinner"]');
+            if (spinner !== null) {
+                spinner.classList.add('d-none');
+            }
+        }
+        Notification.exception(error);
+    }
 };
 
 // Validates the briefing, calls the outline web service and moves to step 2.

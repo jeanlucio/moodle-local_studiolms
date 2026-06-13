@@ -132,11 +132,18 @@
         </button>
     </div>
 
-    <div class="d-flex justify-content-start">
+    <div class="d-flex justify-content-start align-items-center">
         <button type="button" class="btn btn-secondary me-2" data-action="back">
             {{#str}}btn_back, local_studiolms{{/str}}
         </button>
-        <a class="btn btn-outline-secondary" href="{{cancelurl}}">{{#str}}btn_cancel, local_studiolms{{/str}}</a>
+        <a class="btn btn-outline-secondary me-2" href="{{cancelurl}}">
+            {{#str}}btn_cancel, local_studiolms{{/str}}
+        </a>
+        <button type="button" class="btn btn-primary" data-action="populate">
+            <span class="spinner-border spinner-border-sm d-none" role="status"
+                aria-hidden="true" data-region="spinner"></span>
+            <span data-region="populatelabel">{{#str}}btn_populate, local_studiolms{{/str}}</span>
+        </button>
     </div>
 
     <template data-template="objective">

@@ -37,4 +37,22 @@ $functions = [
         'ajax' => true,
         'capabilities' => 'local/studiolms:generate',
     ],
+
+    'local_studiolms_populate_course' => [
+        'classname' => 'local_studiolms\external\populate_course',
+        'methodname' => 'execute',
+        'description' => 'Queues the background task that populates the course from the outline.',
+        'type' => 'write',
+        'ajax' => true,
+        'capabilities' => 'local/studiolms:generate',
+    ],
+
+    'local_studiolms_get_progress' => [
+        'classname' => 'local_studiolms\external\get_progress',
+        'methodname' => 'execute',
+        'description' => 'Returns the progress of a background course generation.',
+        'type' => 'read',
+        'ajax' => true,
+        'capabilities' => 'local/studiolms:generate',
+    ],
 ];

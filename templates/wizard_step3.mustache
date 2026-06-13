@@ -1,0 +1,50 @@
+{{!
+    This file is part of Moodle - https://moodle.org/
+
+    Moodle is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    Moodle is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with Moodle.  If not, see <https://www.gnu.org/licenses/>.
+}}
+{{!
+    @template local_studiolms/wizard_step3
+
+    Generation progress step of the StudioLMS course builder wizard.
+
+    Context variables required for this template:
+    * steplabel - "Step 3 of 3" label.
+
+    Example context (json):
+    {
+        "steplabel": "Step 3 of 3"
+    }
+}}
+<div class="local-studiolms-wizard">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h3 class="mb-0">{{#str}}populate_heading, local_studiolms{{/str}}</h3>
+        <span class="badge bg-light text-dark border">{{steplabel}}</span>
+    </div>
+
+    <div class="progress mb-3">
+        <div class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar"
+            data-region="bar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"></div>
+    </div>
+
+    <p data-region="message" aria-live="polite"></p>
+
+    <div class="alert alert-danger d-none" role="alert" data-region="error"></div>
+
+    <div class="d-none" data-region="done">
+        <a class="btn btn-primary" href="#" data-region="backtocourse">
+            {{#str}}back_to_course, local_studiolms{{/str}}
+        </a>
+    </div>
+</div>
