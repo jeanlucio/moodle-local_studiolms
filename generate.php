@@ -89,4 +89,5 @@ $PAGE->requires->js_call_amd('local_studiolms/wizard_step1', 'init');
 
 echo $OUTPUT->header();
 echo $OUTPUT->render_from_template('local_studiolms/wizard_step1', $templatecontext);
+echo html_writer::div('', 'd-none', ['id' => 'local-studiolms-step2']);
 echo $OUTPUT->footer();

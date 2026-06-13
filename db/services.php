@@ -27,4 +27,14 @@
 
 defined('MOODLE_INTERNAL') || die();
 
-$functions = [];
+$functions = [
+
+    'local_studiolms_generate_outline' => [
+        'classname' => 'local_studiolms\external\generate_outline',
+        'methodname' => 'execute',
+        'description' => 'Generates a course outline from the wizard briefing.',
+        'type' => 'write',
+        'ajax' => true,
+        'capabilities' => 'local/studiolms:generate',
+    ],
+];

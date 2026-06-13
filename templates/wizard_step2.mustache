@@ -1,0 +1,102 @@
+{{!
+    This file is part of Moodle - https://moodle.org/
+
+    Moodle is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    Moodle is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with Moodle.  If not, see <https://www.gnu.org/licenses/>.
+}}
+{{!
+    @template local_studiolms/wizard_step2
+
+    Outline review step of the StudioLMS course builder wizard.
+
+    Context variables required for this template:
+    * outlineid - Stored outline id.
+    * courseid - Target course id.
+    * cancelurl - URL back to the course.
+    * steplabel - "Step 2 of 3" label.
+    * hasobjectives - Whether there is at least one objective.
+    * objectives - Array of objective strings.
+    * sections - Array of {title, activities: [{type, typelabel, title}]}.
+
+    Example context (json):
+    {
+        "outlineid": 7,
+        "courseid": 5,
+        "cancelurl": "https://example.com/course/view.php?id=5",
+        "steplabel": "Step 2 of 3",
+        "hasobjectives": true,
+        "objectives": ["Apply core concepts to real problems."],
+        "sections": [
+            {
+                "title": "Fundamentals",
+                "activities": [
+                    {"type": "page", "typelabel": "Page", "title": "What is the topic?"},
+                    {"type": "quiz", "typelabel": "Quiz", "title": "Check your understanding"}
+                ]
+            }
+        ]
+    }
+}}
+<div class="local-studiolms-wizard" data-outlineid="{{outlineid}}" data-courseid="{{courseid}}">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h3 class="mb-0">{{#str}}outline_review_heading, local_studiolms{{/str}}</h3>
+        <span class="badge bg-light text-dark border">{{steplabel}}</span>
+    </div>
+
+    {{#hasobjectives}}
+        <div class="card mb-3">
+            <div class="card-header h6 mb-0">{{#str}}objectives_heading, local_studiolms{{/str}}</div>
+            <ul class="list-group list-group-flush">
+                {{#objectives}}
+                    <li class="list-group-item">{{.}}</li>
+                {{/objectives}}
+            </ul>
+        </div>
+    {{/hasobjectives}}
+
+    <div data-region="sections">
+        {{#sections}}
+            <div class="card mb-3" data-region="section">
+                <div class="card-header d-flex align-items-center">
+                    <input type="text" class="form-control me-2" value="{{title}}"
+                        data-field="sectiontitle" aria-label="{{#str}}aria_section_title, local_studiolms{{/str}}">
+                    <button type="button" class="btn btn-outline-danger btn-sm" data-action="remove-section"
+                        aria-label="{{#str}}aria_remove_section, local_studiolms{{/str}}">
+                        <i class="icon fa fa-trash m-0" aria-hidden="true"></i>
+                    </button>
+                </div>
+                <ul class="list-group list-group-flush" data-region="activities">
+                    {{#activities}}
+                        <li class="list-group-item d-flex align-items-center" data-region="activity">
+                            <span class="badge bg-secondary me-2">{{typelabel}}</span>
+                            <input type="text" class="form-control me-2" value="{{title}}"
+                                data-field="activitytitle"
+                                aria-label="{{#str}}aria_activity_title, local_studiolms{{/str}}">
+                            <button type="button" class="btn btn-outline-danger btn-sm" data-action="remove-activity"
+                                aria-label="{{#str}}aria_remove_activity, local_studiolms{{/str}}">
+                                <i class="icon fa fa-trash m-0" aria-hidden="true"></i>
+                            </button>
+                        </li>
+                    {{/activities}}
+                </ul>
+            </div>
+        {{/sections}}
+    </div>
+
+    <div class="d-flex justify-content-start">
+        <button type="button" class="btn btn-secondary me-2" data-action="back">
+            {{#str}}btn_back, local_studiolms{{/str}}
+        </button>
+        <a class="btn btn-secondary" href="{{cancelurl}}">{{#str}}btn_cancel, local_studiolms{{/str}}</a>
+    </div>
+</div>

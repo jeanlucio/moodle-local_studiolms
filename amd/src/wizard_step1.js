@@ -21,16 +21,23 @@
  * @license    https://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
+import {call as fetchMany} from 'core/ajax';
 import {get_string as getString} from 'core/str';
+import {renderForPromise, replaceNodeContents} from 'core/templates';
+import Config from 'core/config';
+import * as Step2 from 'local_studiolms/wizard_step2';
 
 // Initialises the briefing form behaviour.
 export const init = () => {
+    const wrapper = document.getElementById('local-studiolms-step1-wrapper');
     const form = document.getElementById('local-studiolms-step1');
-    if (form === null) {
+    const step2Container = document.getElementById('local-studiolms-step2');
+    if (form === null || wrapper === null || step2Container === null) {
         return;
     }
 
     const themeInput = form.querySelector('#studiolms-theme');
+    const referenceInput = form.querySelector('#studiolms-reference');
     const errorRegion = form.querySelector('[data-region="error"]');
     const profilesRegion = form.querySelector('[data-region="profiles"]');
     const wipeWarning = form.querySelector('[data-region="wipewarning"]');
@@ -39,9 +46,13 @@ export const init = () => {
     const submitButton = form.querySelector('[data-action="generate"]');
     const buttonLabel = form.querySelector('[data-region="btnlabel"]');
 
+    const getRadioValue = name => {
+        const checked = form.querySelector(`input[name="${name}"]:checked`);
+        return checked === null ? '' : checked.value;
+    };
+
     // Reveal the gamification profiles only when the gamified mode is selected.
-    const modeRadios = form.querySelectorAll('input[name="mode"]');
-    modeRadios.forEach(radio => {
+    form.querySelectorAll('input[name="mode"]').forEach(radio => {
         radio.addEventListener('change', () => {
             const checkedMode = form.querySelector('input[name="mode"]:checked');
             const gamified = checkedMode !== null && checkedMode.value === 'gamified';
@@ -54,7 +65,39 @@ export const init = () => {
         wipeWarning.classList.toggle('d-none', !wipeCheckbox.checked);
     });
 
-    form.addEventListener('submit', async(event) => {
+    const resetButton = defaultLabel => {
+        spinner.classList.add('d-none');
+        submitButton.removeAttribute('disabled');
+        buttonLabel.textContent = defaultLabel;
+    };
+
+    const showStep2 = async response => {
+        const steplabel = await getString('step_of', 'local_studiolms', {current: 2, total: 3});
+        const context = {
+            outlineid: response.outlineid,
+            courseid: parseInt(form.dataset.courseid, 10),
+            cancelurl: `${Config.wwwroot}/course/view.php?id=${form.dataset.courseid}`,
+            steplabel: steplabel,
+            hasobjectives: response.objectives.length > 0,
+            objectives: response.objectives,
+            sections: response.sections,
+        };
+
+        const {html, js} = await renderForPromise('local_studiolms/wizard_step2', context);
+        replaceNodeContents(step2Container, html, js);
+        wrapper.classList.add('d-none');
+        step2Container.classList.remove('d-none');
+
+        Step2.init(step2Container.firstElementChild, {
+            onBack: () => {
+                step2Container.classList.add('d-none');
+                step2Container.innerHTML = '';
+                wrapper.classList.remove('d-none');
+            },
+        });
+    };
+
+    form.addEventListener('submit', async event => {
         event.preventDefault();
         errorRegion.classList.add('d-none');
 
@@ -65,10 +108,32 @@ export const init = () => {
             return;
         }
 
-        // Phase 1 only surfaces the loading state; the outline web service
-        // arrives in phase 2.
+        const defaultLabel = buttonLabel.textContent;
         spinner.classList.remove('d-none');
         submitButton.setAttribute('disabled', 'disabled');
         buttonLabel.textContent = await getString('generating', 'local_studiolms');
+
+        try {
+            const response = await fetchMany([{
+                methodname: 'local_studiolms_generate_outline',
+                args: {
+                    courseid: parseInt(form.dataset.courseid, 10),
+                    theme: themeInput.value.trim(),
+                    reference: referenceInput.value,
+                    bloom: getRadioValue('bloom'),
+                    structure: getRadioValue('structure'),
+                    mode: getRadioValue('mode'),
+                    profile: getRadioValue('profile'),
+                },
+            }])[0];
+
+            await showStep2(response);
+            resetButton(defaultLabel);
+        } catch (error) {
+            const fallback = await getString('error_outline_generation', 'local_studiolms');
+            errorRegion.textContent = error && error.message ? error.message : fallback;
+            errorRegion.classList.remove('d-none');
+            resetButton(defaultLabel);
+        }
     });
 };
