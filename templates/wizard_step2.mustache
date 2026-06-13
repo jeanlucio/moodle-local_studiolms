@@ -68,7 +68,7 @@
         {{#sections}}
             <div class="card mb-3" data-region="section">
                 <div class="card-header d-flex align-items-center">
-                    <input type="text" class="form-control me-2" value="{{title}}"
+                    <input type="text" class="form-control flex-fill me-2" value="{{title}}"
                         data-field="sectiontitle" aria-label="{{#str}}aria_section_title, local_studiolms{{/str}}">
                     <button type="button" class="btn btn-outline-danger btn-sm" data-action="remove-section"
                         aria-label="{{#str}}aria_remove_section, local_studiolms{{/str}}">
@@ -78,8 +78,8 @@
                 <ul class="list-group list-group-flush" data-region="activities">
                     {{#activities}}
                         <li class="list-group-item d-flex align-items-center" data-region="activity">
-                            <span class="badge bg-secondary me-2">{{typelabel}}</span>
-                            <input type="text" class="form-control me-2" value="{{title}}"
+                            <span class="badge bg-light text-dark border me-2">{{typelabel}}</span>
+                            <input type="text" class="form-control flex-fill me-2" value="{{title}}"
                                 data-field="activitytitle"
                                 aria-label="{{#str}}aria_activity_title, local_studiolms{{/str}}">
                             <button type="button" class="btn btn-outline-danger btn-sm" data-action="remove-activity"
@@ -97,6 +97,6 @@
         <button type="button" class="btn btn-secondary me-2" data-action="back">
             {{#str}}btn_back, local_studiolms{{/str}}
         </button>
-        <a class="btn btn-secondary" href="{{cancelurl}}">{{#str}}btn_cancel, local_studiolms{{/str}}</a>
+        <a class="btn btn-outline-secondary" href="{{cancelurl}}">{{#str}}btn_cancel, local_studiolms{{/str}}</a>
     </div>
 </div>

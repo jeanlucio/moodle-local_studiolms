@@ -35,7 +35,7 @@ use moodle_exception;
  */
 class outline_generator {
     /** @var int Maximum number of AI calls per outline before giving up. */
-    private const MAX_ATTEMPTS = 2;
+    private const MAX_ATTEMPTS = 3;
 
     /** @var int Fixed backoff in seconds between attempts. */
     private const BACKOFF_SECONDS = 2;
@@ -104,6 +104,8 @@ class outline_generator {
             . 'using exactly this shape: '
             . '{"objectives": ["..."], "sections": [{"title": "...", '
             . '"activities": [{"type": "page", "title": "..."}]}]}.';
+        $lines[] = 'Use double quotes for every key and string. Do not add trailing commas, '
+            . 'comments or any text before or after the JSON object.';
         $lines[] = 'Produce between 3 and 6 sections, each with 2 to 4 activities.';
 
         return implode("\n", $lines);
@@ -149,6 +151,9 @@ class outline_generator {
             return null;
         }
         $text = substr($text, $start, $end - $start + 1);
+
+        // Drop trailing commas before a closing brace or bracket, a common LLM mistake.
+        $text = preg_replace('/,(\s*[}\]])/', '$1', $text);
 
         $decoded = json_decode($text, true);
         return is_array($decoded) ? $decoded : null;
