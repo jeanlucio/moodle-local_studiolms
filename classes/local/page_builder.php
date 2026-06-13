@@ -25,7 +25,12 @@
 namespace local_studiolms\local;
 
 /**
- * Renders a page as a pre-training callout plus AI-generated visual blocks.
+ * Renders a page as a pre-training callout plus AI-planned visual blocks.
+ *
+ * The AI first plans the page: it chooses a preset from the tiny_studiolms catalog
+ * when one fits the context (hybrid strategy), or it generates custom blocks
+ * (heading/callout/card/accordion). All rendered blocks carry the editor contract
+ * attributes so they open for re-editing in the tiny_studiolms plugin.
  */
 class page_builder {
     /** @var int Maximum number of glossary terms shown in the pre-training block. */
@@ -54,19 +59,21 @@ class page_builder {
             $html .= self::pretraining($glossaryterms);
         }
 
-        $blocks = self::generate_blocks($theme, $sectiontitle, $pagetitle);
-        if (empty($blocks)) {
+        $body = self::generate_body($theme, $sectiontitle, $pagetitle);
+        if ($body === '') {
             $degraded = true;
         }
-        foreach ($blocks as $block) {
-            $html .= self::render_block($block);
-        }
+        $html .= $body;
 
         if (trim(html_to_text($html)) === '') {
             $html = \html_writer::tag('p', s($pagetitle));
         }
         return $html;
     }
+
+    // -----------------------------------------------------------------------
+    // Pre-training callout.
+    // -----------------------------------------------------------------------.
 
     /**
      * Builds the "Key concepts" pre-training callout from the glossary terms.
@@ -82,8 +89,10 @@ class page_builder {
                 \html_writer::tag('strong', s($term['term'])) . ' — ' . s($term['definition'])
             );
         }
-        $content = \html_writer::tag('p', \html_writer::tag('strong', get_string('pretraining_title', 'local_studiolms')))
-            . \html_writer::tag('ul', $items);
+        $content = \html_writer::tag(
+            'p',
+            \html_writer::tag('strong', get_string('pretraining_title', 'local_studiolms'))
+        ) . \html_writer::tag('ul', $items);
 
         return block_builder::render('callout', [
             'backgroundColor' => '#eef2ff',
@@ -97,10 +106,175 @@ class page_builder {
         ]);
     }
 
+    // -----------------------------------------------------------------------
+    // AI-driven body: plan to preset or blocks.
+    // -----------------------------------------------------------------------.
+
     /**
-     * Renders a single AI content block as an editable StudioLMS block.
+     * Generates the page body by asking the AI to plan a preset or custom blocks.
      *
-     * @param array $block The block definition (type and fields).
+     * Returns an empty string (degraded) when the AI is unavailable.
+     *
+     * @param string $theme Course theme.
+     * @param string $sectiontitle Section title.
+     * @param string $pagetitle Page title.
+     * @return string Rendered body HTML.
+     */
+    private static function generate_body(
+        string $theme,
+        string $sectiontitle,
+        string $pagetitle
+    ): string {
+        try {
+            return self::plan_and_build($theme, $sectiontitle, $pagetitle);
+        } catch (\Throwable $e) {
+            return '';
+        }
+    }
+
+    /**
+     * Asks the AI to plan the page, then builds it.
+     *
+     * @param string $theme Course theme.
+     * @param string $sectiontitle Section title.
+     * @param string $pagetitle Page title.
+     * @return string Rendered body HTML.
+     */
+    private static function plan_and_build(
+        string $theme,
+        string $sectiontitle,
+        string $pagetitle
+    ): string {
+        $plan = self::plan_page($theme, $sectiontitle, $pagetitle);
+        if ($plan === null) {
+            return '';
+        }
+
+        if (($plan['strategy'] ?? '') === 'preset') {
+            $html = self::build_from_preset($plan);
+            if ($html !== '') {
+                return $html;
+            }
+        }
+
+        if (!empty($plan['blocks']) && is_array($plan['blocks'])) {
+            $html = '';
+            foreach ($plan['blocks'] as $block) {
+                $html .= self::render_block($block);
+            }
+            return $html;
+        }
+
+        return '';
+    }
+
+    /**
+     * Asks the AI to decide: use a preset or generate custom blocks.
+     *
+     * Returns the decoded plan array, or null on failure.
+     *
+     * @param string $theme Course theme.
+     * @param string $sectiontitle Section title.
+     * @param string $pagetitle Page title.
+     * @return array|null Decoded plan, or null when AI is unavailable.
+     */
+    private static function plan_page(
+        string $theme,
+        string $sectiontitle,
+        string $pagetitle
+    ): ?array {
+        $lang = current_language();
+        $catalog = preset_loader::catalog_for_prompt($lang);
+        $catalogjson = json_encode($catalog, JSON_UNESCAPED_UNICODE);
+
+        $presetschema = '{"strategy":"preset","preset_name":"<name from catalog>","fill":{"[Placeholder]":"value"}}';
+        $blockschema  = '{"strategy":"blocks","blocks":['
+            . '{"type":"heading","text":"..."},'
+            . '{"type":"callout","html":"<p>...</p>"},'
+            . '{"type":"card","content":"<h4>...</h4><p>...</p>"},'
+            . '{"type":"accordion","title":"...","content":"<p>...</p>"}'
+            . ']}';
+
+        $system = 'You are a course page planner. Given a page topic and a catalog of page templates,'
+            . ' decide whether to apply a template (preset) or generate custom visual blocks.'
+            . ' Return ONLY a valid JSON object with no markdown. Use one of these two schemas:'
+            . ' PRESET: ' . $presetschema
+            . ' BLOCKS: ' . $blockschema
+            . ' Choose PRESET when the page context fits a catalog entry well.'
+            . ' Choose BLOCKS otherwise, using types: heading, callout, card, accordion.'
+            . ' The "fill" map replaces [Placeholder] tokens in the preset (e.g. "[Course name]" -> value).'
+            . ' Write all generated text in the language identified by the code: ' . $lang . '.';
+
+        $user = "Course theme: {$theme}\nSection: {$sectiontitle}\nPage title: {$pagetitle}"
+            . "\nAvailable presets: {$catalogjson}";
+
+        $decoded = ai_json::decode(ai_resolver::generate_text($system, $user));
+        if ($decoded === null || empty($decoded['strategy'])) {
+            return null;
+        }
+        return $decoded;
+    }
+
+    /**
+     * Loads and renders a preset from the AI plan, applying placeholder fill values.
+     *
+     * @param array $plan AI plan with preset_name and fill keys.
+     * @return string Rendered HTML, or empty string when the preset is not found.
+     */
+    private static function build_from_preset(array $plan): string {
+        $preset = preset_loader::find((string) ($plan['preset_name'] ?? ''));
+        if ($preset === null) {
+            return '';
+        }
+
+        $fill = is_array($plan['fill'] ?? null) ? $plan['fill'] : [];
+        if (!empty($fill)) {
+            $preset = self::fill_preset($preset, $fill);
+        }
+
+        return preset_loader::render($preset);
+    }
+
+    /**
+     * Recursively replaces placeholder tokens in all string values of a preset.
+     *
+     * @param array $preset Preset definition.
+     * @param array $fill Map of [Placeholder] => replacement text.
+     * @return array Preset with placeholders replaced.
+     */
+    private static function fill_preset(array $preset, array $fill): array {
+        $search  = array_keys($fill);
+        $replace = array_values($fill);
+        return self::fill_recursive($preset, $search, $replace);
+    }
+
+    /**
+     * Recursively replaces strings inside an array.
+     *
+     * @param array $data The data to process.
+     * @param array $search Strings to search for.
+     * @param array $replace Replacement strings.
+     * @return array Data with replacements applied.
+     */
+    private static function fill_recursive(array $data, array $search, array $replace): array {
+        foreach ($data as $k => $v) {
+            if (is_string($v)) {
+                $data[$k] = str_replace($search, $replace, $v);
+            } else if (is_array($v)) {
+                $data[$k] = self::fill_recursive($v, $search, $replace);
+            }
+        }
+        return $data;
+    }
+
+    // -----------------------------------------------------------------------
+    // Custom block rendering (blocks strategy).
+    // -----------------------------------------------------------------------.
+
+    /**
+     * Renders a single AI-generated block as editable StudioLMS HTML.
+     *
+     * @param array $block Block definition from the AI plan.
      * @return string The rendered block HTML.
      */
     private static function render_block(array $block): string {
@@ -151,38 +325,22 @@ class page_builder {
                     'hoverEffect' => 'none',
                     'content' => clean_text($block['content'], FORMAT_HTML),
                 ]);
+            case 'accordion':
+                if (empty($block['title'])) {
+                    return '';
+                }
+                return block_builder::render('accordion', [
+                    'state' => 'closed',
+                    'bg' => '#ffffff',
+                    'color' => '#3b82f6',
+                    'icon' => '▼ / ▲',
+                    'openSound' => 'none',
+                    'hoverEffect' => 'none',
+                    'title' => clean_param($block['title'], PARAM_TEXT),
+                    'content' => clean_text($block['content'] ?? '', FORMAT_HTML),
+                ]);
             default:
                 return empty($block['html']) ? '' : clean_text($block['html'], FORMAT_HTML);
         }
-    }
-
-    /**
-     * Asks the AI for the page body as a list of visual blocks.
-     *
-     * @param string $theme The course theme.
-     * @param string $sectiontitle The section title.
-     * @param string $pagetitle The page title.
-     * @return array List of block definitions.
-     */
-    private static function generate_blocks(string $theme, string $sectiontitle, string $pagetitle): array {
-        $language = current_language();
-        $system = 'You are an instructional designer writing a course page with rich visual blocks. '
-            . 'Return ONLY a valid JSON object, no markdown or commentary, shaped like '
-            . '{"blocks": [{"type": "heading", "text": "..."}, {"type": "paragraph", "html": "<p>...</p>"}, '
-            . '{"type": "callout", "html": "<p>...</p>"}, {"type": "card", "content": "<h5>...</h5><p>...</p>"}]}. '
-            . 'Use only these block types: heading, paragraph, callout, card. Use callouts to highlight key '
-            . 'information and cards to group related ideas. Use double quotes and no trailing commas. '
-            . "Write everything in the language identified by the code: {$language}.";
-        $user = "Course theme: {$theme}\nSection: {$sectiontitle}\nPage title: {$pagetitle}";
-
-        try {
-            $decoded = ai_json::decode(ai_resolver::generate_text($system, $user));
-        } catch (\Throwable $e) {
-            return [];
-        }
-        if ($decoded === null || empty($decoded['blocks']) || !is_array($decoded['blocks'])) {
-            return [];
-        }
-        return $decoded['blocks'];
     }
 }
