@@ -84,6 +84,7 @@ $string['pluginname'] = 'StudioLMS construtor de cursos';
 $string['populate_heading'] = 'Preenchendo o curso';
 $string['preferredprovider'] = 'Provedor de IA preferencial';
 $string['preferredprovider_desc'] = 'Provedor usado para gerar o conteúdo do curso. O StudioLMS usa a camada de IA do tiny_studiolms por padrão; o PlayerGames é oferecido apenas quando o local_playergames está instalado.';
+$string['pretraining_title'] = 'Conceitos-chave';
 $string['profile_conquest'] = 'Conquista';
 $string['profile_narrative'] = 'Narrativa';
 $string['profile_social'] = 'Social';

@@ -29,6 +29,7 @@ use local_studiolms\local\ai_json;
 use local_studiolms\local\ai_resolver;
 use local_studiolms\local\course_builder;
 use local_studiolms\local\glossary_builder;
+use local_studiolms\local\page_builder;
 use local_studiolms\local\quiz_builder;
 use stdClass;
 
@@ -47,6 +48,9 @@ class generate_course_task extends \core\task\adhoc_task {
 
     /** @var int Steps completed so far. */
     private $step = 0;
+
+    /** @var array Glossary terms used for the page pre-training block. */
+    private $glossaryterms = [];
 
     #[\Override]
     public function get_name(): string {
@@ -144,7 +148,7 @@ class generate_course_task extends \core\task\adhoc_task {
 
         switch ($type) {
             case 'page':
-                $html = $this->generate_html('page', $theme, $sectiontitle, $title);
+                $html = page_builder::render($theme, $sectiontitle, $title, $this->glossaryterms);
                 $result = course_builder::add_page($this->course, $sectionnum, $title, $html);
                 break;
             case 'label':
@@ -160,6 +164,7 @@ class generate_course_task extends \core\task\adhoc_task {
                 break;
             case 'glossary':
                 $result = glossary_builder::create($this->course, $sectionnum, $title, $theme);
+                $this->glossaryterms = glossary_builder::get_terms($result->instance);
                 break;
             case 'quiz':
                 $intro = \html_writer::tag('p', s($title));

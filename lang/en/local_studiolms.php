@@ -84,6 +84,7 @@ $string['pluginname'] = 'StudioLMS course builder';
 $string['populate_heading'] = 'Populating the course';
 $string['preferredprovider'] = 'Preferred AI provider';
 $string['preferredprovider_desc'] = 'Provider used to generate course content. StudioLMS uses the tiny_studiolms AI layer by default; PlayerGames is offered only when local_playergames is installed.';
+$string['pretraining_title'] = 'Key concepts';
 $string['profile_conquest'] = 'Conquest';
 $string['profile_narrative'] = 'Narrative';
 $string['profile_social'] = 'Social';

@@ -71,6 +71,26 @@ class glossary_builder {
     }
 
     /**
+     * Reads the entries of a glossary as term/definition pairs.
+     *
+     * @param int $glossaryid The glossary instance id.
+     * @return array List of ['term' => string, 'definition' => string].
+     */
+    public static function get_terms(int $glossaryid): array {
+        global $DB;
+
+        $entries = $DB->get_records('glossary_entries', ['glossaryid' => $glossaryid], 'id ASC', 'id, concept, definition');
+        $terms = [];
+        foreach ($entries as $entry) {
+            $terms[] = [
+                'term' => $entry->concept,
+                'definition' => content_to_text($entry->definition, FORMAT_HTML),
+            ];
+        }
+        return $terms;
+    }
+
+    /**
      * Generates key glossary terms for the given theme.
      *
      * @param string $theme The course theme.
