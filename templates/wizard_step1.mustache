@@ -73,58 +73,72 @@
                 placeholder="{{#str}}briefing_reference_placeholder, local_studiolms{{/str}}"></textarea>
         </div>
 
-        <fieldset class="mb-3">
-            <legend class="form-label">{{#str}}briefing_bloom, local_studiolms{{/str}}</legend>
-            {{#bloomlevels}}
-                <div class="form-check">
-                    <input class="form-check-input" type="radio" name="bloom"
-                        id="studiolms-bloom-{{value}}" value="{{value}}" {{#checked}}checked{{/checked}}>
-                    <label class="form-check-label" for="studiolms-bloom-{{value}}">{{label}}</label>
-                </div>
-            {{/bloomlevels}}
-        </fieldset>
+        <div class="row">
+            <div class="col-12 col-md-4 mb-3">
+                <fieldset class="card h-100">
+                    <legend class="card-header h6 mb-0">{{#str}}briefing_bloom, local_studiolms{{/str}}</legend>
+                    <div class="card-body">
+                        {{#bloomlevels}}
+                            <div class="form-check">
+                                <input class="form-check-input" type="radio" name="bloom"
+                                    id="studiolms-bloom-{{value}}" value="{{value}}" {{#checked}}checked{{/checked}}>
+                                <label class="form-check-label" for="studiolms-bloom-{{value}}">{{label}}</label>
+                            </div>
+                        {{/bloomlevels}}
+                    </div>
+                </fieldset>
+            </div>
 
-        <fieldset class="mb-3">
-            <legend class="form-label">{{#str}}briefing_structure, local_studiolms{{/str}}</legend>
-            <div class="form-check">
-                <input class="form-check-input" type="radio" name="structure"
-                    id="studiolms-structure-free" value="free" checked>
-                <label class="form-check-label" for="studiolms-structure-free">
-                    {{#str}}structure_free, local_studiolms{{/str}}
-                </label>
+            <div class="col-12 col-md-4 mb-3">
+                <fieldset class="card h-100">
+                    <legend class="card-header h6 mb-0">{{#str}}briefing_structure, local_studiolms{{/str}}</legend>
+                    <div class="card-body">
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="structure"
+                                id="studiolms-structure-free" value="free" checked>
+                            <label class="form-check-label" for="studiolms-structure-free">
+                                {{#str}}structure_free, local_studiolms{{/str}}
+                            </label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="structure"
+                                id="studiolms-structure-abc" value="abc">
+                            <label class="form-check-label" for="studiolms-structure-abc">
+                                {{#str}}structure_abc, local_studiolms{{/str}}
+                            </label>
+                        </div>
+                    </div>
+                </fieldset>
             </div>
-            <div class="form-check">
-                <input class="form-check-input" type="radio" name="structure"
-                    id="studiolms-structure-abc" value="abc">
-                <label class="form-check-label" for="studiolms-structure-abc">
-                    {{#str}}structure_abc, local_studiolms{{/str}}
-                </label>
-            </div>
-        </fieldset>
 
-        <fieldset class="mb-3">
-            <legend class="form-label">{{#str}}briefing_mode, local_studiolms{{/str}}</legend>
-            <div class="form-check">
-                <input class="form-check-input" type="radio" name="mode"
-                    id="studiolms-mode-standard" value="standard" checked>
-                <label class="form-check-label" for="studiolms-mode-standard">
-                    {{#str}}mode_standard, local_studiolms{{/str}}
-                </label>
+            <div class="col-12 col-md-4 mb-3">
+                <fieldset class="card h-100">
+                    <legend class="card-header h6 mb-0">{{#str}}briefing_mode, local_studiolms{{/str}}</legend>
+                    <div class="card-body">
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="mode"
+                                id="studiolms-mode-standard" value="standard" checked>
+                            <label class="form-check-label" for="studiolms-mode-standard">
+                                {{#str}}mode_standard, local_studiolms{{/str}}
+                            </label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="mode"
+                                id="studiolms-mode-gamified" value="gamified" {{^playerhud}}disabled{{/playerhud}}>
+                            <label class="form-check-label" for="studiolms-mode-gamified">
+                                {{#str}}mode_gamified, local_studiolms{{/str}}
+                            </label>
+                        </div>
+                        {{#playerhud}}
+                            <span class="badge bg-success">{{#str}}mode_gamified_detected, local_studiolms{{/str}}</span>
+                        {{/playerhud}}
+                        {{^playerhud}}
+                            <span class="text-muted small">{{#str}}mode_gamified_disabled, local_studiolms{{/str}}</span>
+                        {{/playerhud}}
+                    </div>
+                </fieldset>
             </div>
-            <div class="form-check">
-                <input class="form-check-input" type="radio" name="mode"
-                    id="studiolms-mode-gamified" value="gamified" {{^playerhud}}disabled{{/playerhud}}>
-                <label class="form-check-label" for="studiolms-mode-gamified">
-                    {{#str}}mode_gamified, local_studiolms{{/str}}
-                    {{#playerhud}}
-                        <span class="badge bg-success">{{#str}}mode_gamified_detected, local_studiolms{{/str}}</span>
-                    {{/playerhud}}
-                    {{^playerhud}}
-                        <span class="text-muted">— {{#str}}mode_gamified_disabled, local_studiolms{{/str}}</span>
-                    {{/playerhud}}
-                </label>
-            </div>
-        </fieldset>
+        </div>
 
         <fieldset class="mb-3 d-none" data-region="profiles">
             <legend class="form-label">{{#str}}gamification_profile, local_studiolms{{/str}}</legend>
