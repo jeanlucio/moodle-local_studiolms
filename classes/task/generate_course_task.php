@@ -29,6 +29,7 @@ use local_studiolms\local\ai_json;
 use local_studiolms\local\ai_resolver;
 use local_studiolms\local\course_builder;
 use local_studiolms\local\glossary_builder;
+use local_studiolms\local\quiz_builder;
 use stdClass;
 
 /**
@@ -163,6 +164,11 @@ class generate_course_task extends \core\task\adhoc_task {
             case 'quiz':
                 $intro = \html_writer::tag('p', s($title));
                 $result = course_builder::add_quiz($this->course, $sectionnum, $title, $intro);
+                try {
+                    quiz_builder::create($result->coursemodule, $result->instance, $theme, $title, 5);
+                } catch (\Throwable $e) {
+                    debugging('StudioLMS quiz questions failed: ' . $e->getMessage(), DEBUG_DEVELOPER);
+                }
                 break;
             default:
                 $html = $this->generate_html('page', $theme, $sectiontitle, $title);
