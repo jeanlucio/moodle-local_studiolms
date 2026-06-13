@@ -135,21 +135,21 @@
                         {{^playerhud}}
                             <span class="text-muted small">{{#str}}mode_gamified_disabled, local_studiolms{{/str}}</span>
                         {{/playerhud}}
+
+                        <fieldset class="mt-3 pt-3 border-top d-none" data-region="profiles">
+                            <legend class="form-label h6">{{#str}}gamification_profile, local_studiolms{{/str}}</legend>
+                            {{#profiles}}
+                                <div class="form-check">
+                                    <input class="form-check-input" type="radio" name="profile"
+                                        id="studiolms-profile-{{value}}" value="{{value}}" {{#checked}}checked{{/checked}}>
+                                    <label class="form-check-label" for="studiolms-profile-{{value}}">{{label}}</label>
+                                </div>
+                            {{/profiles}}
+                        </fieldset>
                     </div>
                 </fieldset>
             </div>
         </div>
-
-        <fieldset class="mb-3 d-none" data-region="profiles">
-            <legend class="form-label">{{#str}}gamification_profile, local_studiolms{{/str}}</legend>
-            {{#profiles}}
-                <div class="form-check">
-                    <input class="form-check-input" type="radio" name="profile"
-                        id="studiolms-profile-{{value}}" value="{{value}}" {{#checked}}checked{{/checked}}>
-                    <label class="form-check-label" for="studiolms-profile-{{value}}">{{label}}</label>
-                </div>
-            {{/profiles}}
-        </fieldset>
 
         <div class="form-check mb-2">
             <input class="form-check-input" type="checkbox" name="wipe" id="studiolms-wipe" value="1">
