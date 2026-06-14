@@ -75,6 +75,7 @@ class get_progress extends external_api {
             'errormsg' => (string) ($progress->errormsg ?? ''),
             'courseid' => (int) $progress->courseid,
             'warnings' => is_array($warnings) ? array_values($warnings) : [],
+            'report' => (string) ($progress->reportjson ?? ''),
         ];
     }
 
@@ -94,6 +95,7 @@ class get_progress extends external_api {
             'warnings' => new external_multiple_structure(
                 new external_value(PARAM_TEXT, 'An activity that used simplified content.')
             ),
+            'report' => new external_value(PARAM_RAW, 'JSON array of per-activity generation report.'),
         ]);
     }
 }

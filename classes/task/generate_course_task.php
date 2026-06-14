@@ -67,6 +67,9 @@ class generate_course_task extends \core\task\adhoc_task {
     /** @var array Course learning objectives from the outline. */
     private array $objectives = [];
 
+    /** @var array Per-activity generation report saved to reportjson. */
+    private array $report = [];
+
     #[\Override]
     public function get_name(): string {
         return get_string('task_generate_course', 'local_studiolms');
@@ -164,6 +167,7 @@ class generate_course_task extends \core\task\adhoc_task {
         $type = $activity['type'];
         $title = $activity['title'];
         $degraded = false;
+        $chosenpreset = '';
 
         switch ($type) {
             case 'page':
@@ -175,6 +179,12 @@ class generate_course_task extends \core\task\adhoc_task {
                     $planresult = course_builder::add_page($this->course, $sectionnum, $plantitle, $planhtml);
                     $this->created['cmids'][] = $planresult->coursemodule;
                     $this->progress->total++;
+                    $this->report[] = [
+                        'title' => $plantitle,
+                        'type' => 'page',
+                        'preset' => 'plan',
+                        'degraded' => $plandegraded,
+                    ];
                     if ($plandegraded) {
                         $this->warnings[] = $plantitle . ': ' . $this->course->fullname;
                     }
@@ -187,7 +197,8 @@ class generate_course_task extends \core\task\adhoc_task {
                     $this->reference,
                     $this->bloom,
                     $this->objectives,
-                    $degraded
+                    $degraded,
+                    $chosenpreset
                 );
                 $result = course_builder::add_page($this->course, $sectionnum, $title, $html);
                 break;
@@ -234,7 +245,15 @@ class generate_course_task extends \core\task\adhoc_task {
                 }
                 break;
             default:
-                $html = $this->generate_html('page', $theme, $sectiontitle, $title, $degraded);
+                $html = $this->generate_html(
+                    'page',
+                    $theme,
+                    $sectiontitle,
+                    $title,
+                    $this->reference,
+                    $this->bloom,
+                    $degraded
+                );
                 $result = course_builder::add_page($this->course, $sectionnum, $title, $html);
                 break;
         }
@@ -242,6 +261,13 @@ class generate_course_task extends \core\task\adhoc_task {
         if ($degraded) {
             $this->warnings[] = get_string('activity_' . $type, 'local_studiolms') . ': ' . $title;
         }
+
+        $this->report[] = [
+            'title' => $title,
+            'type' => $type,
+            'preset' => $chosenpreset,
+            'degraded' => $degraded,
+        ];
 
         $this->created['cmids'][] = $result->coursemodule;
         $this->advance(get_string('progress_activity', 'local_studiolms', $title));
@@ -369,6 +395,7 @@ class generate_course_task extends \core\task\adhoc_task {
         global $DB;
         $this->progress->createditems = json_encode($this->created);
         $this->progress->warnings = json_encode($this->warnings);
+        $this->progress->reportjson = json_encode($this->report);
         $this->progress->timemodified = time();
         $DB->update_record('local_studiolms_progress', $this->progress);
     }

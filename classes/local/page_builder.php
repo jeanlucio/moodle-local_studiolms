@@ -47,6 +47,7 @@ class page_builder {
      * @param string $bloom Bloom's taxonomy level, or 'general' for no specific level.
      * @param array $objectives Course learning objectives from the outline.
      * @param bool $degraded Set to true when the AI body could not be generated.
+     * @param string $chosenpreset Set to the preset name, 'blocks', or '' (degraded).
      * @return string The page HTML.
      */
     public static function render(
@@ -57,7 +58,8 @@ class page_builder {
         string $reference = '',
         string $bloom = 'general',
         array $objectives = [],
-        bool &$degraded = false
+        bool &$degraded = false,
+        string &$chosenpreset = ''
     ): string {
         $html = '';
 
@@ -65,7 +67,15 @@ class page_builder {
             $html .= self::pretraining($glossaryterms);
         }
 
-        $body = self::generate_body($theme, $sectiontitle, $pagetitle, $reference, $bloom, $objectives);
+        $body = self::generate_body(
+            $theme,
+            $sectiontitle,
+            $pagetitle,
+            $reference,
+            $bloom,
+            $objectives,
+            $chosenpreset
+        );
         if ($body === '') {
             $degraded = true;
         }
@@ -161,6 +171,7 @@ class page_builder {
      * @param string $reference Reference material from the briefing.
      * @param string $bloom Bloom's taxonomy level, or 'general'.
      * @param array $objectives Course learning objectives.
+     * @param string $chosenpreset Set to the preset name, 'blocks', or '' on failure.
      * @return string Rendered body HTML.
      */
     private static function generate_body(
@@ -169,10 +180,19 @@ class page_builder {
         string $pagetitle,
         string $reference = '',
         string $bloom = 'general',
-        array $objectives = []
+        array $objectives = [],
+        string &$chosenpreset = ''
     ): string {
         try {
-            return self::plan_and_build($theme, $sectiontitle, $pagetitle, $reference, $bloom, $objectives);
+            return self::plan_and_build(
+                $theme,
+                $sectiontitle,
+                $pagetitle,
+                $reference,
+                $bloom,
+                $objectives,
+                $chosenpreset
+            );
         } catch (\Throwable $e) {
             return '';
         }
@@ -253,6 +273,7 @@ class page_builder {
      * @param string $reference Reference material from the briefing.
      * @param string $bloom Bloom's taxonomy level, or 'general'.
      * @param array $objectives Course learning objectives.
+     * @param string $chosenpreset Set to the preset name, 'blocks', or '' on failure.
      * @return string Rendered body HTML.
      */
     private static function plan_and_build(
@@ -261,7 +282,8 @@ class page_builder {
         string $pagetitle,
         string $reference = '',
         string $bloom = 'general',
-        array $objectives = []
+        array $objectives = [],
+        string &$chosenpreset = ''
     ): string {
         $plan = self::plan_page($theme, $sectiontitle, $pagetitle, $reference, $bloom, $objectives);
         if ($plan === null) {
@@ -269,13 +291,16 @@ class page_builder {
         }
 
         if (($plan['strategy'] ?? '') === 'preset') {
+            $chosenpreset = (string) ($plan['preset_name'] ?? 'preset');
             $html = self::build_from_preset($plan);
             if ($html !== '') {
                 return $html;
             }
+            $chosenpreset = '';
         }
 
         if (!empty($plan['blocks']) && is_array($plan['blocks'])) {
+            $chosenpreset = 'blocks';
             $html = '';
             foreach ($plan['blocks'] as $block) {
                 $html .= self::render_block($block);

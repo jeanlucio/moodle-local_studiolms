@@ -22,7 +22,7 @@
  */
 
 import {call as fetchMany} from 'core/ajax';
-import {get_string as getString} from 'core/str';
+import {get_string as getString, get_strings as getStrings} from 'core/str';
 import Config from 'core/config';
 
 const POLL_INTERVAL = 1500;
@@ -39,6 +39,89 @@ export const init = (root, options = {}) => {
     const warningsRegion = root.querySelector('[data-region="warnings"]');
     const done = root.querySelector('[data-region="done"]');
     const backLink = root.querySelector('[data-region="backtocourse"]');
+
+    // Parses the per-activity report and renders a summary panel below the warnings.
+    const showReport = async reportjson => {
+        const container = root.querySelector('[data-region="report"]');
+        if (container === null) {
+            return;
+        }
+        let activities = [];
+        try {
+            activities = JSON.parse(reportjson || '[]');
+        } catch (e) {
+            return;
+        }
+        if (!Array.isArray(activities) || activities.length === 0) {
+            return;
+        }
+
+        const pages = activities.filter(a => a.type === 'page');
+        const total = activities.length;
+        const degradedCount = activities.filter(a => a.degraded).length;
+        const successCount = total - degradedCount;
+
+        const [headingStr, successStr, degradedStr, pagesStr, blocksStr, planStr, fallbackStr] = await getStrings([
+            {key: 'report_heading', component: 'local_studiolms'},
+            {key: 'report_success', component: 'local_studiolms'},
+            {key: 'report_degraded', component: 'local_studiolms'},
+            {key: 'report_pages', component: 'local_studiolms'},
+            {key: 'report_blocks', component: 'local_studiolms'},
+            {key: 'report_plan', component: 'local_studiolms'},
+            {key: 'report_fallback', component: 'local_studiolms'},
+        ]);
+
+        const heading = document.createElement('h6');
+        heading.textContent = headingStr;
+        container.appendChild(heading);
+
+        const summary = document.createElement('p');
+        summary.className = 'mb-1';
+        const successBadge = document.createElement('span');
+        successBadge.className = 'badge bg-success me-1';
+        successBadge.textContent = `${successCount} ${successStr}`;
+        summary.appendChild(successBadge);
+        if (degradedCount > 0) {
+            const degradedBadge = document.createElement('span');
+            degradedBadge.className = 'badge bg-warning text-dark';
+            degradedBadge.textContent = `${degradedCount} ${degradedStr}`;
+            summary.appendChild(degradedBadge);
+        }
+        container.appendChild(summary);
+
+        if (pages.length > 0) {
+            const pagesLabel = document.createElement('p');
+            pagesLabel.className = 'mb-1 mt-2';
+            const strong = document.createElement('strong');
+            strong.textContent = pagesStr;
+            pagesLabel.appendChild(strong);
+            container.appendChild(pagesLabel);
+
+            const list = document.createElement('ul');
+            list.className = 'mb-0 small';
+            pages.forEach(page => {
+                let strategy;
+                if (page.preset === 'blocks') {
+                    strategy = blocksStr;
+                } else if (page.preset === 'plan') {
+                    strategy = planStr;
+                } else if (page.preset && page.preset !== '') {
+                    strategy = page.preset;
+                } else {
+                    strategy = fallbackStr;
+                }
+                const item = document.createElement('li');
+                const titleEl = document.createElement('strong');
+                titleEl.textContent = page.title;
+                item.appendChild(titleEl);
+                item.appendChild(document.createTextNode(` — ${strategy}`));
+                list.appendChild(item);
+            });
+            container.appendChild(list);
+        }
+
+        container.classList.remove('d-none');
+    };
 
     const showWarnings = async warnings => {
         if (!Array.isArray(warnings) || warnings.length === 0) {
@@ -89,6 +172,7 @@ export const init = (root, options = {}) => {
             setBar(1, 1);
             stopAnimation();
             await showWarnings(progress.warnings);
+            await showReport(progress.report ?? '');
             backLink.setAttribute('href', Config.wwwroot + '/course/view.php?id=' + progress.courseid);
             done.classList.remove('d-none');
             return;
