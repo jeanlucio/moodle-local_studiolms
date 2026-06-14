@@ -47,9 +47,9 @@
         <div class="row">
             <div class="col-12 col-md-6 mb-3">
                 <label class="form-label" for="activity-sectionnum">
-                    {{#str}}activity_section, local_studiolms{{/str}} <span class="text-danger" aria-hidden="true">*</span>
+                    {{#str}}activity_section, local_studiolms{{/str}}
                 </label>
-                <select class="form-select" id="activity-sectionnum" name="sectionnum" required>
+                <select class="form-select" id="activity-sectionnum" name="sectionnum">
                     {{#sections}}
                         <option value="{{num}}">{{name}}</option>
                     {{/sections}}
@@ -58,9 +58,9 @@
 
             <div class="col-12 col-md-6 mb-3">
                 <label class="form-label" for="activity-type">
-                    {{#str}}aria_activity_type, local_studiolms{{/str}} <span class="text-danger" aria-hidden="true">*</span>
+                    {{#str}}aria_activity_type, local_studiolms{{/str}}
                 </label>
-                <select class="form-select" id="activity-type" name="type" required>
+                <select class="form-select" id="activity-type" name="type">
                     {{#activitytypes}}
                         <option value="{{value}}">{{label}}</option>
                     {{/activitytypes}}
