@@ -36,7 +36,6 @@ export const init = (root, options = {}) => {
     const bar = root.querySelector('[data-region="bar"]');
     const message = root.querySelector('[data-region="message"]');
     const errorRegion = root.querySelector('[data-region="error"]');
-    const warningsRegion = root.querySelector('[data-region="warnings"]');
     const done = root.querySelector('[data-region="done"]');
     const backLink = root.querySelector('[data-region="backtocourse"]');
 
@@ -47,7 +46,8 @@ export const init = (root, options = {}) => {
         return s > 0 ? `${m} min ${s} s` : `${m} min`;
     };
 
-    // Parses the per-activity report and renders a summary panel below the warnings.
+    // Parses the per-activity report and renders a unified summary panel.
+    // Shows success/simplified badges first, then every activity with type label.
     const showReport = async(reportjson, duration = 0) => {
         const container = root.querySelector('[data-region="report"]');
         if (container === null) {
@@ -63,28 +63,43 @@ export const init = (root, options = {}) => {
             return;
         }
 
-        const pages = activities.filter(a => a.type === 'page');
         const total = activities.length;
         const degradedCount = activities.filter(a => a.degraded).length;
         const successCount = total - degradedCount;
-
         const formattedDuration = duration > 0 ? formatDuration(duration) : '';
-        const [headingStr, successStr, degradedStr, pagesStr, blocksStr, planStr, fallbackStr, durationStr] =
-            await getStrings([
-                {key: 'report_heading', component: 'local_studiolms'},
-                {key: 'report_success', component: 'local_studiolms'},
-                {key: 'report_degraded', component: 'local_studiolms'},
-                {key: 'report_pages', component: 'local_studiolms'},
-                {key: 'report_blocks', component: 'local_studiolms'},
-                {key: 'report_plan', component: 'local_studiolms'},
-                {key: 'report_fallback', component: 'local_studiolms'},
-                {key: 'report_duration', component: 'local_studiolms', param: formattedDuration},
-            ]);
 
+        const [
+            headingStr, successStr, degradedStr, activitiesStr,
+            blocksStr, planStr, fallbackStr, durationStr,
+            typePageStr, typeQuizStr, typeForumStr, typeAssignStr, typeGlossaryStr, typeLabelStr,
+        ] = await getStrings([
+            {key: 'report_heading', component: 'local_studiolms'},
+            {key: 'report_success', component: 'local_studiolms'},
+            {key: 'report_degraded', component: 'local_studiolms'},
+            {key: 'report_activities', component: 'local_studiolms'},
+            {key: 'report_blocks', component: 'local_studiolms'},
+            {key: 'report_plan', component: 'local_studiolms'},
+            {key: 'report_fallback', component: 'local_studiolms'},
+            {key: 'report_duration', component: 'local_studiolms', param: formattedDuration},
+            {key: 'activity_page', component: 'local_studiolms'},
+            {key: 'activity_quiz', component: 'local_studiolms'},
+            {key: 'activity_forum', component: 'local_studiolms'},
+            {key: 'activity_assign', component: 'local_studiolms'},
+            {key: 'activity_glossary', component: 'local_studiolms'},
+            {key: 'activity_label', component: 'local_studiolms'},
+        ]);
+
+        const typeLabels = {
+            page: typePageStr, quiz: typeQuizStr, forum: typeForumStr,
+            assign: typeAssignStr, glossary: typeGlossaryStr, label: typeLabelStr,
+        };
+
+        // Heading
         const heading = document.createElement('h6');
         heading.textContent = headingStr;
         container.appendChild(heading);
 
+        // Duration
         if (formattedDuration !== '') {
             const durationEl = document.createElement('p');
             durationEl.className = 'text-muted small mb-1';
@@ -92,8 +107,9 @@ export const init = (root, options = {}) => {
             container.appendChild(durationEl);
         }
 
+        // Badges — success count first, then simplified count if any
         const summary = document.createElement('p');
-        summary.className = 'mb-1';
+        summary.className = 'mb-2';
         const successBadge = document.createElement('span');
         successBadge.className = 'badge bg-success me-1';
         successBadge.textContent = `${successCount} ${successStr}`;
@@ -106,54 +122,49 @@ export const init = (root, options = {}) => {
         }
         container.appendChild(summary);
 
-        if (pages.length > 0) {
-            const pagesLabel = document.createElement('p');
-            pagesLabel.className = 'mb-1 mt-2';
-            const strong = document.createElement('strong');
-            strong.textContent = pagesStr;
-            pagesLabel.appendChild(strong);
-            container.appendChild(pagesLabel);
+        // Full activity list
+        const listLabel = document.createElement('p');
+        listLabel.className = 'mb-1 mt-2';
+        const strong = document.createElement('strong');
+        strong.textContent = activitiesStr;
+        listLabel.appendChild(strong);
+        container.appendChild(listLabel);
 
-            const list = document.createElement('ul');
-            list.className = 'mb-0 small';
-            pages.forEach(page => {
-                let strategy;
-                if (page.preset === 'blocks') {
-                    strategy = blocksStr;
-                } else if (page.preset === 'plan') {
-                    strategy = planStr;
-                } else if (page.preset && page.preset !== '') {
-                    strategy = page.preset;
-                } else {
-                    strategy = fallbackStr;
-                }
-                const item = document.createElement('li');
-                const titleEl = document.createElement('strong');
-                titleEl.textContent = page.title;
-                item.appendChild(titleEl);
-                item.appendChild(document.createTextNode(` — ${strategy}`));
-                list.appendChild(item);
-            });
-            container.appendChild(list);
-        }
-
-        container.classList.remove('d-none');
-    };
-
-    const showWarnings = async warnings => {
-        if (!Array.isArray(warnings) || warnings.length === 0) {
-            return;
-        }
-        warningsRegion.textContent = await getString('warnings_heading', 'local_studiolms');
         const list = document.createElement('ul');
-        list.classList.add('mb-0', 'mt-2');
-        warnings.forEach(warning => {
+        list.className = 'mb-0 small';
+        activities.forEach(activity => {
+            const typeLabel = typeLabels[activity.type] ?? activity.type;
+
+            let detail = '';
+            if (activity.type === 'page') {
+                if (activity.preset === 'blocks') { detail = blocksStr; }
+                else if (activity.preset === 'plan') { detail = planStr; }
+                else if (activity.preset && activity.preset !== '') { detail = activity.preset; }
+                else { detail = fallbackStr; }
+            } else if (activity.degraded) {
+                detail = fallbackStr;
+            }
+
             const item = document.createElement('li');
-            item.textContent = warning;
+
+            const typeEl = document.createElement('span');
+            typeEl.className = 'text-muted me-1';
+            typeEl.textContent = `[${typeLabel}]`;
+            item.appendChild(typeEl);
+
+            const titleEl = document.createElement('strong');
+            titleEl.textContent = activity.title;
+            item.appendChild(titleEl);
+
+            if (detail !== '') {
+                item.appendChild(document.createTextNode(` — ${detail}`));
+            }
+
             list.appendChild(item);
         });
-        warningsRegion.appendChild(list);
-        warningsRegion.classList.remove('d-none');
+        container.appendChild(list);
+
+        container.classList.remove('d-none');
     };
 
     const setBar = (step, total) => {
@@ -206,7 +217,6 @@ export const init = (root, options = {}) => {
             failedPollCount = 0;
             setBar(1, 1);
             stopAnimation();
-            await showWarnings(progress.warnings);
             const duration = (progress.timemodified ?? 0) - (progress.timecreated ?? 0);
             await showReport(progress.report ?? '', duration);
             backLink.setAttribute('href', Config.wwwroot + '/course/view.php?id=' + progress.courseid);

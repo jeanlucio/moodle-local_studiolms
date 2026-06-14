@@ -176,7 +176,7 @@ class generate_course_task extends \core\task\adhoc_task {
                     $plandegraded = false;
                     $planhtml = page_builder::render_course_intro($theme, $this->course->fullname, [], $plandegraded);
                     $plantitle = get_string('courseplantitle', 'local_studiolms');
-                    $planresult = course_builder::add_page($this->course, $sectionnum, $plantitle, $planhtml);
+                    $planresult = course_builder::add_page($this->course, 0, $plantitle, $planhtml);
                     $this->created['cmids'][] = $planresult->coursemodule;
                     $this->progress->total++;
                     $this->report[] = [
@@ -327,6 +327,7 @@ class generate_course_task extends \core\task\adhoc_task {
 
     /**
      * Removes the existing sections and activities of the course.
+     * The Moodle default news forum (Announcements) is always preserved.
      *
      * @return void
      */
@@ -335,6 +336,11 @@ class generate_course_task extends \core\task\adhoc_task {
 
         $modinfo = get_fast_modinfo($this->course);
         foreach ($modinfo->get_cms() as $cm) {
+            $isnewsforum = $cm->modname === 'forum'
+                && $DB->record_exists('forum', ['id' => $cm->instance, 'course' => $this->course->id, 'type' => 'news']);
+            if ($isnewsforum) {
+                continue;
+            }
             course_delete_module($cm->id);
         }
 

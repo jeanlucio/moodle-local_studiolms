@@ -98,6 +98,7 @@ $string['progress_done'] = 'Course populated.';
 $string['progress_section'] = 'Section added: {$a}';
 $string['provider_playergames'] = 'PlayerGames (local_playergames)';
 $string['provider_studio'] = 'StudioLMS (default)';
+$string['report_activities'] = 'Activities generated:';
 $string['report_blocks'] = 'Custom blocks';
 $string['report_degraded'] = 'simplified';
 $string['report_duration'] = 'Total time: {$a}';
