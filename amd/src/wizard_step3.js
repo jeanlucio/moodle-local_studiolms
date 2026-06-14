@@ -40,7 +40,9 @@ export const init = (root, options = {}) => {
     const backLink = root.querySelector('[data-region="backtocourse"]');
 
     const formatDuration = seconds => {
-        if (seconds < 60) { return `${seconds} s`; }
+        if (seconds < 60) {
+            return `${seconds} s`;
+        }
         const m = Math.floor(seconds / 60);
         const s = seconds % 60;
         return s > 0 ? `${m} min ${s} s` : `${m} min`;
@@ -137,10 +139,15 @@ export const init = (root, options = {}) => {
 
             let detail = '';
             if (activity.type === 'page') {
-                if (activity.preset === 'blocks') { detail = blocksStr; }
-                else if (activity.preset === 'plan') { detail = planStr; }
-                else if (activity.preset && activity.preset !== '') { detail = activity.preset; }
-                else { detail = fallbackStr; }
+                if (activity.preset === 'blocks') {
+                    detail = blocksStr;
+                } else if (activity.preset === 'plan') {
+                    detail = planStr;
+                } else if (activity.preset && activity.preset !== '') {
+                    detail = activity.preset;
+                } else {
+                    detail = fallbackStr;
+                }
             } else if (activity.degraded) {
                 detail = fallbackStr;
             }
@@ -239,8 +246,8 @@ export const init = (root, options = {}) => {
             return;
         }
 
-        // status === 'running' — if recovering from a previous failed attempt
-        // (Moodle auto-retry), clear the error banner and restore the animation.
+        // Running — if recovering from a previous failed attempt (Moodle auto-retry),
+        // clear the error banner and restore the animation.
         if (failedPollCount > 0) {
             failedPollCount = 0;
             errorRegion.textContent = '';

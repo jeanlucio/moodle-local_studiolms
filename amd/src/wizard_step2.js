@@ -74,7 +74,7 @@ export const init = (root, callbacks = {}) => {
             return;
         }
         const costs = {page: 12, quiz: 15, assign: 8, forum: 5, label: 2, glossary: 10};
-        let seconds = 12; // the "Course plan" intro page is always generated
+        let seconds = 12; // The "Course plan" intro page is always generated.
         root.querySelectorAll('[data-region="activity"]').forEach(activity => {
             const type = activity.querySelector('[data-field="activitytype"]')?.value ?? 'page';
             seconds += costs[type] ?? 8;
