@@ -47,6 +47,7 @@ class block_builder {
         'infographicSteps'      => 'tiny_studiolms/block_infographic_steps',
         'infographicTimeline'   => 'tiny_studiolms/block_infographic_timeline',
         'infographicComparison' => 'tiny_studiolms/block_infographic_comparison',
+        'mindmap'               => 'tiny_studiolms/block_mindmap',
     ];
 
     /**
@@ -160,6 +161,9 @@ class block_builder {
                 break;
             case 'infographicComparison':
                 $context = self::infographic_comparison_context($config);
+                break;
+            case 'mindmap':
+                $context = self::mindmap_context($config);
                 break;
             default:
                 return null;
@@ -641,6 +645,351 @@ class block_builder {
 
         $attrs = ' data-slms-block-type="' . $type . '" data-slms-state="' . $chip . '"';
         return $opentag . $attrs . substr($html, $tagend);
+    }
+
+    // -------------------------------------------------------------------------
+    // Mind map block.
+    // --------------------------------------------------------------------------.
+
+    /**
+     * Builds the view model for block_mindmap.
+     *
+     * Generates the SVG diagram in PHP, mirroring the buildSvg() function
+     * from tiny_studiolms/amd/src/blocks/mindmap.js.
+     *
+     * @param array $config Canonical block config (topic, theme, branches).
+     * @return array Mustache context with svgContent and textAlt.
+     */
+    private static function mindmap_context(array $config): array {
+        $colors   = self::mindmap_colors();
+        $theme    = $config['theme'] ?? 'blue';
+        $c        = $colors[$theme] ?? $colors['blue'];
+        $topic    = clean_param((string)($config['topic'] ?? 'Topic'), PARAM_TEXT);
+        $branches = is_array($config['branches'] ?? null) ? array_slice($config['branches'], 0, 8) : [];
+
+        $svgcontent = self::build_mindmap_svg($topic, $branches, $c);
+
+        $branchparts = [];
+        foreach ($branches as $b) {
+            $label = (string)($b['label'] ?? '');
+            $kids  = is_array($b['children'] ?? null)
+                ? array_filter(array_map('strval', $b['children']))
+                : [];
+            $branchparts[] = !empty($kids) ? $label . ' (' . implode(', ', $kids) . ')' : $label;
+        }
+        $textalt = !empty($branchparts) ? $topic . ': ' . implode('; ', $branchparts) : $topic;
+
+        return ['svgContent' => $svgcontent, 'textAlt' => $textalt];
+    }
+
+    /**
+     * Returns the colour palette definitions for the mind map block.
+     *
+     * Mirrors the COLORS constant in tiny_studiolms/amd/src/blocks/mindmap.js.
+     *
+     * @return array Palette definitions indexed by theme name.
+     */
+    private static function mindmap_colors(): array {
+        return [
+            'blue' => [
+                'bg' => '#f0f9ff',
+                'centerFill' => '#1e3a8a', 'centerText' => '#ffffff',
+                'branchFills' => ['#2563eb', '#1d4ed8', '#3b82f6', '#1e40af', '#60a5fa', '#1e40af'],
+                'branchText' => '#ffffff',
+                'childFill' => '#dbeafe', 'childText' => '#1e40af',
+                'lineColor' => '#93c5fd',
+            ],
+            'green' => [
+                'bg' => '#f0fdf4',
+                'centerFill' => '#14532d', 'centerText' => '#ffffff',
+                'branchFills' => ['#16a34a', '#15803d', '#22c55e', '#166534', '#4ade80', '#15803d'],
+                'branchText' => '#ffffff',
+                'childFill' => '#dcfce7', 'childText' => '#14532d',
+                'lineColor' => '#86efac',
+            ],
+            'purple' => [
+                'bg' => '#faf5ff',
+                'centerFill' => '#581c87', 'centerText' => '#ffffff',
+                'branchFills' => ['#9333ea', '#7c3aed', '#a855f7', '#6d28d9', '#c084fc', '#7c3aed'],
+                'branchText' => '#ffffff',
+                'childFill' => '#f3e8ff', 'childText' => '#581c87',
+                'lineColor' => '#c084fc',
+            ],
+            'orange' => [
+                'bg' => '#fff7ed',
+                'centerFill' => '#7c2d12', 'centerText' => '#ffffff',
+                'branchFills' => ['#ea580c', '#f97316', '#c2410c', '#fb923c', '#f97316', '#c2410c'],
+                'branchText' => '#ffffff',
+                'childFill' => '#ffedd5', 'childText' => '#7c2d12',
+                'lineColor' => '#fdba74',
+            ],
+            'red' => [
+                'bg' => '#fff1f2',
+                'centerFill' => '#881337', 'centerText' => '#ffffff',
+                'branchFills' => ['#be123c', '#e11d48', '#f43f5e', '#9f1239', '#fb7185', '#be123c'],
+                'branchText' => '#ffffff',
+                'childFill' => '#ffe4e6', 'childText' => '#881337',
+                'lineColor' => '#fda4af',
+            ],
+            'black' => [
+                'bg' => '#f8fafc',
+                'centerFill' => '#0f172a', 'centerText' => '#f1f5f9',
+                'branchFills' => ['#1e293b', '#334155', '#475569', '#1e293b', '#334155', '#475569'],
+                'branchText' => '#f1f5f9',
+                'childFill' => '#e2e8f0', 'childText' => '#0f172a',
+                'lineColor' => '#94a3b8',
+            ],
+        ];
+    }
+
+    /**
+     * Builds the SVG for a mind map, mirroring buildSvg() from mindmap.js.
+     *
+     * @param string $topic Central node label.
+     * @param array $branches Array of {label, children: string[]}.
+     * @param array $c Colour palette from mindmap_colors().
+     * @return string Complete SVG markup string.
+     */
+    private static function build_mindmap_svg(string $topic, array $branches, array $c): string {
+        $w  = 900;
+        $h  = 620;
+        $cx = (float)($w / 2);
+        $cy = (float)($h / 2);
+        $n  = count($branches);
+        if ($n === 0) {
+            return '';
+        }
+
+        $r1 = 145;
+        if ($n <= 4) {
+            $r1 = 180;
+        } else if ($n <= 6) {
+            $r1 = 162;
+        }
+        $r2           = 124;
+        $manybranches = $n >= 7;
+        $bw           = $manybranches ? 110 : 128;
+        $fontbranch   = $manybranches ? 12 : 13;
+        $bh1          = $manybranches ? 38 : 42;
+        $bh2          = $manybranches ? 48 : 54;
+        $kw           = 112;
+        $fontchild    = 12;
+        $kh1          = 34;
+        $kh2          = 44;
+        $linemax      = $manybranches ? 14 : 15;
+        $childspacing = 122;
+
+        $parts   = [];
+        $parts[] = '<svg xmlns="http://www.w3.org/2000/svg"'
+            . ' viewBox="-10 -10 ' . ($w + 20) . ' ' . ($h + 20) . '"'
+            . ' style="width:100%;max-width:' . $w . 'px;height:auto;display:block;"'
+            . ' aria-hidden="true">';
+        $parts[] = '<rect x="-10" y="-10" width="' . ($w + 20) . '" height="' . ($h + 20) . '"'
+            . ' rx="10" fill="' . $c['bg'] . '"/>';
+
+        $branchpos = [];
+        foreach ($branches as $i => $b) {
+            $angle       = ($i / $n) * M_PI * 2 - M_PI / 2;
+            $branchpos[] = [
+                'x'        => $cx + $r1 * cos($angle),
+                'y'        => $cy + $r1 * sin($angle),
+                'angle'    => $angle,
+                'b'        => $b,
+                'coloridx' => $i % count($c['branchFills']),
+            ];
+        }
+
+        // Connector lines drawn first (below nodes).
+        foreach ($branchpos as $bp) {
+            [$bx, $by, $angle, $b, $coloridx] = [
+                $bp['x'], $bp['y'], $bp['angle'], $bp['b'], $bp['coloridx'],
+            ];
+            $bfill   = $c['branchFills'][$coloridx];
+            $cpos    = self::svg_child_positions($bx, $by, $angle, $b['children'] ?? [], $r2, $childspacing);
+            $mx      = ($cx + $bx) / 2;
+            $parts[] = '<path d="M' . $cx . ',' . $cy . ' Q' . round($mx, 1) . ',' . $cy
+                . ' ' . round($bx, 1) . ',' . round($by, 1) . '"'
+                . ' stroke="' . $c['lineColor'] . '" stroke-width="2.5" fill="none" opacity="0.8"/>';
+            foreach ($cpos as $cp) {
+                $parts[] = '<line x1="' . round($bx, 1) . '" y1="' . round($by, 1) . '"'
+                    . ' x2="' . round($cp['x'], 1) . '" y2="' . round($cp['y'], 1) . '"'
+                    . ' stroke="' . $bfill . '" stroke-width="1.5" opacity="0.5"/>';
+            }
+        }
+
+        // Branch and child nodes drawn above connectors.
+        foreach ($branchpos as $bp) {
+            [$bx, $by, $angle, $b, $coloridx] = [
+                $bp['x'], $bp['y'], $bp['angle'], $bp['b'], $bp['coloridx'],
+            ];
+            $bfill   = $c['branchFills'][$coloridx];
+            $cpos    = self::svg_child_positions($bx, $by, $angle, $b['children'] ?? [], $r2, $childspacing);
+            $blines  = self::svg_wrap_text((string)($b['label'] ?? ''), $linemax);
+            $bh      = count($blines) > 1 ? $bh2 : $bh1;
+            $parts[] = '<rect x="' . round($bx - $bw / 2, 1) . '" y="' . round($by - $bh / 2, 1) . '"'
+                . ' width="' . $bw . '" height="' . $bh . '" rx="' . round($bh / 2) . '"'
+                . ' fill="' . $bfill . '"/>';
+            if (count($blines) === 1) {
+                $parts[] = '<text x="' . round($bx, 1) . '" y="' . round($by + 5, 1) . '"'
+                    . ' text-anchor="middle" fill="' . $c['branchText'] . '"'
+                    . ' font-size="' . $fontbranch . '" font-weight="600"'
+                    . ' font-family="system-ui,sans-serif">'
+                    . self::svg_esc($blines[0]) . '</text>';
+            } else {
+                $yoff    = $fontbranch <= 12 ? 6 : 7;
+                $parts[] = '<text x="' . round($bx, 1) . '" y="' . round($by - $yoff, 1) . '"'
+                    . ' text-anchor="middle" fill="' . $c['branchText'] . '"'
+                    . ' font-size="' . $fontbranch . '" font-weight="600"'
+                    . ' font-family="system-ui,sans-serif">'
+                    . self::svg_esc($blines[0]) . '</text>';
+                $parts[] = '<text x="' . round($bx, 1) . '" y="' . round($by + $yoff + 2, 1) . '"'
+                    . ' text-anchor="middle" fill="' . $c['branchText'] . '"'
+                    . ' font-size="' . $fontbranch . '" font-weight="600"'
+                    . ' font-family="system-ui,sans-serif">'
+                    . self::svg_esc($blines[1]) . '</text>';
+            }
+            foreach ($cpos as $cp) {
+                $klines  = self::svg_wrap_text((string)$cp['label'], 14);
+                $kh      = count($klines) > 1 ? $kh2 : $kh1;
+                $kx      = $cp['x'];
+                $ky      = $cp['y'];
+                $parts[] = '<rect x="' . round($kx - $kw / 2, 1) . '" y="' . round($ky - $kh / 2, 1) . '"'
+                    . ' width="' . $kw . '" height="' . $kh . '" rx="' . round($kh / 2) . '"'
+                    . ' fill="' . $c['childFill'] . '" stroke="' . $bfill . '" stroke-width="1.5"/>';
+                if (count($klines) === 1) {
+                    $parts[] = '<text x="' . round($kx, 1) . '" y="' . round($ky + 5, 1) . '"'
+                        . ' text-anchor="middle" fill="' . $c['childText'] . '"'
+                        . ' font-size="' . $fontchild . '" font-family="system-ui,sans-serif">'
+                        . self::svg_esc($klines[0]) . '</text>';
+                } else {
+                    $parts[] = '<text x="' . round($kx, 1) . '" y="' . round($ky - 5, 1) . '"'
+                        . ' text-anchor="middle" fill="' . $c['childText'] . '"'
+                        . ' font-size="' . $fontchild . '" font-family="system-ui,sans-serif">'
+                        . self::svg_esc($klines[0]) . '</text>';
+                    $parts[] = '<text x="' . round($kx, 1) . '" y="' . round($ky + 9, 1) . '"'
+                        . ' text-anchor="middle" fill="' . $c['childText'] . '"'
+                        . ' font-size="' . $fontchild . '" font-family="system-ui,sans-serif">'
+                        . self::svg_esc($klines[1]) . '</text>';
+                }
+            }
+        }
+
+        // Center node — drawn last (always on top).
+        $cw      = 158;
+        $ch      = 60;
+        $parts[] = '<rect x="' . round($cx - $cw / 2 + 2, 1) . '" y="' . round($cy - $ch / 2 + 3, 1) . '"'
+            . ' width="' . $cw . '" height="' . $ch . '" rx="' . ($ch / 2) . '"'
+            . ' fill="rgba(0,0,0,0.15)"/>';
+        $parts[] = '<rect x="' . round($cx - $cw / 2, 1) . '" y="' . round($cy - $ch / 2, 1) . '"'
+            . ' width="' . $cw . '" height="' . $ch . '" rx="' . ($ch / 2) . '"'
+            . ' fill="' . $c['centerFill'] . '"/>';
+
+        $maxtopic = 14;
+        if (mb_strlen($topic) <= $maxtopic) {
+            $parts[] = '<text x="' . $cx . '" y="' . round($cy + 6, 1) . '"'
+                . ' text-anchor="middle" fill="' . $c['centerText'] . '"'
+                . ' font-size="15" font-weight="700" font-family="system-ui,sans-serif">'
+                . self::svg_esc($topic) . '</text>';
+        } else {
+            $mid    = (int)floor(mb_strlen($topic) / 2);
+            $rawspl = mb_strrpos(mb_substr($topic, 0, $mid + 6), ' ');
+            $split  = ($rawspl === false || $rawspl < 3) ? $maxtopic - 1 : $rawspl;
+            $l1     = mb_substr(mb_substr($topic, 0, $split), 0, $maxtopic);
+            $l2     = mb_substr(trim(mb_substr($topic, $split)), 0, $maxtopic);
+            $parts[] = '<text x="' . $cx . '" y="' . round($cy - 6, 1) . '"'
+                . ' text-anchor="middle" fill="' . $c['centerText'] . '"'
+                . ' font-size="14" font-weight="700" font-family="system-ui,sans-serif">'
+                . self::svg_esc($l1) . '</text>';
+            $parts[] = '<text x="' . $cx . '" y="' . round($cy + 12, 1) . '"'
+                . ' text-anchor="middle" fill="' . $c['centerText'] . '"'
+                . ' font-size="14" font-weight="700" font-family="system-ui,sans-serif">'
+                . self::svg_esc($l2) . '</text>';
+        }
+
+        $parts[] = '</svg>';
+        return implode('', $parts);
+    }
+
+    /**
+     * Computes child node positions perpendicular to the branch direction.
+     *
+     * Mirrors the childPositions() helper in tiny_studiolms/amd/src/blocks/mindmap.js.
+     *
+     * @param float $bx Branch node X coordinate.
+     * @param float $by Branch node Y coordinate.
+     * @param float $angle Branch angle in radians.
+     * @param array $children Child label strings.
+     * @param int $r2 Distance from branch to child row centre.
+     * @param int $childspacing Spacing in px between sibling child nodes.
+     * @return array Child position records, each with keys x, y, label.
+     */
+    private static function svg_child_positions(
+        float $bx,
+        float $by,
+        float $angle,
+        array $children,
+        int $r2,
+        int $childspacing
+    ): array {
+        $m = count($children);
+        if ($m === 0) {
+            return [];
+        }
+        $perpangle = $angle + M_PI / 2;
+        $outx      = $r2 * cos($angle);
+        $outy      = $r2 * sin($angle);
+        $px        = cos($perpangle);
+        $py        = sin($perpangle);
+        $pos       = [];
+        foreach ($children as $j => $child) {
+            $offset = ($j - ($m - 1) / 2) * $childspacing;
+            $pos[]  = [
+                'x'     => $bx + $outx + $offset * $px,
+                'y'     => $by + $outy + $offset * $py,
+                'label' => (string)$child,
+            ];
+        }
+        return $pos;
+    }
+
+    /**
+     * Splits a string into at most two lines for SVG text rendering.
+     *
+     * Mirrors the wrapText() helper in tiny_studiolms/amd/src/blocks/mindmap.js.
+     *
+     * @param string $text Text to wrap.
+     * @param int $linemax Maximum characters per line before attempting a split.
+     * @return string[] Array of 1 or 2 lines.
+     */
+    private static function svg_wrap_text(string $text, int $linemax): array {
+        if (mb_strlen($text) <= $linemax) {
+            return [$text];
+        }
+        $mid   = (int)ceil(mb_strlen($text) / 2);
+        $rawsp = mb_strrpos(mb_substr($text, 0, $mid + 5), ' ');
+        if ($rawsp === false || $rawsp < 1) {
+            $alt = mb_strpos($text, ' ', max(0, $mid - 5));
+            if ($alt === false || $alt < 1) {
+                return [mb_substr($text, 0, $linemax), mb_substr($text, $linemax, $linemax * 2)];
+            }
+            $rawsp = $alt;
+        }
+        $l1 = trim(mb_substr($text, 0, $rawsp));
+        $l2 = trim(mb_substr($text, $rawsp));
+        if (mb_strlen($l2) > $linemax + 3) {
+            $l2 = mb_substr($l2, 0, $linemax + 2) . '…';
+        }
+        return [$l1, $l2];
+    }
+
+    /**
+     * Escapes a string for safe embedding inside an SVG text node.
+     *
+     * @param string $s Raw string.
+     * @return string XML-escaped string.
+     */
+    private static function svg_esc(string $s): string {
+        return htmlspecialchars($s, ENT_XML1, 'UTF-8');
     }
 
     // -------------------------------------------------------------------------

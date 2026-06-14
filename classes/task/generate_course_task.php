@@ -55,6 +55,9 @@ class generate_course_task extends \core\task\adhoc_task {
     /** @var string[] Activities that used simplified content because the AI was unavailable. */
     private $warnings = [];
 
+    /** @var bool Whether the first course-intro page has already been created. */
+    private bool $firstpagecreated = false;
+
     #[\Override]
     public function get_name(): string {
         return get_string('task_generate_course', 'local_studiolms');
@@ -152,7 +155,12 @@ class generate_course_task extends \core\task\adhoc_task {
 
         switch ($type) {
             case 'page':
-                $html = page_builder::render($theme, $sectiontitle, $title, $this->glossaryterms, $degraded);
+                if (!$this->firstpagecreated) {
+                    $this->firstpagecreated = true;
+                    $html = page_builder::render_course_intro($theme, $title, $this->glossaryterms, $degraded);
+                } else {
+                    $html = page_builder::render($theme, $sectiontitle, $title, $this->glossaryterms, $degraded);
+                }
                 $result = course_builder::add_page($this->course, $sectionnum, $title, $html);
                 break;
             case 'label':

@@ -71,6 +71,40 @@ class page_builder {
         return $html;
     }
 
+    /**
+     * Renders the first page of a course using the "Plano de Disciplina" preset.
+     *
+     * Forces the preset regardless of AI planning — the AI only generates the fill
+     * values for content placeholders (topics, objectives). Structural placeholders
+     * (dates, chapter titles) are left for the teacher to complete manually.
+     *
+     * @param string $theme The course theme.
+     * @param string $pagetitle The page title (used as the course name).
+     * @param array $glossaryterms Glossary terms for the pre-training block.
+     * @param bool $degraded Set to true when the AI body could not be generated.
+     * @return string The page HTML.
+     */
+    public static function render_course_intro(
+        string $theme,
+        string $pagetitle,
+        array $glossaryterms,
+        bool &$degraded = false
+    ): string {
+        $html = '';
+        if (!empty($glossaryterms)) {
+            $html .= self::pretraining($glossaryterms);
+        }
+        $body = self::build_course_plan($theme, $pagetitle);
+        if ($body === '') {
+            $degraded = true;
+        }
+        $html .= $body;
+        if (trim(html_to_text($html)) === '') {
+            $html = \html_writer::tag('p', s($pagetitle));
+        }
+        return $html;
+    }
+
     // -----------------------------------------------------------------------
     // Pre-training callout.
     // -----------------------------------------------------------------------.
@@ -133,6 +167,72 @@ class page_builder {
     }
 
     /**
+     * Loads and renders the "Plano de Disciplina" preset with AI-generated fill values.
+     *
+     * Uses the course name and fixed structural values as a base fill, then enriches
+     * with AI-generated topics and objectives. Falls back gracefully when the preset
+     * is unavailable or the AI cannot be reached.
+     *
+     * @param string $theme Course theme.
+     * @param string $pagetitle Page title (used as the course name placeholder).
+     * @return string Rendered preset HTML, or empty string on failure.
+     */
+    private static function build_course_plan(string $theme, string $pagetitle): string {
+        try {
+            $lang   = current_language();
+            $preset = preset_loader::find('Plano de Disciplina', $lang);
+            if ($preset === null) {
+                return '';
+            }
+            $fill = [
+                '[Nome da Disciplina]' => $pagetitle,
+                '[N]'                  => '4',
+                '[X]'                  => '10',
+                '[Y]'                  => '60',
+            ];
+            try {
+                $aifill = self::ai_fill_for_course_plan($theme, $pagetitle);
+                if (!empty($aifill)) {
+                    $fill = array_merge($fill, $aifill);
+                }
+            } catch (\Throwable $e) {
+                debugging('StudioLMS: course plan fill skipped — ' . $e->getMessage(), DEBUG_DEVELOPER);
+            }
+            $preset = self::fill_preset($preset, $fill);
+            return preset_loader::render($preset);
+        } catch (\Throwable $e) {
+            return '';
+        }
+    }
+
+    /**
+     * Asks the AI to generate educational content fill values for the course plan preset.
+     *
+     * Returns a map of [Placeholder] => replacement for topics and learning objectives.
+     * Structural placeholders (dates, chapter titles) are excluded; the teacher fills them.
+     *
+     * @param string $theme Course theme.
+     * @param string $pagetitle Page title.
+     * @return array Map of placeholder string => replacement text.
+     */
+    private static function ai_fill_for_course_plan(string $theme, string $pagetitle): array {
+        $lang = current_language();
+        $keys = '[Tópico 1], [Tópico 2], [Tópico 3], [Tópico 4], [Tópico 5], [Tópico 6],'
+            . ' [descreva o objetivo geral da disciplina], [resultado esperado],'
+            . ' [Objetivo específico 1], [Objetivo específico 2], [Objetivo específico 3],'
+            . ' [Objetivo específico 4], [Objetivo específico 5], [Objetivo específico 6]';
+        $system = 'You are a course syllabus generator. Given a course theme and title,'
+            . ' generate short fill values for a course plan template.'
+            . ' Return ONLY a valid JSON object mapping each key (with square brackets)'
+            . ' to its replacement value (plain text, not HTML, max 80 chars each).'
+            . ' Keys to fill: ' . $keys . '.'
+            . ' Write all text in the language identified by the code: ' . $lang . '.';
+        $user    = "Course theme: {$theme}\nCourse title: {$pagetitle}";
+        $decoded = ai_json::decode(ai_resolver::generate_text($system, $user));
+        return is_array($decoded) ? $decoded : [];
+    }
+
+    /**
      * Asks the AI to plan the page, then builds it.
      *
      * @param string $theme Course theme.
@@ -162,6 +262,7 @@ class page_builder {
             foreach ($plan['blocks'] as $block) {
                 $html .= self::render_block($block);
             }
+            $html .= self::generate_mindmap_block($pagetitle);
             return $html;
         }
 
@@ -265,6 +366,37 @@ class page_builder {
             }
         }
         return $data;
+    }
+
+    // -----------------------------------------------------------------------
+    // Rich visual blocks.
+    // ------------------------------------------------------------------------.
+
+    /**
+     * Generates a mind map block as a visual summary for a content page.
+     *
+     * Calls the tiny_studiolms AI generator directly for the mind map structure
+     * (topic + branches). Silently returns empty string on AI failure so the
+     * page degrades gracefully without losing the text blocks.
+     *
+     * @param string $topic Page topic used as the mind map central node and prompt.
+     * @return string Rendered mindmap block HTML, or empty string on failure.
+     */
+    private static function generate_mindmap_block(string $topic): string {
+        try {
+            $data     = \tiny_studiolms\ai\generator::generate_mindmap($topic);
+            $branches = json_decode((string)($data['branches'] ?? '[]'), true);
+            if (!is_array($branches) || empty($branches)) {
+                return '';
+            }
+            return block_builder::render('mindmap', [
+                'topic'    => $data['topic'] ?? $topic,
+                'theme'    => 'blue',
+                'branches' => $branches,
+            ]);
+        } catch (\Throwable $e) {
+            return '';
+        }
     }
 
     // -----------------------------------------------------------------------
