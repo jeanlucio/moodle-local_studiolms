@@ -55,4 +55,13 @@ $functions = [
         'ajax' => true,
         'capabilities' => 'local/studiolms:generate',
     ],
+
+    'local_studiolms_generate_activity' => [
+        'classname' => 'local_studiolms\external\generate_activity',
+        'methodname' => 'execute',
+        'description' => 'Generates a single activity synchronously in an existing course section.',
+        'type' => 'write',
+        'ajax' => true,
+        'capabilities' => 'local/studiolms:generate',
+    ],
 ];

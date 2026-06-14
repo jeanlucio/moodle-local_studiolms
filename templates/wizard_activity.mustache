@@ -1,0 +1,113 @@
+{{!
+    This file is part of Moodle - https://moodle.org/
+
+    Moodle is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    Moodle is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with Moodle.  If not, see <https://www.gnu.org/licenses/>.
+}}
+{{!
+    @template local_studiolms/wizard_activity
+
+    Single-activity generation form for the StudioLMS course builder.
+
+    Context variables required for this template:
+    * courseid - Target course id.
+    * sections - Array of {num, name} course sections.
+    * activitytypes - Array of {value, label} activity types.
+
+    Example context (json):
+    {
+        "courseid": 5,
+        "sections": [
+            {"num": 0, "name": "General"},
+            {"num": 1, "name": "Section 1"}
+        ],
+        "activitytypes": [
+            {"value": "page", "label": "Page"},
+            {"value": "quiz", "label": "Quiz"}
+        ]
+    }
+}}
+<div class="local-studiolms-wizard d-none" id="local-studiolms-activity">
+    <h3 class="mb-3">{{#str}}activity_heading, local_studiolms{{/str}}</h3>
+
+    <form id="local-studiolms-activity-form" data-courseid="{{courseid}}">
+
+        <div class="alert alert-danger d-none" role="alert" data-region="error"></div>
+
+        <div class="row">
+            <div class="col-12 col-md-6 mb-3">
+                <label class="form-label" for="activity-sectionnum">
+                    {{#str}}activity_section, local_studiolms{{/str}} <span class="text-danger" aria-hidden="true">*</span>
+                </label>
+                <select class="form-select" id="activity-sectionnum" name="sectionnum" required>
+                    {{#sections}}
+                        <option value="{{num}}">{{name}}</option>
+                    {{/sections}}
+                </select>
+            </div>
+
+            <div class="col-12 col-md-6 mb-3">
+                <label class="form-label" for="activity-type">
+                    {{#str}}aria_activity_type, local_studiolms{{/str}} <span class="text-danger" aria-hidden="true">*</span>
+                </label>
+                <select class="form-select" id="activity-type" name="type" required>
+                    {{#activitytypes}}
+                        <option value="{{value}}">{{label}}</option>
+                    {{/activitytypes}}
+                </select>
+            </div>
+        </div>
+
+        <div class="mb-3">
+            <label class="form-label" for="activity-title">
+                {{#str}}aria_activity_title, local_studiolms{{/str}} <span class="text-danger" aria-hidden="true">*</span>
+            </label>
+            <input type="text" class="form-control" id="activity-title" name="title" required>
+        </div>
+
+        <div class="mb-3">
+            <label class="form-label" for="activity-theme">
+                {{#str}}briefing_theme, local_studiolms{{/str}} <span class="text-danger" aria-hidden="true">*</span>
+            </label>
+            <input type="text" class="form-control" id="activity-theme" name="theme" required
+                placeholder="{{#str}}briefing_theme_placeholder, local_studiolms{{/str}}">
+        </div>
+
+        <div class="mb-3">
+            <label class="form-label" for="activity-reference">
+                {{#str}}briefing_reference, local_studiolms{{/str}}
+            </label>
+            <textarea class="form-control" id="activity-reference" name="reference" rows="3"
+                placeholder="{{#str}}briefing_reference_placeholder, local_studiolms{{/str}}"></textarea>
+        </div>
+
+        <div class="alert alert-success d-none" role="status" data-region="result">
+            <p class="mb-2">{{#str}}activity_success, local_studiolms{{/str}}</p>
+            <a href="#" class="btn btn-sm btn-success" data-region="viewlink" target="_blank" rel="noopener">
+                {{#str}}activity_view, local_studiolms{{/str}}
+            </a>
+        </div>
+
+        <div class="d-flex justify-content-start">
+            <button type="button" class="btn btn-secondary me-2" data-action="back-to-landing">
+                {{#str}}btn_back, local_studiolms{{/str}}
+            </button>
+            <button type="submit" class="btn btn-primary" data-action="generate-activity">
+                <span class="spinner-border spinner-border-sm d-none" role="status"
+                    aria-hidden="true" data-region="spinner"></span>
+                <span data-region="btnlabel">{{#str}}btn_generate_activity, local_studiolms{{/str}}</span>
+            </button>
+        </div>
+
+    </form>
+</div>

@@ -18,7 +18,9 @@
  * StudioLMS course builder wizard entry point.
  *
  * Always runs in the context of an existing course; the teacher reaches it
- * from the course navigation. Phase 1 renders the briefing step (step 1).
+ * from the course navigation. Renders the mode-selection landing (single
+ * activity, section, or full-course wizard) and pre-renders all views so
+ * transitions happen client-side without page reloads.
  *
  * @package    local_studiolms
  * @copyright  2026 Jean Lúcio <jeanlucio@gmail.com>
@@ -42,52 +44,89 @@ $PAGE->set_pagelayout('incourse');
 $PAGE->set_title(get_string('generate_heading', 'local_studiolms'));
 $PAGE->set_heading(format_string($course->fullname));
 
+$cancelurl = (new moodle_url('/course/view.php', ['id' => $course->id]))->out(false);
+
+// Section list for the single-activity form.
+
+$sectionrecords = $DB->get_records('course_sections', ['course' => $course->id], 'section ASC');
+$sections = [];
+foreach ($sectionrecords as $sec) {
+    $name = ($sec->name !== '' && $sec->name !== null)
+        ? format_string($sec->name)
+        : get_string('section_number', 'local_studiolms', $sec->section);
+    $sections[] = ['num' => (int) $sec->section, 'name' => $name];
+}
+
+$typekeys = ['page', 'label', 'quiz', 'forum', 'assign', 'glossary'];
+$activitytypes = [];
+foreach ($typekeys as $value) {
+    $activitytypes[] = [
+        'value' => $value,
+        'label' => get_string('activity_' . $value, 'local_studiolms'),
+    ];
+}
+
+// Full-course wizard data (step 1).
+
 $playerhudinstalled = array_key_exists('playerhud', core_component::get_plugin_list('block'));
 
 $bloomdefinitions = [
-    'remember' => 'bloom_remember',
+    'remember'  => 'bloom_remember',
     'understand' => 'bloom_understand',
-    'apply' => 'bloom_apply',
-    'analyze' => 'bloom_analyze',
-    'evaluate' => 'bloom_evaluate',
-    'create' => 'bloom_create',
+    'apply'     => 'bloom_apply',
+    'analyze'   => 'bloom_analyze',
+    'evaluate'  => 'bloom_evaluate',
+    'create'    => 'bloom_create',
 ];
 $bloomlevels = [];
 foreach ($bloomdefinitions as $value => $stringkey) {
     $bloomlevels[] = [
-        'value' => $value,
-        'label' => get_string($stringkey, 'local_studiolms'),
+        'value'   => $value,
+        'label'   => get_string($stringkey, 'local_studiolms'),
         'checked' => $value === 'apply',
     ];
 }
 
 $profiledefinitions = [
-    'conquest' => 'profile_conquest',
+    'conquest'  => 'profile_conquest',
     'narrative' => 'profile_narrative',
-    'social' => 'profile_social',
+    'social'    => 'profile_social',
 ];
 $profiles = [];
 foreach ($profiledefinitions as $value => $stringkey) {
     $profiles[] = [
-        'value' => $value,
-        'label' => get_string($stringkey, 'local_studiolms'),
+        'value'   => $value,
+        'label'   => get_string($stringkey, 'local_studiolms'),
         'checked' => $value === 'narrative',
     ];
 }
 
-$templatecontext = [
-    'courseid' => $course->id,
-    'sesskey' => sesskey(),
-    'cancelurl' => (new moodle_url('/course/view.php', ['id' => $course->id]))->out(false),
-    'steplabel' => get_string('step_of', 'local_studiolms', (object) ['current' => 1, 'total' => 3]),
-    'playerhud' => $playerhudinstalled,
+$step1context = [
+    'courseid'   => $course->id,
+    'sesskey'    => sesskey(),
+    'cancelurl'  => $cancelurl,
+    'steplabel'  => get_string('step_of', 'local_studiolms', (object) ['current' => 1, 'total' => 3]),
+    'playerhud'  => $playerhudinstalled,
     'bloomlevels' => $bloomlevels,
-    'profiles' => $profiles,
+    'profiles'   => $profiles,
+    'hidden'     => true,
 ];
 
+// AMD modules.
+
+$PAGE->requires->js_call_amd('local_studiolms/wizard_landing', 'init');
 $PAGE->requires->js_call_amd('local_studiolms/wizard_step1', 'init');
+$PAGE->requires->js_call_amd('local_studiolms/wizard_activity', 'init');
+
+// Output.
 
 echo $OUTPUT->header();
-echo $OUTPUT->render_from_template('local_studiolms/wizard_step1', $templatecontext);
+echo $OUTPUT->render_from_template('local_studiolms/wizard_landing', ['cancelurl' => $cancelurl]);
+echo $OUTPUT->render_from_template('local_studiolms/wizard_step1', $step1context);
+echo $OUTPUT->render_from_template('local_studiolms/wizard_activity', [
+    'courseid'      => $course->id,
+    'sections'      => $sections,
+    'activitytypes' => $activitytypes,
+]);
 echo html_writer::div('', 'd-none', ['id' => 'local-studiolms-step2']);
 echo $OUTPUT->footer();

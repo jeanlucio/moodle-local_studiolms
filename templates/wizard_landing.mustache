@@ -1,0 +1,97 @@
+{{!
+    This file is part of Moodle - https://moodle.org/
+
+    Moodle is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    Moodle is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with Moodle.  If not, see <https://www.gnu.org/licenses/>.
+}}
+{{!
+    @template local_studiolms/wizard_landing
+
+    Mode selection landing page for the StudioLMS course builder.
+
+    Context variables required for this template:
+    * cancelurl - URL back to the course.
+
+    Example context (json):
+    {
+        "cancelurl": "https://example.com/course/view.php?id=5"
+    }
+}}
+<div class="local-studiolms-wizard" id="local-studiolms-landing">
+    <h3 class="mb-4">{{#str}}landing_heading, local_studiolms{{/str}}</h3>
+
+    <div class="row mb-4">
+        <div class="col-12 col-md-4 mb-3">
+            <div class="card h-100 shadow-sm border-primary">
+                <div class="card-body d-flex flex-column">
+                    <div class="mb-3 text-primary" aria-hidden="true">
+                        <i class="fa fa-cube fa-2x"></i>
+                    </div>
+                    <h5 class="card-title">{{#str}}landing_activity_title, local_studiolms{{/str}}</h5>
+                    <p class="card-text text-muted flex-grow-1">
+                        {{#str}}landing_activity_desc, local_studiolms{{/str}}
+                    </p>
+                    <button type="button" class="btn btn-primary mt-3"
+                            data-action="select-mode" data-mode="activity">
+                        {{#str}}landing_activity_title, local_studiolms{{/str}}
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-12 col-md-4 mb-3">
+            <div class="card h-100 shadow-sm">
+                <div class="card-body d-flex flex-column">
+                    <div class="mb-3 text-muted" aria-hidden="true">
+                        <i class="fa fa-list-alt fa-2x"></i>
+                    </div>
+                    <h5 class="card-title">
+                        {{#str}}landing_section_title, local_studiolms{{/str}}
+                        <span class="badge bg-secondary fw-normal small ms-1">
+                            {{#str}}landing_coming_soon, local_studiolms{{/str}}
+                        </span>
+                    </h5>
+                    <p class="card-text text-muted flex-grow-1">
+                        {{#str}}landing_section_desc, local_studiolms{{/str}}
+                    </p>
+                    <button type="button" class="btn btn-outline-secondary mt-3"
+                            disabled aria-disabled="true">
+                        {{#str}}landing_section_title, local_studiolms{{/str}}
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-12 col-md-4 mb-3">
+            <div class="card h-100 shadow-sm border-primary">
+                <div class="card-body d-flex flex-column">
+                    <div class="mb-3 text-primary" aria-hidden="true">
+                        <i class="fa fa-graduation-cap fa-2x"></i>
+                    </div>
+                    <h5 class="card-title">{{#str}}landing_course_title, local_studiolms{{/str}}</h5>
+                    <p class="card-text text-muted flex-grow-1">
+                        {{#str}}landing_course_desc, local_studiolms{{/str}}
+                    </p>
+                    <button type="button" class="btn btn-primary mt-3"
+                            data-action="select-mode" data-mode="course">
+                        {{#str}}landing_course_title, local_studiolms{{/str}}
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <a class="btn btn-secondary" href="{{cancelurl}}">
+        {{#str}}btn_cancel, local_studiolms{{/str}}
+    </a>
+</div>
