@@ -64,6 +64,7 @@ $string['btn_back'] = 'Back';
 $string['btn_cancel'] = 'Cancel';
 $string['btn_generate_outline'] = 'Generate course';
 $string['btn_populate'] = 'Populate course';
+$string['courseplantitle'] = 'Course plan';
 $string['error_outline_generation'] = 'The outline could not be generated. Please try again.';
 $string['error_populate'] = 'The course could not be populated. Please try again.';
 $string['error_theme_required'] = 'Please enter the theme or content focus.';

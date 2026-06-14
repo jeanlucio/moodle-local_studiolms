@@ -157,10 +157,17 @@ class generate_course_task extends \core\task\adhoc_task {
             case 'page':
                 if (!$this->firstpagecreated) {
                     $this->firstpagecreated = true;
-                    $html = page_builder::render_course_intro($theme, $title, $this->glossaryterms, $degraded);
-                } else {
-                    $html = page_builder::render($theme, $sectiontitle, $title, $this->glossaryterms, $degraded);
+                    $plandegraded = false;
+                    $planhtml = page_builder::render_course_intro($theme, $this->course->fullname, [], $plandegraded);
+                    $plantitle = get_string('courseplantitle', 'local_studiolms');
+                    $planresult = course_builder::add_page($this->course, $sectionnum, $plantitle, $planhtml);
+                    $this->created['cmids'][] = $planresult->coursemodule;
+                    $this->progress->total++;
+                    if ($plandegraded) {
+                        $this->warnings[] = $plantitle . ': ' . $this->course->fullname;
+                    }
                 }
+                $html = page_builder::render($theme, $sectiontitle, $title, $this->glossaryterms, $degraded);
                 $result = course_builder::add_page($this->course, $sectionnum, $title, $html);
                 break;
             case 'label':

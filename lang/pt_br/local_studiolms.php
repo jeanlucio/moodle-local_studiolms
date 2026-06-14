@@ -64,6 +64,7 @@ $string['btn_back'] = 'Voltar';
 $string['btn_cancel'] = 'Cancelar';
 $string['btn_generate_outline'] = 'Gerar curso';
 $string['btn_populate'] = 'Preencher curso';
+$string['courseplantitle'] = 'Plano de Disciplina';
 $string['error_outline_generation'] = 'Não foi possível gerar o outline. Tente novamente.';
 $string['error_populate'] = 'Não foi possível preencher o curso. Tente novamente.';
 $string['error_theme_required'] = 'Informe o tema ou foco do conteúdo.';
