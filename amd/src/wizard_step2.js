@@ -21,7 +21,7 @@
  * @license    https://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
-import {get_strings as getStrings} from 'core/str';
+import {get_string as getString, get_strings as getStrings} from 'core/str';
 
 // Wires the editable course review: renaming, removing and adding objectives,
 // sections and activities, with automatic section numbering and back navigation.
@@ -66,6 +66,27 @@ export const init = (root, callbacks = {}) => {
         };
     };
 
+    // Counts activities by type, applies conservative per-type estimates and
+    // updates the estimate badge near the populate button.
+    const estimateTime = async() => {
+        const el = root.querySelector('[data-region="estimate"]');
+        if (el === null) {
+            return;
+        }
+        const costs = {page: 12, quiz: 15, assign: 8, forum: 5, label: 2, glossary: 10};
+        let seconds = 12; // the "Course plan" intro page is always generated
+        root.querySelectorAll('[data-region="activity"]').forEach(activity => {
+            const type = activity.querySelector('[data-field="activitytype"]')?.value ?? 'page';
+            seconds += costs[type] ?? 8;
+        });
+        const minutes = Math.ceil(seconds / 60);
+        const str = minutes < 1
+            ? await getString('estimate_time_short', 'local_studiolms')
+            : await getString('estimate_time', 'local_studiolms', minutes);
+        el.textContent = str;
+        el.classList.remove('d-none');
+    };
+
     const renumberSections = async() => {
         const sections = Array.from(root.querySelectorAll('[data-region="sections"] > [data-region="section"]'));
         if (sections.length === 0) {
@@ -94,9 +115,11 @@ export const init = (root, callbacks = {}) => {
             case 'remove-section':
                 trigger.closest('[data-region="section"]').remove();
                 await renumberSections();
+                await estimateTime();
                 break;
             case 'remove-activity':
                 trigger.closest('[data-region="activity"]').remove();
+                await estimateTime();
                 break;
             case 'remove-objective':
                 trigger.closest('[data-region="objective"]').remove();
@@ -111,6 +134,7 @@ export const init = (root, callbacks = {}) => {
                 const node = clone('section');
                 root.querySelector('[data-region="sections"]').appendChild(node);
                 await renumberSections();
+                await estimateTime();
                 focusField(node, 'sectiontitle');
                 break;
             }
@@ -118,6 +142,7 @@ export const init = (root, callbacks = {}) => {
                 const activities = trigger.closest('[data-region="section"]').querySelector('[data-region="activities"]');
                 const node = clone('activity');
                 activities.appendChild(node);
+                await estimateTime();
                 focusField(node, 'activitytitle');
                 break;
             }
@@ -139,5 +164,12 @@ export const init = (root, callbacks = {}) => {
         }
     });
 
+    root.addEventListener('change', async event => {
+        if (event.target.closest('[data-field="activitytype"]') !== null) {
+            await estimateTime();
+        }
+    });
+
     renumberSections();
+    estimateTime();
 };

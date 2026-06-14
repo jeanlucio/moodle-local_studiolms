@@ -40,8 +40,15 @@ export const init = (root, options = {}) => {
     const done = root.querySelector('[data-region="done"]');
     const backLink = root.querySelector('[data-region="backtocourse"]');
 
+    const formatDuration = seconds => {
+        if (seconds < 60) { return `${seconds} s`; }
+        const m = Math.floor(seconds / 60);
+        const s = seconds % 60;
+        return s > 0 ? `${m} min ${s} s` : `${m} min`;
+    };
+
     // Parses the per-activity report and renders a summary panel below the warnings.
-    const showReport = async reportjson => {
+    const showReport = async(reportjson, duration = 0) => {
         const container = root.querySelector('[data-region="report"]');
         if (container === null) {
             return;
@@ -61,19 +68,29 @@ export const init = (root, options = {}) => {
         const degradedCount = activities.filter(a => a.degraded).length;
         const successCount = total - degradedCount;
 
-        const [headingStr, successStr, degradedStr, pagesStr, blocksStr, planStr, fallbackStr] = await getStrings([
-            {key: 'report_heading', component: 'local_studiolms'},
-            {key: 'report_success', component: 'local_studiolms'},
-            {key: 'report_degraded', component: 'local_studiolms'},
-            {key: 'report_pages', component: 'local_studiolms'},
-            {key: 'report_blocks', component: 'local_studiolms'},
-            {key: 'report_plan', component: 'local_studiolms'},
-            {key: 'report_fallback', component: 'local_studiolms'},
-        ]);
+        const formattedDuration = duration > 0 ? formatDuration(duration) : '';
+        const [headingStr, successStr, degradedStr, pagesStr, blocksStr, planStr, fallbackStr, durationStr] =
+            await getStrings([
+                {key: 'report_heading', component: 'local_studiolms'},
+                {key: 'report_success', component: 'local_studiolms'},
+                {key: 'report_degraded', component: 'local_studiolms'},
+                {key: 'report_pages', component: 'local_studiolms'},
+                {key: 'report_blocks', component: 'local_studiolms'},
+                {key: 'report_plan', component: 'local_studiolms'},
+                {key: 'report_fallback', component: 'local_studiolms'},
+                {key: 'report_duration', component: 'local_studiolms', param: formattedDuration},
+            ]);
 
         const heading = document.createElement('h6');
         heading.textContent = headingStr;
         container.appendChild(heading);
+
+        if (formattedDuration !== '') {
+            const durationEl = document.createElement('p');
+            durationEl.className = 'text-muted small mb-1';
+            durationEl.textContent = durationStr;
+            container.appendChild(durationEl);
+        }
 
         const summary = document.createElement('p');
         summary.className = 'mb-1';
@@ -190,7 +207,8 @@ export const init = (root, options = {}) => {
             setBar(1, 1);
             stopAnimation();
             await showWarnings(progress.warnings);
-            await showReport(progress.report ?? '');
+            const duration = (progress.timemodified ?? 0) - (progress.timecreated ?? 0);
+            await showReport(progress.report ?? '', duration);
             backLink.setAttribute('href', Config.wwwroot + '/course/view.php?id=' + progress.courseid);
             done.classList.remove('d-none');
             return;

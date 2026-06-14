@@ -76,6 +76,8 @@ class get_progress extends external_api {
             'courseid' => (int) $progress->courseid,
             'warnings' => is_array($warnings) ? array_values($warnings) : [],
             'report' => (string) ($progress->reportjson ?? ''),
+            'timecreated' => (int) $progress->timecreated,
+            'timemodified' => (int) $progress->timemodified,
         ];
     }
 
@@ -96,6 +98,8 @@ class get_progress extends external_api {
                 new external_value(PARAM_TEXT, 'An activity that used simplified content.')
             ),
             'report' => new external_value(PARAM_RAW, 'JSON array of per-activity generation report.'),
+            'timecreated' => new external_value(PARAM_INT, 'Timestamp when generation was requested.'),
+            'timemodified' => new external_value(PARAM_INT, 'Timestamp of the last status update.'),
         ]);
     }
 }
