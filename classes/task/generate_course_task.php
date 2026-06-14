@@ -58,6 +58,15 @@ class generate_course_task extends \core\task\adhoc_task {
     /** @var bool Whether the first course-intro page has already been created. */
     private bool $firstpagecreated = false;
 
+    /** @var string Reference material from the briefing, passed to page content generation. */
+    private string $reference = '';
+
+    /** @var string Bloom's taxonomy level ('general' means no specific level). */
+    private string $bloom = 'general';
+
+    /** @var array Course learning objectives from the outline. */
+    private array $objectives = [];
+
     #[\Override]
     public function get_name(): string {
         return get_string('task_generate_course', 'local_studiolms');
@@ -87,6 +96,9 @@ class generate_course_task extends \core\task\adhoc_task {
         $structure = json_decode($outline->outlinejson, true) ?: [];
         $sections = $structure['sections'] ?? [];
         $theme = $briefing['theme'] ?? '';
+        $this->reference = $briefing['reference'] ?? '';
+        $this->bloom = $briefing['bloom'] ?? 'general';
+        $this->objectives = $structure['objectives'] ?? [];
 
         $this->progress->status = 'running';
         $this->progress->total = self::count_steps($sections);
@@ -167,18 +179,43 @@ class generate_course_task extends \core\task\adhoc_task {
                         $this->warnings[] = $plantitle . ': ' . $this->course->fullname;
                     }
                 }
-                $html = page_builder::render($theme, $sectiontitle, $title, $this->glossaryterms, $degraded);
+                $html = page_builder::render(
+                    $theme,
+                    $sectiontitle,
+                    $title,
+                    $this->glossaryterms,
+                    $this->reference,
+                    $this->bloom,
+                    $this->objectives,
+                    $degraded
+                );
                 $result = course_builder::add_page($this->course, $sectionnum, $title, $html);
                 break;
             case 'label':
                 $result = course_builder::add_label($this->course, $sectionnum, \html_writer::tag('h4', s($title)));
                 break;
             case 'forum':
-                $intro = $this->generate_html('forum', $theme, $sectiontitle, $title, $degraded);
+                $intro = $this->generate_html(
+                    'forum',
+                    $theme,
+                    $sectiontitle,
+                    $title,
+                    $this->reference,
+                    $this->bloom,
+                    $degraded
+                );
                 $result = course_builder::add_forum($this->course, $sectionnum, $title, $intro);
                 break;
             case 'assign':
-                $intro = $this->generate_html('assign', $theme, $sectiontitle, $title, $degraded);
+                $intro = $this->generate_html(
+                    'assign',
+                    $theme,
+                    $sectiontitle,
+                    $title,
+                    $this->reference,
+                    $this->bloom,
+                    $degraded
+                );
                 $result = course_builder::add_assign($this->course, $sectionnum, $title, $intro);
                 break;
             case 'glossary':
@@ -217,6 +254,8 @@ class generate_course_task extends \core\task\adhoc_task {
      * @param string $theme The course theme.
      * @param string $sectiontitle The section title.
      * @param string $title The activity title.
+     * @param string $reference Reference material from the briefing.
+     * @param string $bloom Bloom's taxonomy level, or 'general'.
      * @param bool $degraded Set to true when the AI content could not be generated.
      * @return string The cleaned HTML content.
      */
@@ -225,6 +264,8 @@ class generate_course_task extends \core\task\adhoc_task {
         string $theme,
         string $sectiontitle,
         string $title,
+        string $reference = '',
+        string $bloom = 'general',
         bool &$degraded = false
     ): string {
         $language = current_language();
@@ -239,7 +280,13 @@ class generate_course_task extends \core\task\adhoc_task {
             $system = $instruction . ' Return ONLY a valid JSON object shaped like {"content": "..."} '
                 . 'where content is clean HTML (headings, paragraphs, lists) with no markdown fences. '
                 . "Write in the language identified by the code: {$language}.";
+            if ($bloom !== 'general' && $bloom !== '') {
+                $system .= " Cognitive level (Bloom's taxonomy): {$bloom}.";
+            }
             $user = "Course theme: {$theme}\nSection: {$sectiontitle}\nTitle: {$title}";
+            if ($reference !== '') {
+                $user .= "\n\nReference material:\n" . mb_substr($reference, 0, 3000);
+            }
             $decoded = ai_json::decode(ai_resolver::generate_text($system, $user));
             $html = is_array($decoded) ? trim((string) ($decoded['content'] ?? '')) : '';
             if ($html === '' || trim(html_to_text($html)) === '') {

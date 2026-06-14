@@ -45,7 +45,7 @@ class generate_outline extends external_api {
             'courseid' => new external_value(PARAM_INT, 'Target course id.'),
             'theme' => new external_value(PARAM_TEXT, 'Course theme or content focus.'),
             'reference' => new external_value(PARAM_TEXT, 'Optional reference material.', VALUE_DEFAULT, ''),
-            'bloom' => new external_value(PARAM_ALPHA, "Predominant Bloom's level.", VALUE_DEFAULT, 'apply'),
+            'bloom' => new external_value(PARAM_ALPHA, "Predominant Bloom's level.", VALUE_DEFAULT, 'general'),
             'structure' => new external_value(PARAM_ALPHA, 'Structure preset: free or abc.', VALUE_DEFAULT, 'free'),
             'mode' => new external_value(PARAM_ALPHA, 'Generation mode: standard or gamified.', VALUE_DEFAULT, 'standard'),
             'profile' => new external_value(PARAM_ALPHA, 'Gamification profile.', VALUE_DEFAULT, ''),
@@ -68,7 +68,7 @@ class generate_outline extends external_api {
         int $courseid,
         string $theme,
         string $reference = '',
-        string $bloom = 'apply',
+        string $bloom = 'general',
         string $structure = 'free',
         string $mode = 'standard',
         string $profile = ''

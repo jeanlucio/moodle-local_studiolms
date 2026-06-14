@@ -78,13 +78,32 @@
                 <fieldset class="card h-100">
                     <legend class="card-header h6 mb-0">{{#str}}briefing_bloom, local_studiolms{{/str}}</legend>
                     <div class="card-body">
-                        {{#bloomlevels}}
-                            <div class="form-check">
-                                <input class="form-check-input" type="radio" name="bloom"
-                                    id="studiolms-bloom-{{value}}" value="{{value}}" {{#checked}}checked{{/checked}}>
-                                <label class="form-check-label" for="studiolms-bloom-{{value}}">{{label}}</label>
-                            </div>
-                        {{/bloomlevels}}
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="bloommode"
+                                id="studiolms-bloommode-general" value="general" checked>
+                            <label class="form-check-label" for="studiolms-bloommode-general">
+                                {{#str}}bloom_general, local_studiolms{{/str}}
+                            </label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="bloommode"
+                                id="studiolms-bloommode-taxonomy" value="taxonomy">
+                            <label class="form-check-label" for="studiolms-bloommode-taxonomy">
+                                {{#str}}bloom_taxonomy, local_studiolms{{/str}}
+                            </label>
+                        </div>
+                        <div class="mt-2 pt-2 border-top d-none" data-region="bloomlevels">
+                            {{#bloomlevels}}
+                                <div class="form-check">
+                                    <input class="form-check-input" type="radio" name="bloom"
+                                        id="studiolms-bloom-{{value}}" value="{{value}}"
+                                        {{#checked}}checked{{/checked}}>
+                                    <label class="form-check-label" for="studiolms-bloom-{{value}}">
+                                        {{label}}
+                                    </label>
+                                </div>
+                            {{/bloomlevels}}
+                        </div>
                     </div>
                 </fieldset>
             </div>

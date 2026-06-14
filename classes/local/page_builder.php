@@ -43,6 +43,9 @@ class page_builder {
      * @param string $sectiontitle The section title.
      * @param string $pagetitle The page title.
      * @param array $glossaryterms Glossary terms ([term, definition]) for the pre-training block.
+     * @param string $reference Optional reference material from the briefing.
+     * @param string $bloom Bloom's taxonomy level, or 'general' for no specific level.
+     * @param array $objectives Course learning objectives from the outline.
      * @param bool $degraded Set to true when the AI body could not be generated.
      * @return string The page HTML.
      */
@@ -51,6 +54,9 @@ class page_builder {
         string $sectiontitle,
         string $pagetitle,
         array $glossaryterms,
+        string $reference = '',
+        string $bloom = 'general',
+        array $objectives = [],
         bool &$degraded = false
     ): string {
         $html = '';
@@ -59,7 +65,7 @@ class page_builder {
             $html .= self::pretraining($glossaryterms);
         }
 
-        $body = self::generate_body($theme, $sectiontitle, $pagetitle);
+        $body = self::generate_body($theme, $sectiontitle, $pagetitle, $reference, $bloom, $objectives);
         if ($body === '') {
             $degraded = true;
         }
@@ -152,15 +158,21 @@ class page_builder {
      * @param string $theme Course theme.
      * @param string $sectiontitle Section title.
      * @param string $pagetitle Page title.
+     * @param string $reference Reference material from the briefing.
+     * @param string $bloom Bloom's taxonomy level, or 'general'.
+     * @param array $objectives Course learning objectives.
      * @return string Rendered body HTML.
      */
     private static function generate_body(
         string $theme,
         string $sectiontitle,
-        string $pagetitle
+        string $pagetitle,
+        string $reference = '',
+        string $bloom = 'general',
+        array $objectives = []
     ): string {
         try {
-            return self::plan_and_build($theme, $sectiontitle, $pagetitle);
+            return self::plan_and_build($theme, $sectiontitle, $pagetitle, $reference, $bloom, $objectives);
         } catch (\Throwable $e) {
             return '';
         }
@@ -238,14 +250,20 @@ class page_builder {
      * @param string $theme Course theme.
      * @param string $sectiontitle Section title.
      * @param string $pagetitle Page title.
+     * @param string $reference Reference material from the briefing.
+     * @param string $bloom Bloom's taxonomy level, or 'general'.
+     * @param array $objectives Course learning objectives.
      * @return string Rendered body HTML.
      */
     private static function plan_and_build(
         string $theme,
         string $sectiontitle,
-        string $pagetitle
+        string $pagetitle,
+        string $reference = '',
+        string $bloom = 'general',
+        array $objectives = []
     ): string {
-        $plan = self::plan_page($theme, $sectiontitle, $pagetitle);
+        $plan = self::plan_page($theme, $sectiontitle, $pagetitle, $reference, $bloom, $objectives);
         if ($plan === null) {
             return '';
         }
@@ -277,12 +295,18 @@ class page_builder {
      * @param string $theme Course theme.
      * @param string $sectiontitle Section title.
      * @param string $pagetitle Page title.
+     * @param string $reference Reference material from the briefing.
+     * @param string $bloom Bloom's taxonomy level, or 'general'.
+     * @param array $objectives Course learning objectives.
      * @return array|null Decoded plan, or null when AI is unavailable.
      */
     private static function plan_page(
         string $theme,
         string $sectiontitle,
-        string $pagetitle
+        string $pagetitle,
+        string $reference = '',
+        string $bloom = 'general',
+        array $objectives = []
     ): ?array {
         $lang = current_language();
         $catalog = preset_loader::catalog_for_prompt($lang);
@@ -306,8 +330,21 @@ class page_builder {
             . ' The "fill" map replaces [Placeholder] tokens in the preset (e.g. "[Course name]" -> value).'
             . ' Write all generated text in the language identified by the code: ' . $lang . '.';
 
+        if ($bloom !== 'general' && $bloom !== '') {
+            $system .= " The predominant cognitive level (Bloom's taxonomy) is: {$bloom}.";
+        }
+
         $user = "Course theme: {$theme}\nSection: {$sectiontitle}\nPage title: {$pagetitle}"
             . "\nAvailable presets: {$catalogjson}";
+
+        if (!empty($objectives)) {
+            $objlist = implode('; ', array_slice($objectives, 0, 6));
+            $user .= "\nLearning objectives: {$objlist}";
+        }
+
+        if ($reference !== '') {
+            $user .= "\n\nReference material:\n" . mb_substr($reference, 0, 3000);
+        }
 
         $decoded = ai_json::decode(ai_resolver::generate_text($system, $user));
         if ($decoded === null || empty($decoded['strategy'])) {

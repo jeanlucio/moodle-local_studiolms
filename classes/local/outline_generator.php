@@ -81,17 +81,21 @@ class outline_generator {
      */
     private static function build_system_prompt(array $briefing): string {
         $language = current_language();
-        $bloom = clean_param($briefing['bloom'] ?? 'apply', PARAM_ALPHA);
+        $bloom = clean_param($briefing['bloom'] ?? 'general', PARAM_ALPHA);
         $abc = ($briefing['structure'] ?? 'free') === 'abc';
 
         $lines = [
             'You are an instructional designer building a course outline for Moodle.',
             'Apply Backward Design: first derive the learning objectives, then the assessments '
                 . 'that verify them, then the learning activities that prepare for those assessments.',
-            "The predominant cognitive level (Bloom's taxonomy) for this course is: {$bloom}. "
-                . 'Choose activity types and verbs that match this level.',
-            "Write every title and objective in the language identified by the code: {$language}.",
         ];
+
+        if ($bloom !== 'general' && $bloom !== '') {
+            $lines[] = "The predominant cognitive level (Bloom's taxonomy) for this course is: {$bloom}. "
+                . 'Choose activity types and verbs that match this level.';
+        }
+
+        $lines[] = "Write every title and objective in the language identified by the code: {$language}.";
 
         if ($abc) {
             $lines[] = 'Use ABC Learning Design: give each section a balanced mix of acquisition, '

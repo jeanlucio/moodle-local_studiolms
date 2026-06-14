@@ -153,7 +153,9 @@ const handleSubmit = async form => {
                 courseid: parseInt(form.dataset.courseid, 10),
                 theme: themeInput.value.trim(),
                 reference: referenceInput.value,
-                bloom: getRadioValue(form, 'bloom'),
+                bloom: getRadioValue(form, 'bloommode') === 'taxonomy'
+                    ? getRadioValue(form, 'bloom')
+                    : 'general',
                 structure: getRadioValue(form, 'structure'),
                 mode: getRadioValue(form, 'mode'),
                 profile: getRadioValue(form, 'profile'),
@@ -189,6 +191,9 @@ export const init = () => {
         if (event.target.matches('#' + SELECTORS.form + ' input[name="mode"]')) {
             const gamified = getRadioValue(form, 'mode') === 'gamified';
             form.querySelector('[data-region="profiles"]').classList.toggle('d-none', !gamified);
+        } else if (event.target.matches('#' + SELECTORS.form + ' input[name="bloommode"]')) {
+            const taxonomy = getRadioValue(form, 'bloommode') === 'taxonomy';
+            form.querySelector('[data-region="bloomlevels"]').classList.toggle('d-none', !taxonomy);
         } else if (event.target.id === 'studiolms-wipe') {
             form.querySelector('[data-region="wipewarning"]').classList.toggle('d-none', !event.target.checked);
         }
