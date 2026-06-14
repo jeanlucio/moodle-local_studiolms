@@ -141,13 +141,22 @@ export const init = (root, options = {}) => {
 
     const setBar = (step, total) => {
         const percent = total > 0 ? Math.round((step / total) * 100) : 0;
-        bar.style.width = percent + '%';
+        // Keep a minimum of 5 % so the bar is never invisible while running.
+        bar.style.width = Math.max(percent, 5) + '%';
         bar.setAttribute('aria-valuenow', percent);
     };
 
     const stopAnimation = () => {
         bar.classList.remove('progress-bar-striped', 'progress-bar-animated');
     };
+
+    const restartAnimation = () => {
+        bar.classList.add('progress-bar-striped', 'progress-bar-animated');
+    };
+
+    // Counts consecutive 'failed' responses so we can give up after ~40 s.
+    let failedPollCount = 0;
+    const MAX_FAILED_POLLS = 8;
 
     const poll = async() => {
         let progress;
@@ -166,9 +175,18 @@ export const init = (root, options = {}) => {
         }
 
         message.textContent = progress.message;
-        setBar(progress.step, progress.total);
+
+        // Task is queued but the worker has not picked it up yet — show a
+        // visible waiting indicator instead of an invisible 0 % bar.
+        if (progress.status === 'queued') {
+            bar.style.width = '15%';
+            bar.setAttribute('aria-valuenow', 15);
+            setTimeout(poll, POLL_INTERVAL);
+            return;
+        }
 
         if (progress.status === 'completed') {
+            failedPollCount = 0;
             setBar(1, 1);
             stopAnimation();
             await showWarnings(progress.warnings);
@@ -179,14 +197,30 @@ export const init = (root, options = {}) => {
         }
 
         if (progress.status === 'failed') {
+            failedPollCount++;
             stopAnimation();
             errorRegion.textContent = progress.errormsg !== ''
                 ? progress.errormsg
                 : await getString('error_populate', 'local_studiolms');
             errorRegion.classList.remove('d-none');
+            // Moodle retries failed adhoc tasks automatically. Keep polling so
+            // that a successful retry is reflected without a page reload.
+            if (failedPollCount < MAX_FAILED_POLLS) {
+                setTimeout(poll, POLL_INTERVAL * 3);
+            }
             return;
         }
 
+        // status === 'running' — if recovering from a previous failed attempt
+        // (Moodle auto-retry), clear the error banner and restore the animation.
+        if (failedPollCount > 0) {
+            failedPollCount = 0;
+            errorRegion.textContent = '';
+            errorRegion.classList.add('d-none');
+            restartAnimation();
+        }
+
+        setBar(progress.step, progress.total);
         setTimeout(poll, POLL_INTERVAL);
     };
 
