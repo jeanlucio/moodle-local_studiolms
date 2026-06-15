@@ -5,6 +5,15 @@ Versions align with `$plugin->release` in `version.php`.
 
 ---
 
+## v0.2.1 — 2026-06-15
+
+- Fixed the gamified mode adding no PlayerHUD block when the generation runs in
+  the background task: the block instance is now inserted directly instead of
+  through the page block manager, which cannot resolve a default region without
+  a real page/theme context. Verified end to end on a live course.
+
+---
+
 ## v0.2.0 — 2026-06-15
 
 - Added the gamified generation mode (PlayerHUD integration). When the gamified

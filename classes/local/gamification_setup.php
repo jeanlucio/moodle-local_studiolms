@@ -135,6 +135,11 @@ class gamification_setup {
     /**
      * Adds the PlayerHUD block to the course and applies the profile config.
      *
+     * The block instance is inserted directly rather than through the page
+     * block manager: the generation runs in a background task with no real
+     * page or theme region context, where add_block_at_end_of_default_region()
+     * cannot resolve a default region.
+     *
      * @return void
      */
     private function setup_block(): void {
@@ -142,28 +147,31 @@ class gamification_setup {
 
         $coursecontext = \context_course::instance($this->course->id);
 
-        $page = new \moodle_page();
-        $page->set_context($coursecontext);
-        $page->set_course($this->course);
-        $page->set_pagelayout('course');
-        $page->set_url('/course/view.php', ['id' => $this->course->id]);
-        $page->blocks->add_block_at_end_of_default_region('playerhud');
-
-        $this->instanceid = (int) $DB->get_field_sql(
-            "SELECT MAX(id)
+        $weight = (int) $DB->get_field_sql(
+            "SELECT MAX(defaultweight)
                FROM {block_instances}
-              WHERE blockname = :name AND parentcontextid = :ctx",
-            ['name' => 'playerhud', 'ctx' => $coursecontext->id]
+              WHERE parentcontextid = :ctx AND defaultregion = :region",
+            ['ctx' => $coursecontext->id, 'region' => 'side-pre']
         );
 
-        if ($this->instanceid > 0) {
-            $DB->set_field(
-                'block_instances',
-                'configdata',
-                base64_encode(serialize($this->profile_config())),
-                ['id' => $this->instanceid]
-            );
-        }
+        $now = time();
+        $this->instanceid = (int) $DB->insert_record('block_instances', (object) [
+            'blockname'         => 'playerhud',
+            'parentcontextid'   => $coursecontext->id,
+            'showinsubcontexts' => 0,
+            'requiredbytheme'   => 0,
+            'pagetypepattern'   => 'course-view-*',
+            'subpagepattern'    => null,
+            'defaultregion'     => 'side-pre',
+            'defaultweight'     => $weight + 1,
+            'configdata'        => base64_encode(serialize($this->profile_config())),
+            'timecreated'       => $now,
+            'timemodified'      => $now,
+        ]);
+
+        // Create the block context so capability checks resolve.
+        \context_block::instance($this->instanceid);
+        $coursecontext->mark_dirty();
 
         ($this->advance)(get_string('progress_playerhud', 'local_studiolms'));
     }
