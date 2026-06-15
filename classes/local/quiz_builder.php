@@ -64,7 +64,7 @@ class quiz_builder {
         }
 
         $context = context_module::instance($cmid);
-        $category = question_get_default_category($context->id, true);
+        $category = self::ensure_question_category($context);
         $quiz = $DB->get_record('quiz', ['id' => $quizinstanceid], '*', MUST_EXIST);
 
         $added = 0;
@@ -89,6 +89,43 @@ class quiz_builder {
             \mod_quiz\quiz_settings::create($quiz->id)->get_grade_calculator()->recompute_quiz_sumgrades();
         }
         return $added;
+    }
+
+    /**
+     * Returns the module's default question category, creating it when missing.
+     *
+     * Moodle 5.x auto-creates it via question_get_default_category(..., true), but
+     * Moodle 4.5 does not, so the category is created explicitly as a fallback.
+     *
+     * @param context_module $context The quiz module context.
+     * @return stdClass The default question category.
+     */
+    private static function ensure_question_category(context_module $context): stdClass {
+        global $DB;
+
+        $category = question_get_default_category($context->id, true);
+        if (!empty($category) && !empty($category->id)) {
+            return $category;
+        }
+
+        $existing = question_get_default_category($context->id);
+        if (!empty($existing) && !empty($existing->id)) {
+            return $existing;
+        }
+
+        $top = question_get_top_category($context->id, true);
+        $contextname = $context->get_context_name(false, true);
+        $category = new stdClass();
+        $category->name = shorten_text(get_string('defaultfor', 'question', $contextname), 1333);
+        $category->info = get_string('defaultinfofor', 'question', $contextname);
+        $category->infoformat = FORMAT_HTML;
+        $category->contextid = $context->id;
+        $category->parent = $top->id;
+        $category->sortorder = 999;
+        $category->stamp = make_unique_id_code();
+        $category->id = $DB->insert_record('question_categories', $category);
+
+        return $category;
     }
 
     /**
