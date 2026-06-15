@@ -123,6 +123,7 @@ $string['report_heading'] = 'Relatório de geração';
 $string['report_pages'] = 'Páginas geradas:';
 $string['report_plan'] = 'Plano de Disciplina (preset)';
 $string['report_success'] = 'com sucesso';
+$string['section_done'] = 'Seção preenchida.';
 $string['section_generate_another'] = 'Gerar outra seção';
 $string['section_heading'] = 'Gerar seção';
 $string['section_new'] = 'Nova seção (adicionar ao final do curso)';

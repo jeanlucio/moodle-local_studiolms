@@ -123,6 +123,7 @@ $string['report_heading'] = 'Generation report';
 $string['report_pages'] = 'Pages generated:';
 $string['report_plan'] = 'Course plan (preset)';
 $string['report_success'] = 'successful';
+$string['section_done'] = 'Section populated.';
 $string['section_generate_another'] = 'Generate another section';
 $string['section_heading'] = 'Generate section';
 $string['section_new'] = 'New section (add to end of course)';

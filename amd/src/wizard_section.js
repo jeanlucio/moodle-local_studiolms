@@ -22,7 +22,7 @@
  */
 
 import {call as fetchMany} from 'core/ajax';
-import {get_string as getString} from 'core/str';
+import {get_string as getString, get_strings as getStrings} from 'core/str';
 import Config from 'core/config';
 
 const FORM_ID = 'local-studiolms-section-form';
@@ -306,7 +306,13 @@ const showProgressView = wrapper => {
     progressView.classList.remove('d-none');
     progressView.querySelector('[data-region="done"]').classList.add('d-none');
     progressView.querySelector('[data-region="progress-error"]').classList.add('d-none');
+
+    const report = progressView.querySelector('[data-region="report"]');
+    report.innerHTML = '';
+    report.classList.add('d-none');
+
     const bar = progressView.querySelector('[data-region="bar"]');
+    bar.classList.add('progress-bar-striped', 'progress-bar-animated');
     bar.style.width = '0%';
     bar.setAttribute('aria-valuenow', '0');
 };
@@ -317,6 +323,8 @@ const startPolling = (wrapper, progressid, courseid) => {
     const doneRegion = wrapper.querySelector('[data-region="done"]');
     const errorRegion = wrapper.querySelector('[data-region="progress-error"]');
     const viewLink = wrapper.querySelector('[data-region="viewlink"]');
+
+    const stopAnimation = () => bar.classList.remove('progress-bar-striped', 'progress-bar-animated');
 
     const intervalId = setInterval(async() => {
         try {
@@ -338,10 +346,14 @@ const startPolling = (wrapper, progressid, courseid) => {
                 clearInterval(intervalId);
                 bar.style.width = '100%';
                 bar.setAttribute('aria-valuenow', '100');
+                stopAnimation();
+                const duration = (progress.timemodified ?? 0) - (progress.timecreated ?? 0);
+                await showReport(wrapper, progress.report ?? '', duration);
                 viewLink.href = `${Config.wwwroot}/course/view.php?id=${courseid}`;
                 doneRegion.classList.remove('d-none');
             } else if (progress.status === 'failed') {
                 clearInterval(intervalId);
+                stopAnimation();
                 const msg = progress.errormsg
                     || await getString('error_populate', 'local_studiolms');
                 errorRegion.textContent = msg;
@@ -351,6 +363,136 @@ const startPolling = (wrapper, progressid, courseid) => {
             clearInterval(intervalId);
         }
     }, POLL_INTERVAL);
+};
+
+const formatDuration = seconds => {
+    if (seconds < 60) {
+        return `${seconds} s`;
+    }
+    const m = Math.floor(seconds / 60);
+    const s = seconds % 60;
+    return s > 0 ? `${m} min ${s} s` : `${m} min`;
+};
+
+// Parses the per-activity report JSON and renders a summary panel with badges and a list.
+const showReport = async(wrapper, reportjson, duration = 0) => {
+    const container = wrapper.querySelector('[data-region="report"]');
+    if (container === null) {
+        return;
+    }
+    let activities = [];
+    try {
+        activities = JSON.parse(reportjson || '[]');
+    } catch (e) {
+        return;
+    }
+    if (!Array.isArray(activities) || activities.length === 0) {
+        return;
+    }
+
+    const total = activities.length;
+    const degradedCount = activities.filter(a => a.degraded).length;
+    const successCount = total - degradedCount;
+    const formattedDuration = duration > 0 ? formatDuration(duration) : '';
+
+    const [
+        headingStr, successStr, degradedStr, activitiesStr,
+        blocksStr, planStr, fallbackStr, durationStr,
+        typePageStr, typeQuizStr, typeForumStr, typeAssignStr, typeGlossaryStr, typeLabelStr,
+    ] = await getStrings([
+        {key: 'report_heading', component: 'local_studiolms'},
+        {key: 'report_success', component: 'local_studiolms'},
+        {key: 'report_degraded', component: 'local_studiolms'},
+        {key: 'report_activities', component: 'local_studiolms'},
+        {key: 'report_blocks', component: 'local_studiolms'},
+        {key: 'report_plan', component: 'local_studiolms'},
+        {key: 'report_fallback', component: 'local_studiolms'},
+        {key: 'report_duration', component: 'local_studiolms', param: formattedDuration},
+        {key: 'activity_page', component: 'local_studiolms'},
+        {key: 'activity_quiz', component: 'local_studiolms'},
+        {key: 'activity_forum', component: 'local_studiolms'},
+        {key: 'activity_assign', component: 'local_studiolms'},
+        {key: 'activity_glossary', component: 'local_studiolms'},
+        {key: 'activity_label', component: 'local_studiolms'},
+    ]);
+
+    const typeLabels = {
+        page: typePageStr, quiz: typeQuizStr, forum: typeForumStr,
+        assign: typeAssignStr, glossary: typeGlossaryStr, label: typeLabelStr,
+    };
+
+    const heading = document.createElement('h6');
+    heading.textContent = headingStr;
+    container.appendChild(heading);
+
+    if (formattedDuration !== '') {
+        const durationEl = document.createElement('p');
+        durationEl.className = 'text-muted small mb-1';
+        durationEl.textContent = durationStr;
+        container.appendChild(durationEl);
+    }
+
+    const summary = document.createElement('p');
+    summary.className = 'mb-2';
+    const successBadge = document.createElement('span');
+    successBadge.className = 'badge bg-success me-1';
+    successBadge.textContent = `${successCount} ${successStr}`;
+    summary.appendChild(successBadge);
+    if (degradedCount > 0) {
+        const degradedBadge = document.createElement('span');
+        degradedBadge.className = 'badge bg-warning text-dark';
+        degradedBadge.textContent = `${degradedCount} ${degradedStr}`;
+        summary.appendChild(degradedBadge);
+    }
+    container.appendChild(summary);
+
+    const listLabel = document.createElement('p');
+    listLabel.className = 'mb-1 mt-2';
+    const strong = document.createElement('strong');
+    strong.textContent = activitiesStr;
+    listLabel.appendChild(strong);
+    container.appendChild(listLabel);
+
+    const list = document.createElement('ul');
+    list.className = 'mb-0 small';
+    activities.forEach(activity => {
+        const typeLabel = typeLabels[activity.type] ?? activity.type;
+
+        let detail = '';
+        if (activity.type === 'page') {
+            if (activity.preset === 'blocks') {
+                detail = blocksStr;
+            } else if (activity.preset === 'plan') {
+                detail = planStr;
+            } else if (activity.preset && activity.preset !== '') {
+                detail = activity.preset;
+            } else {
+                detail = fallbackStr;
+            }
+        } else if (activity.degraded) {
+            detail = fallbackStr;
+        }
+
+        const item = document.createElement('li');
+
+        const typeEl = document.createElement('span');
+        typeEl.className = 'text-muted me-1';
+        typeEl.textContent = `[${typeLabel}]`;
+        item.appendChild(typeEl);
+
+        const titleEl = document.createElement('strong');
+        titleEl.textContent = activity.title;
+        item.appendChild(titleEl);
+
+        if (detail !== '') {
+            item.appendChild(document.createTextNode(` — ${detail}`));
+        }
+
+        list.appendChild(item);
+    });
+    container.appendChild(list);
+
+    container.classList.remove('d-none');
 };
 
 // ─── Reset ───────────────────────────────────────────────────────────────────

@@ -60,6 +60,12 @@ class generate_section_task extends \core\task\adhoc_task {
     /** @var string Bloom's taxonomy level ('general' means no specific level). */
     private string $bloom = 'general';
 
+    /** @var string[] Activities that used simplified content because the AI was unavailable. */
+    private array $warnings = [];
+
+    /** @var array Per-activity generation report saved to reportjson. */
+    private array $report = [];
+
     #[\Override]
     public function get_name(): string {
         return get_string('task_generate_section', 'local_studiolms');
@@ -103,7 +109,8 @@ class generate_section_task extends \core\task\adhoc_task {
             if ($sectionnum < 0) {
                 $this->progress->message = get_string('section_planning', 'local_studiolms');
                 $this->update();
-                $sectionnum = (int) course_create_section($this->course->id);
+                $newsection = course_create_section($this->course);
+                $sectionnum = (int) $newsection->section;
                 $this->createdsectionnum = $sectionnum;
             }
 
@@ -139,7 +146,7 @@ class generate_section_task extends \core\task\adhoc_task {
             }
 
             $this->progress->status  = 'completed';
-            $this->progress->message = get_string('progress_done', 'local_studiolms');
+            $this->progress->message = get_string('section_done', 'local_studiolms');
             $this->update();
         } catch (\Throwable $e) {
             $this->rollback();
@@ -229,6 +236,17 @@ class generate_section_task extends \core\task\adhoc_task {
                 $result = course_builder::add_page($this->course, $sectionnum, $title, $html);
                 break;
         }
+
+        if ($degraded) {
+            $this->warnings[] = get_string('activity_' . $type, 'local_studiolms') . ': ' . $title;
+        }
+
+        $this->report[] = [
+            'title'    => $title,
+            'type'     => $type,
+            'preset'   => $chosenpreset,
+            'degraded' => $degraded,
+        ];
 
         $this->createdcmids[] = $result->coursemodule;
         $this->step++;
@@ -320,6 +338,8 @@ class generate_section_task extends \core\task\adhoc_task {
     private function update(): void {
         global $DB;
         $this->progress->createditems = json_encode(['cmids' => $this->createdcmids]);
+        $this->progress->warnings     = json_encode($this->warnings);
+        $this->progress->reportjson   = json_encode($this->report);
         $this->progress->timemodified = time();
         $DB->update_record('local_studiolms_progress', $this->progress);
     }

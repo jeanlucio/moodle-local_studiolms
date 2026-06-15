@@ -145,6 +145,8 @@ class plan_section extends external_api {
         string $bloom,
         string $reference
     ): array {
+        $maxattempts = 3;
+        $backoffseconds = 2;
         $language = current_language();
         $system = 'Return ONLY a valid JSON array of learning activities for a course section. '
             . 'Example: [{"type":"page","title":"Introduction"},{"type":"quiz","title":"Check"}]. '
@@ -163,29 +165,36 @@ class plan_section extends external_api {
 
         $allowed = ['page', 'quiz', 'forum', 'assign', 'label', 'glossary'];
 
-        try {
-            $decoded = ai_json::decode(ai_resolver::generate_text($system, $user));
-            if (!is_array($decoded) || empty($decoded)) {
-                throw new \moodle_exception('invalidairesponse', 'local_studiolms');
-            }
-            $activities = [];
-            foreach ($decoded as $item) {
-                if (!isset($item['type'], $item['title'])) {
-                    continue;
+        for ($attempt = 1; $attempt <= $maxattempts; $attempt++) {
+            try {
+                $decoded = ai_json::decode(ai_resolver::generate_text($system, $user));
+                if (!is_array($decoded) || empty($decoded)) {
+                    throw new \moodle_exception('invalidairesponse', 'local_studiolms');
                 }
-                $type = in_array($item['type'], $allowed, true) ? $item['type'] : 'page';
-                $activities[] = [
-                    'type'  => $type,
-                    'title' => mb_substr((string) $item['title'], 0, 80),
-                ];
+                $activities = [];
+                foreach ($decoded as $item) {
+                    if (!isset($item['type'], $item['title'])) {
+                        continue;
+                    }
+                    $type = in_array($item['type'], $allowed, true) ? $item['type'] : 'page';
+                    $activities[] = [
+                        'type'  => $type,
+                        'title' => mb_substr((string) $item['title'], 0, 80),
+                    ];
+                }
+                if (!empty($activities)) {
+                    return $activities;
+                }
+            } catch (\Throwable $e) {
+                debugging('StudioLMS section plan attempt failed: ' . $e->getMessage(), DEBUG_DEVELOPER);
             }
-            if (empty($activities)) {
-                throw new \moodle_exception('invalidairesponse', 'local_studiolms');
+
+            if ($attempt < $maxattempts) {
+                sleep($backoffseconds);
             }
-            return $activities;
-        } catch (\Throwable $e) {
-            return [['type' => 'page', 'title' => $sectionname]];
         }
+
+        return [['type' => 'page', 'title' => $sectionname]];
     }
 
     /**
