@@ -34,6 +34,26 @@ namespace local_studiolms\local;
  * (class_exists), so local_studiolms does not hard-depend on it.
  */
 class ai_resolver {
+    /** @var callable|null Deterministic provider injected by tests, bypassing real AI. */
+    private static $testingprovider = null;
+
+    /**
+     * Injects a deterministic provider for tests, bypassing the real AI chain.
+     *
+     * The callable receives the system and user prompts and returns the generated
+     * string. Only honoured under PHPUnit or Behat; a no-op (and ignored) otherwise.
+     * Pass null to clear the override.
+     *
+     * @param callable|null $provider fn(string $system, string $user): string, or null.
+     * @return void
+     */
+    public static function set_provider_for_testing(?callable $provider): void {
+        if (!defined('PHPUNIT_TEST') && !defined('BEHAT_SITE_RUNNING')) {
+            return;
+        }
+        self::$testingprovider = $provider;
+    }
+
     /**
      * Generates free text from the resolved AI provider.
      *
@@ -43,6 +63,14 @@ class ai_resolver {
      * @throws \moodle_exception When no AI provider is available.
      */
     public static function generate_text(string $systemprompt, string $userprompt): string {
+        // Test seam: a deterministic provider injected by PHPUnit/Behat wins.
+        if (
+            self::$testingprovider !== null
+            && (defined('PHPUNIT_TEST') || defined('BEHAT_SITE_RUNNING'))
+        ) {
+            return (string) (self::$testingprovider)($systemprompt, $userprompt);
+        }
+
         // Primary: the PlayerGames hub resolves personal → site → core_ai internally.
         if (class_exists('\local_playergames\cartridge\ai_generator')) {
             $hub = new \local_playergames\cartridge\ai_generator();

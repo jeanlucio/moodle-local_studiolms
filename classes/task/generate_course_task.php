@@ -472,7 +472,7 @@ class generate_course_task extends \core\task\adhoc_task {
         $outline->timemodified = time();
         $DB->update_record('local_studiolms_outline', $outline);
 
-        $DB->insert_record('local_studiolms_generation_log', (object) [
+        $logid = $DB->insert_record('local_studiolms_generation_log', (object) [
             'userid' => $this->progress->userid,
             'courseid' => $this->course->id,
             'mode' => $briefing['mode'] ?? 'standard',
@@ -484,6 +484,17 @@ class generate_course_task extends \core\task\adhoc_task {
             'timecreated' => time(),
             'timecompleted' => time(),
         ]);
+
+        \local_studiolms\event\course_generated::create([
+            'context' => context_course::instance($this->course->id),
+            'objectid' => $logid,
+            'userid' => $this->progress->userid,
+            'courseid' => $this->course->id,
+            'other' => [
+                'mode' => $briefing['mode'] ?? 'standard',
+                'profile' => $briefing['profile'] ?? null,
+            ],
+        ])->trigger();
     }
 
     /**
@@ -501,5 +512,14 @@ class generate_course_task extends \core\task\adhoc_task {
         $this->progress->errormsg = $message;
         $this->progress->timemodified = time();
         $DB->update_record('local_studiolms_progress', $this->progress);
+
+        if (!empty($this->course)) {
+            \local_studiolms\event\generation_failed::create([
+                'context' => context_course::instance($this->course->id),
+                'userid' => $this->progress->userid,
+                'courseid' => $this->course->id,
+                'other' => ['error' => $message],
+            ])->trigger();
+        }
     }
 }

@@ -5,6 +5,20 @@ Versions align with `$plugin->release` in `version.php`.
 
 ---
 
+## v0.4.0 — 2026-06-15
+
+- Added two events: `course_generated` (fired with the audit-log id when a
+  generation finishes) and `generation_failed` (fired with the error message
+  when a run fails and rolls back).
+- Added a complete Privacy API provider declaring the three teacher-owned tables
+  (generation log, draft outline, progress), with export and deletion by user,
+  by context and by user list.
+- Added a test seam (`ai_resolver::set_provider_for_testing`) honoured only under
+  PHPUnit/Behat, so the generation pipeline can be exercised deterministically
+  without calling a real AI provider.
+
+---
+
 ## v0.3.0 — 2026-06-15
 
 - The `tiny_studiolms` editor is no longer a hard dependency: StudioLMS now runs
