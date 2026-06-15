@@ -32,24 +32,5 @@ if ($hassiteconfig) {
         'local_studiolms/aiheading',
         get_string('aiheading', 'local_studiolms'),
         get_string('aikeys_info', 'local_studiolms')
-            . ' '
-            . html_writer::link(
-                new moodle_url('/admin/settings.php', ['section' => 'tiny_studiolms']),
-                get_string('aikeys_configure', 'local_studiolms')
-            )
-    ));
-
-    // PlayerGames is offered as an alternative provider only when it is installed.
-    $provideroptions = ['studio' => get_string('provider_studio', 'local_studiolms')];
-    if (array_key_exists('playergames', core_component::get_plugin_list('local'))) {
-        $provideroptions['playergames'] = get_string('provider_playergames', 'local_studiolms');
-    }
-
-    $settings->add(new admin_setting_configselect(
-        'local_studiolms/preferredprovider',
-        get_string('preferredprovider', 'local_studiolms'),
-        get_string('preferredprovider_desc', 'local_studiolms'),
-        'studio',
-        $provideroptions
     ));
 }

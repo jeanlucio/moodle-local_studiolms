@@ -5,6 +5,15 @@ Versions align with `$plugin->release` in `version.php`.
 
 ---
 
+## v0.2.4 — 2026-06-15
+
+- Removed the now-unused "preferred AI provider" admin setting (the AI engine is
+  resolved automatically: PlayerGames hub → `core_ai`). The AI settings heading no
+  longer points to the editor for keys; it explains that AI comes from `core_ai`
+  or the PlayerGames hub.
+
+---
+
 ## v0.2.3 — 2026-06-15
 
 - AI text generation now goes through the PlayerGames hub (`local_playergames`)
