@@ -104,7 +104,6 @@ foreach ($profiledefinitions as $value => $stringkey) {
 $step1context = [
     'courseid'   => $course->id,
     'sesskey'    => sesskey(),
-    'cancelurl'  => $cancelurl,
     'steplabel'  => get_string('step_of', 'local_studiolms', (object) ['current' => 1, 'total' => 3]),
     'playerhud'  => $playerhudinstalled,
     'bloomlevels' => $bloomlevels,
