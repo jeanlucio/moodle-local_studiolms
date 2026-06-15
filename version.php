@@ -24,12 +24,12 @@
 
 defined('MOODLE_INTERNAL') || die();
 
-$plugin->version = 2026061501;
+$plugin->version = 2026061502;
 $plugin->requires = 2024100700; // Requires Moodle 4.5+ (Compatible with 5.x).
 $plugin->supported = [405, 502];
 $plugin->component = 'local_studiolms';
 $plugin->maturity = MATURITY_ALPHA;
-$plugin->release = 'v0.1.0';
+$plugin->release = 'v0.2.0';
 $plugin->dependencies = [
     'tiny_studiolms' => ANY_VERSION,
 ];

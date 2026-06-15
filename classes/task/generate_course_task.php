@@ -28,6 +28,7 @@ use context_course;
 use local_studiolms\local\ai_json;
 use local_studiolms\local\ai_resolver;
 use local_studiolms\local\course_builder;
+use local_studiolms\local\gamification_setup;
 use local_studiolms\local\glossary_builder;
 use local_studiolms\local\page_builder;
 use local_studiolms\local\quiz_builder;
@@ -69,6 +70,12 @@ class generate_course_task extends \core\task\adhoc_task {
 
     /** @var array Per-activity generation report saved to reportjson. */
     private array $report = [];
+
+    /** @var array Created course module ids grouped by module name (quiz, assign, forum). */
+    private array $cmidsbytype = ['quiz' => [], 'assign' => [], 'forum' => []];
+
+    /** @var string[] Section titles, used by the gamified narrative profile. */
+    private array $sectiontitles = [];
 
     #[\Override]
     public function get_name(): string {
@@ -113,6 +120,7 @@ class generate_course_task extends \core\task\adhoc_task {
                 $this->wipe_course();
             }
             $this->build($sections, $theme);
+            $this->gamify($briefing, $theme);
             $this->complete($outline, $briefing);
         } catch (\Throwable $e) {
             $this->rollback();
@@ -144,6 +152,7 @@ class generate_course_task extends \core\task\adhoc_task {
     private function build(array $sections, string $theme): void {
         foreach ($sections as $section) {
             $title = $section['title'];
+            $this->sectiontitles[] = $title;
             $record = course_builder::create_section($this->course, $title);
             $this->created['sectionids'][] = $record->id;
             $this->advance(get_string('progress_section', 'local_studiolms', $title));
@@ -270,7 +279,46 @@ class generate_course_task extends \core\task\adhoc_task {
         ];
 
         $this->created['cmids'][] = $result->coursemodule;
+        if (isset($this->cmidsbytype[$type])) {
+            $this->cmidsbytype[$type][] = $result->coursemodule;
+        }
         $this->advance(get_string('progress_activity', 'local_studiolms', $title));
+    }
+
+    /**
+     * Configures PlayerHUD gamification when the gamified mode is selected.
+     *
+     * Runs after the course content is built. Failures here are recorded as
+     * warnings and never roll back the already-created course content.
+     *
+     * @param array $briefing The briefing data (mode, profile).
+     * @param string $theme The course theme.
+     * @return void
+     */
+    private function gamify(array $briefing, string $theme): void {
+        $mode = $briefing['mode'] ?? 'standard';
+        if ($mode !== 'gamified' || !gamification_setup::is_available()) {
+            return;
+        }
+
+        $profile = $briefing['profile'] ?? gamification_setup::PROFILE_CONQUEST;
+        $this->progress->total += gamification_setup::step_count($profile);
+        $this->update();
+
+        try {
+            $warnings = gamification_setup::run(
+                $this->course,
+                $profile,
+                $theme,
+                $this->cmidsbytype,
+                $this->sectiontitles,
+                fn(string $message) => $this->advance($message)
+            );
+            $this->warnings = array_merge($this->warnings, $warnings);
+        } catch (\Throwable $e) {
+            debugging('StudioLMS gamification failed: ' . $e->getMessage(), DEBUG_DEVELOPER);
+            $this->warnings[] = get_string('progress_playerhud', 'local_studiolms');
+        }
     }
 
     /**
