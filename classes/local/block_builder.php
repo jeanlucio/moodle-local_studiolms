@@ -98,14 +98,24 @@ class block_builder {
     ];
 
     /**
-     * Renders a block as editable Studio HTML.
+     * Renders a block as Studio HTML.
+     *
+     * When the tiny_studiolms editor is installed the block uses its rich Mustache
+     * templates and is wrapped with the editor contract attributes so it reopens for
+     * editing. When the editor is absent the block falls back to plain semantic HTML
+     * (Bootstrap/core markup) via render_plain(), which displays correctly but cannot
+     * be reopened in the visual editor.
      *
      * @param string $type The block registry id (for example 'callout').
      * @param array $config The canonical block configuration.
-     * @return string The wrapped editable HTML, or an empty string when the type is unsupported.
+     * @return string The block HTML, or an empty string when the type is unsupported.
      */
     public static function render(string $type, array $config): string {
         global $OUTPUT;
+
+        if (!self::tiny_available()) {
+            return self::render_plain($type, $config);
+        }
 
         $adapter = self::adapt($type, $config);
         if ($adapter === null) {
@@ -114,6 +124,17 @@ class block_builder {
 
         $html = $OUTPUT->render_from_template($adapter['template'], $adapter['context']);
         return self::wrap($html, $type, $config);
+    }
+
+    /**
+     * Returns true when the tiny_studiolms editor plugin is present on disk, so its
+     * block Mustache templates can be rendered. When false, blocks render as plain
+     * semantic HTML instead.
+     *
+     * @return bool
+     */
+    private static function tiny_available(): bool {
+        return \core_component::get_component_directory('tiny_studiolms') !== null;
     }
 
     /**
@@ -645,6 +666,390 @@ class block_builder {
 
         $attrs = ' data-slms-block-type="' . $type . '" data-slms-state="' . $chip . '"';
         return $opentag . $attrs . substr($html, $tagend);
+    }
+
+    // -------------------------------------------------------------------------
+    // Plain fallback — semantic HTML used when tiny_studiolms is not installed.
+    // -------------------------------------------------------------------------.
+
+    /**
+     * Renders a block as plain semantic HTML for when the tiny_studiolms editor is
+     * absent. Output uses Bootstrap/core markup only (no slms-* classes, no inline
+     * styles, no editor contract attributes), so it displays on any Moodle theme but
+     * cannot be reopened in the visual editor.
+     *
+     * @param string $type The block registry id.
+     * @param array $config The canonical block configuration.
+     * @return string Semantic HTML, or an empty string when the type is unsupported.
+     */
+    private static function render_plain(string $type, array $config): string {
+        switch ($type) {
+            case 'stylizedHeading':
+                return self::plain_heading($config);
+            case 'callout':
+                return self::plain_callout($config);
+            case 'advancedCard':
+                return self::plain_card($config);
+            case 'accordion':
+                return self::plain_accordion($config);
+            case 'gridcards':
+                return self::plain_gridcards($config);
+            case 'table':
+                return self::plain_table($config);
+            case 'infographic':
+                return self::plain_stats($config);
+            case 'infographicFeatures':
+                return self::plain_features($config);
+            case 'infographicSteps':
+                return self::plain_steps($config);
+            case 'infographicTimeline':
+                return self::plain_timeline($config);
+            case 'infographicComparison':
+                return self::plain_comparison($config);
+            case 'mindmap':
+                return self::plain_mindmap($config);
+            default:
+                return '';
+        }
+    }
+
+    /**
+     * Plain fallback for stylizedHeading: a heading element with the optional icon.
+     *
+     * @param array $config Canonical block config.
+     * @return string HTML.
+     */
+    private static function plain_heading(array $config): string {
+        $level = ($config['level'] ?? 'h3') === 'h4' ? 'h4' : 'h3';
+        $icon = trim((string) ($config['icon'] ?? ''));
+        $text = trim((string) ($config['text'] ?? ''));
+        $label = ($icon !== '' ? $icon . ' ' : '') . $text;
+        if (trim($label) === '') {
+            return '';
+        }
+        return \html_writer::tag($level, s($label));
+    }
+
+    /**
+     * Plain fallback for callout: a Bootstrap alert with the rich content.
+     *
+     * @param array $config Canonical block config.
+     * @return string HTML.
+     */
+    private static function plain_callout(array $config): string {
+        $icon = trim((string) ($config['icon'] ?? ''));
+        $content = (string) ($config['contentHtml'] ?? '');
+        $inner = ($icon !== '' ? \html_writer::tag('span', s($icon), ['class' => 'me-2']) : '') . $content;
+        return \html_writer::div($inner, 'alert alert-secondary');
+    }
+
+    /**
+     * Plain fallback for advancedCard: a Bootstrap card with optional image and button.
+     *
+     * @param array $config Canonical block config.
+     * @return string HTML.
+     */
+    private static function plain_card(array $config): string {
+        $mediaurl = trim((string) ($config['mediaUrl'] ?? ''));
+        $content = (string) ($config['content'] ?? '');
+        $btntext = trim((string) ($config['btnText'] ?? ''));
+
+        $parts = '';
+        if (($config['mediaType'] ?? 'none') === 'image' && $mediaurl !== '') {
+            $parts .= \html_writer::empty_tag('img', [
+                'src' => $mediaurl, 'class' => 'card-img-top', 'alt' => '',
+            ]);
+        }
+        $body = $content;
+        if ($btntext !== '') {
+            $body .= \html_writer::link(
+                (string) ($config['btnUrl'] ?? '#'),
+                s($btntext),
+                ['class' => 'btn btn-primary mt-2']
+            );
+        }
+        $parts .= \html_writer::div($body, 'card-body');
+        return \html_writer::div($parts, 'card mb-3');
+    }
+
+    /**
+     * Plain fallback for accordion: a native disclosure (details/summary).
+     *
+     * @param array $config Canonical block config.
+     * @return string HTML.
+     */
+    private static function plain_accordion(array $config): string {
+        $title = trim((string) ($config['title'] ?? ''));
+        $content = (string) ($config['content'] ?? '');
+        $summary = \html_writer::tag('summary', s($title !== '' ? $title : '…'));
+        $attrs = ['class' => 'mb-3'];
+        if (($config['state'] ?? 'closed') === 'open') {
+            $attrs['open'] = 'open';
+        }
+        return \html_writer::tag('details', $summary . $content, $attrs);
+    }
+
+    /**
+     * Plain fallback for gridcards: a responsive Bootstrap row of columns.
+     *
+     * @param array $config Canonical block config.
+     * @return string HTML.
+     */
+    private static function plain_gridcards(array $config): string {
+        $cols = max(1, (int) ($config['columns'] ?? 2));
+        $slots = is_array($config['slots'] ?? null) ? $config['slots'] : [];
+        $title = trim((string) ($config['containerTitle'] ?? ''));
+
+        $cells = '';
+        for ($i = 0; $i < $cols; $i++) {
+            $cells .= \html_writer::div(!empty($slots[$i]) ? (string) $slots[$i] : '', 'col');
+        }
+        $row = \html_writer::div($cells, 'row row-cols-1 row-cols-md-' . $cols . ' g-3');
+        $heading = $title !== '' ? \html_writer::tag('h3', s($title)) : '';
+        return \html_writer::div($heading . $row, 'mb-3');
+    }
+
+    /**
+     * Plain fallback for table: a Bootstrap table with the first row as the header.
+     *
+     * @param array $config Canonical block config.
+     * @return string HTML.
+     */
+    private static function plain_table(array $config): string {
+        $numrows = max(2, (int) ($config['rows'] ?? 4));
+        $numcols = max(1, (int) ($config['cols'] ?? 3));
+        $celldata = is_array($config['cellData'] ?? null) ? $config['cellData'] : [];
+
+        $headcells = '';
+        $headrow = $celldata[0] ?? [];
+        for ($c = 0; $c < $numcols; $c++) {
+            $headcells .= \html_writer::tag('th', !empty($headrow[$c]) ? (string) $headrow[$c] : '&nbsp;', [
+                'scope' => 'col',
+            ]);
+        }
+        $thead = \html_writer::tag('thead', \html_writer::tag('tr', $headcells));
+
+        $bodyrows = '';
+        for ($r = 1; $r < $numrows; $r++) {
+            $rowdata = $celldata[$r] ?? [];
+            $cells = '';
+            for ($c = 0; $c < $numcols; $c++) {
+                $cells .= \html_writer::tag('td', !empty($rowdata[$c]) ? (string) $rowdata[$c] : '&nbsp;');
+            }
+            $bodyrows .= \html_writer::tag('tr', $cells);
+        }
+        $tbody = \html_writer::tag('tbody', $bodyrows);
+
+        $class = 'table table-bordered' . (($config['style'] ?? 'striped') === 'striped' ? ' table-striped' : '');
+        return \html_writer::tag('table', $thead . $tbody, ['class' => $class]);
+    }
+
+    /**
+     * Plain fallback for the stats infographic: a responsive row of value/label cards.
+     *
+     * @param array $config Canonical block config.
+     * @return string HTML.
+     */
+    private static function plain_stats(array $config): string {
+        $items = is_array($config['items'] ?? null) ? $config['items'] : [];
+        $cells = '';
+        foreach ($items as $item) {
+            $value = trim((string) ($item['value'] ?? ''));
+            $label = trim((string) ($item['label'] ?? ''));
+            if ($value === '' && $label === '') {
+                continue;
+            }
+            $inner = \html_writer::div(s($value), 'h4 mb-1') . \html_writer::div(s($label), 'text-secondary');
+            $cells .= \html_writer::div(\html_writer::div($inner, 'border rounded p-3 h-100 text-center'), 'col');
+        }
+        if ($cells === '') {
+            return '';
+        }
+        $title = trim((string) ($config['title'] ?? ''));
+        $heading = $title !== '' ? \html_writer::tag('h3', s($title)) : '';
+        return \html_writer::div($heading . \html_writer::div($cells, 'row row-cols-1 row-cols-md-3 g-3'), 'mb-3');
+    }
+
+    /**
+     * Plain fallback for the features infographic: a responsive row of titled cards.
+     *
+     * @param array $config Canonical block config.
+     * @return string HTML.
+     */
+    private static function plain_features(array $config): string {
+        $cols = ($config['columns'] ?? 3) === 2 ? 2 : 3;
+        $items = is_array($config['items'] ?? null) ? $config['items'] : [];
+        $cells = '';
+        foreach ($items as $item) {
+            $name = trim((string) ($item['title'] ?? ''));
+            if ($name === '') {
+                continue;
+            }
+            $desc = trim((string) ($item['description'] ?? ''));
+            $body = \html_writer::tag('h5', s($name), ['class' => 'card-title']);
+            if ($desc !== '') {
+                $body .= \html_writer::tag('p', s($desc), ['class' => 'card-text']);
+            }
+            $card = \html_writer::div(\html_writer::div($body, 'card-body'), 'card h-100');
+            $cells .= \html_writer::div($card, 'col');
+        }
+        if ($cells === '') {
+            return '';
+        }
+        $title = trim((string) ($config['title'] ?? ''));
+        $heading = $title !== '' ? \html_writer::tag('h3', s($title)) : '';
+        return \html_writer::div($heading . \html_writer::div($cells, 'row row-cols-1 row-cols-md-' . $cols . ' g-3'), 'mb-3');
+    }
+
+    /**
+     * Plain fallback for the steps infographic: an ordered list.
+     *
+     * @param array $config Canonical block config.
+     * @return string HTML.
+     */
+    private static function plain_steps(array $config): string {
+        $items = is_array($config['items'] ?? null) ? $config['items'] : [];
+        $lis = '';
+        foreach ($items as $item) {
+            $steptitle = trim((string) ($item['title'] ?? ''));
+            if ($steptitle === '') {
+                continue;
+            }
+            $desc = trim((string) ($item['description'] ?? ''));
+            $li = \html_writer::tag('strong', s($steptitle));
+            if ($desc !== '') {
+                $li .= \html_writer::div(s($desc));
+            }
+            $lis .= \html_writer::tag('li', $li, ['class' => 'mb-2']);
+        }
+        if ($lis === '') {
+            return '';
+        }
+        $title = trim((string) ($config['title'] ?? ''));
+        $heading = $title !== '' ? \html_writer::tag('h3', s($title)) : '';
+        return \html_writer::div($heading . \html_writer::tag('ol', $lis), 'mb-3');
+    }
+
+    /**
+     * Plain fallback for the timeline infographic: an unordered list of dated entries.
+     *
+     * @param array $config Canonical block config.
+     * @return string HTML.
+     */
+    private static function plain_timeline(array $config): string {
+        $items = is_array($config['items'] ?? null) ? $config['items'] : [];
+        $lis = '';
+        foreach ($items as $item) {
+            $title = trim((string) ($item['title'] ?? ''));
+            if ($title === '') {
+                continue;
+            }
+            $date = trim((string) ($item['date'] ?? ''));
+            $desc = trim((string) ($item['description'] ?? ''));
+            $head = $date !== '' ? $date . ' — ' . $title : $title;
+            $li = \html_writer::tag('strong', s($head));
+            if ($desc !== '') {
+                $li .= \html_writer::div(s($desc));
+            }
+            $lis .= \html_writer::tag('li', $li, ['class' => 'mb-2']);
+        }
+        if ($lis === '') {
+            return '';
+        }
+        $title = trim((string) ($config['title'] ?? ''));
+        $heading = $title !== '' ? \html_writer::tag('h3', s($title)) : '';
+        return \html_writer::div($heading . \html_writer::tag('ul', $lis, ['class' => 'list-unstyled']), 'mb-3');
+    }
+
+    /**
+     * Plain fallback for the comparison infographic: a two-column comparison table.
+     *
+     * @param array $config Canonical block config.
+     * @return string HTML.
+     */
+    private static function plain_comparison(array $config): string {
+        $col1 = trim((string) ($config['col1'] ?? 'A'));
+        $col2 = trim((string) ($config['col2'] ?? 'B'));
+        $items = is_array($config['items'] ?? null) ? $config['items'] : [];
+
+        $head = \html_writer::tag(
+            'tr',
+            \html_writer::tag('th', '&nbsp;', ['scope' => 'col'])
+            . \html_writer::tag('th', s($col1), ['scope' => 'col'])
+            . \html_writer::tag('th', s($col2), ['scope' => 'col'])
+        );
+        $rows = '';
+        foreach ($items as $item) {
+            $label = trim((string) ($item['label'] ?? ''));
+            if ($label === '') {
+                continue;
+            }
+            $rows .= \html_writer::tag(
+                'tr',
+                \html_writer::tag('th', s($label), ['scope' => 'row'])
+                . \html_writer::tag('td', self::plain_bool(!empty($item['col1'])))
+                . \html_writer::tag('td', self::plain_bool(!empty($item['col2'])))
+            );
+        }
+        if ($rows === '') {
+            return '';
+        }
+        $table = \html_writer::tag(
+            'table',
+            \html_writer::tag('thead', $head) . \html_writer::tag('tbody', $rows),
+            ['class' => 'table table-bordered']
+        );
+        $title = trim((string) ($config['title'] ?? ''));
+        $heading = $title !== '' ? \html_writer::tag('h3', s($title)) : '';
+        return \html_writer::div($heading . $table, 'mb-3');
+    }
+
+    /**
+     * Returns an accessible yes/no marker for the plain comparison table.
+     *
+     * @param bool $yes Whether the cell is a positive match.
+     * @return string HTML.
+     */
+    private static function plain_bool(bool $yes): string {
+        if ($yes) {
+            return \html_writer::tag('span', '&#x2713;', ['role' => 'img', 'aria-label' => get_string('yes')]);
+        }
+        return \html_writer::tag('span', '&#x2717;', ['role' => 'img', 'aria-label' => get_string('no')]);
+    }
+
+    /**
+     * Plain fallback for mindmap: a nested list (topic → branches → children).
+     *
+     * @param array $config Canonical block config.
+     * @return string HTML.
+     */
+    private static function plain_mindmap(array $config): string {
+        $topic = trim((string) ($config['topic'] ?? ''));
+        $branches = is_array($config['branches'] ?? null) ? $config['branches'] : [];
+
+        $items = '';
+        foreach ($branches as $b) {
+            $label = trim((string) ($b['label'] ?? ''));
+            if ($label === '') {
+                continue;
+            }
+            $kids = is_array($b['children'] ?? null) ? $b['children'] : [];
+            $sub = '';
+            foreach ($kids as $kid) {
+                $kid = trim((string) $kid);
+                if ($kid !== '') {
+                    $sub .= \html_writer::tag('li', s($kid));
+                }
+            }
+            $branchhtml = s($label) . ($sub !== '' ? \html_writer::tag('ul', $sub) : '');
+            $items .= \html_writer::tag('li', $branchhtml);
+        }
+        if ($topic === '' && $items === '') {
+            return '';
+        }
+        $heading = $topic !== '' ? \html_writer::tag('h3', s($topic)) : '';
+        $list = $items !== '' ? \html_writer::tag('ul', $items) : '';
+        return \html_writer::div($heading . $list, 'mb-3');
     }
 
     // -------------------------------------------------------------------------

@@ -5,6 +5,23 @@ Versions align with `$plugin->release` in `version.php`.
 
 ---
 
+## v0.3.0 — 2026-06-15
+
+- The `tiny_studiolms` editor is no longer a hard dependency: StudioLMS now runs
+  standalone on Moodle 4.5+ alone. When the editor is installed, generated blocks
+  use its rich visual templates and reopen for editing as before; when it is
+  absent, blocks fall back to clean semantic HTML (Bootstrap/core headings,
+  alerts, cards, `<details>`, tables and lists) via a new plain renderer. The
+  fallback displays on any theme but cannot be reopened in the visual editor.
+- The AI mind map (whose structured generator lives in the editor) is skipped
+  when the editor is absent, and the first page — which would use the editor's
+  "Plano de Disciplina" preset — falls back to AI-generated custom blocks.
+- Integration with the editor and the PlayerGames hub is fully soft
+  (`class_exists` / component detection); the plugin declares no
+  `$plugin->dependencies`.
+
+---
+
 ## v0.2.5 — 2026-06-15
 
 - The Moodle `core_ai` manager (used as the direct fallback when the PlayerGames

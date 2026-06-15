@@ -214,7 +214,10 @@ class page_builder {
             $lang   = current_language();
             $preset = preset_loader::find('Plano de Disciplina', $lang);
             if ($preset === null) {
-                return '';
+                // No preset catalog (e.g. tiny_studiolms not installed): fall back to
+                // AI-generated custom blocks so the intro page still has content.
+                $discard = '';
+                return self::generate_body($theme, $pagetitle, $pagetitle, '', 'general', [], $discard);
             }
             $fill = [
                 '[Nome da Disciplina]' => $pagetitle,
@@ -439,12 +442,17 @@ class page_builder {
      *
      * Calls the tiny_studiolms AI generator directly for the mind map structure
      * (topic + branches). Silently returns empty string on AI failure so the
-     * page degrades gracefully without losing the text blocks.
+     * page degrades gracefully without losing the text blocks. The mind map is
+     * skipped entirely when the tiny_studiolms editor is not installed, since its
+     * structured generator lives there.
      *
      * @param string $topic Page topic used as the mind map central node and prompt.
      * @return string Rendered mindmap block HTML, or empty string on failure.
      */
     private static function generate_mindmap_block(string $topic): string {
+        if (!class_exists('\tiny_studiolms\ai\generator')) {
+            return '';
+        }
         try {
             $data     = \tiny_studiolms\ai\generator::generate_mindmap($topic);
             $branches = json_decode((string)($data['branches'] ?? '[]'), true);
