@@ -25,12 +25,13 @@
 namespace local_studiolms\local;
 
 /**
- * Delegates free-text AI generation to the available provider.
+ * Delegates free-text AI generation to the PlayerGames ecosystem.
  *
- * The default provider is the tiny_studiolms AI layer (a mandatory dependency),
- * which internally chains core_ai → Gemini → Groq → OpenAI-compatible and resolves
- * personal-first keys. local_playergames is used only when installed and selected
- * by the admin as the preferred provider.
+ * Primary engine: the local_playergames hub (cartridge\ai_generator), which owns
+ * the canonical key precedence (personal → site → core_ai). When the hub is not
+ * installed, Moodle core_ai is called directly. When neither is available, a clear
+ * message asks the admin to configure AI. The integration with the hub is soft
+ * (class_exists), so local_studiolms does not hard-depend on it.
  */
 class ai_resolver {
     /**
@@ -39,19 +40,90 @@ class ai_resolver {
      * @param string $systemprompt System instruction text.
      * @param string $userprompt User prompt text.
      * @return string The generated content as returned by the provider.
+     * @throws \moodle_exception When no AI provider is available.
      */
     public static function generate_text(string $systemprompt, string $userprompt): string {
-        $preferred = get_config('local_studiolms', 'preferredprovider');
-
-        // PlayerGames is used only when installed and explicitly preferred by the admin.
-        if (
-            $preferred === 'playergames'
-                && class_exists('\local_playergames\cartridge\ai_generator')
-        ) {
-            return \local_playergames\cartridge\ai_generator::generate($userprompt);
+        // Primary: the PlayerGames hub resolves personal → site → core_ai internally.
+        if (class_exists('\local_playergames\cartridge\ai_generator')) {
+            $hub = new \local_playergames\cartridge\ai_generator();
+            if ($hub->has_key()) {
+                return $hub->generate_text($systemprompt, $userprompt);
+            }
         }
 
-        // Default StudioLMS AI layer (mandatory dependency).
-        return \tiny_studiolms\ai\generator::generate_text($systemprompt, $userprompt);
+        // Fallback: Moodle core_ai directly when the hub is not installed.
+        if (self::has_core_ai_provider()) {
+            return self::call_core_ai($systemprompt, $userprompt);
+        }
+
+        // No AI source available: guide the admin to configure one.
+        throw new \moodle_exception('noaiprovider', 'local_studiolms');
+    }
+
+    /**
+     * Returns true when Moodle core_ai has a provider enabled for text generation.
+     *
+     * Compatible with Moodle 4.5 (static API) and 5.x (instance API with DB injection).
+     *
+     * @return bool
+     */
+    private static function has_core_ai_provider(): bool {
+        global $DB;
+
+        if (
+            !class_exists(\core_ai\manager::class)
+            || !class_exists(\core_ai\aiactions\generate_text::class)
+        ) {
+            return false;
+        }
+
+        try {
+            $actionclass = \core_ai\aiactions\generate_text::class;
+            $reflection = new \ReflectionMethod(\core_ai\manager::class, 'get_providers_for_actions');
+            if ($reflection->isStatic()) {
+                $providers = \core_ai\manager::get_providers_for_actions([$actionclass], true);
+            } else {
+                $providers = (new \core_ai\manager($DB))->get_providers_for_actions([$actionclass], true);
+            }
+            return !empty($providers[$actionclass]);
+        } catch (\Throwable $e) {
+            return false;
+        }
+    }
+
+    /**
+     * Generates text via the Moodle core_ai subsystem.
+     *
+     * core_ai's generate_text action has no separate system field, so the system
+     * instruction is prepended to the user prompt.
+     *
+     * @param string $systemprompt System instruction (may be empty).
+     * @param string $userprompt User prompt text.
+     * @return string The generated content.
+     * @throws \moodle_exception On a failed or empty response.
+     */
+    private static function call_core_ai(string $systemprompt, string $userprompt): string {
+        global $DB, $USER;
+
+        $reflection = new \ReflectionMethod(\core_ai\manager::class, 'get_providers_for_actions');
+        $manager = $reflection->isStatic() ? new \core_ai\manager() : new \core_ai\manager($DB);
+
+        $prompttext = $systemprompt !== '' ? ($systemprompt . "\n\n" . $userprompt) : $userprompt;
+        $action = new \core_ai\aiactions\generate_text(
+            contextid: \context_system::instance()->id,
+            userid: (int) $USER->id,
+            prompttext: $prompttext,
+        );
+
+        $response = $manager->process_action($action);
+        $content = $response->get_success()
+            ? (string) ($response->get_response_data()['generatedcontent'] ?? '')
+            : '';
+
+        if ($content === '') {
+            throw new \moodle_exception('invalidairesponse', 'local_studiolms');
+        }
+
+        return $content;
     }
 }

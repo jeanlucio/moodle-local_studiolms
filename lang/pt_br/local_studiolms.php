@@ -99,6 +99,7 @@ $string['mode_gamified'] = 'Gamificado';
 $string['mode_gamified_detected'] = 'PlayerHUD detectado';
 $string['mode_gamified_disabled'] = 'Instale o Plugin PlayerHUD para ativar este modo';
 $string['mode_standard'] = 'Padrão';
+$string['noaiprovider'] = 'Nenhum provedor de IA disponível. Configure um provedor na IA do Moodle (Administração do site → IA → Provedores de IA), ou instale o hub PlayerGames (local_playergames) e cadastre uma chave de API.';
 $string['objectives_heading'] = 'Objetivos de aprendizagem';
 $string['outline_review_heading'] = 'Revisar curso';
 $string['pluginname'] = 'StudioLMS construtor de cursos';

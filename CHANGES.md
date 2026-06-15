@@ -5,6 +5,21 @@ Versions align with `$plugin->release` in `version.php`.
 
 ---
 
+## v0.2.3 — 2026-06-15
+
+- AI text generation now goes through the PlayerGames hub (`local_playergames`)
+  when installed, which owns the canonical key precedence (personal → site →
+  `core_ai`); otherwise Moodle `core_ai` is called directly. When neither is
+  available, a clear message guides the admin to configure a provider. The hub is
+  consumed softly via `class_exists` — the editor (`tiny_studiolms`) is no longer
+  the AI source. (Removing the hard `tiny_studiolms` dependency, kept for the
+  visual templates, is a separate step pending the plain-HTML fallback renderer.)
+- Fixed a broken provider branch that called the hub's structured `generate()`
+  statically with the wrong arguments; the resolver now calls the hub's generic
+  `generate_text(system, user)`.
+
+---
+
 ## v0.2.2 — 2026-06-15
 
 - Generated activities now use "view to complete" completion tracking (the
