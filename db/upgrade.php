@@ -52,8 +52,20 @@ function xmldb_local_studiolms_upgrade($oldversion): bool {
 
     if ($oldversion < 2026061500) {
         $table = new xmldb_table('local_studiolms_progress');
+
+        // The FK on outlineid creates a dependent index that blocks field modification; drop it first.
+        $key = new xmldb_key('outlineid', XMLDB_KEY_FOREIGN, ['outlineid'], 'local_studiolms_outline', ['id']);
+        if ($dbman->find_key_name($table, $key)) {
+            $dbman->drop_key($table, $key);
+        }
+
+        // Make outlineid nullable so section-only generation rows need no outline record.
         $field = new xmldb_field('outlineid', XMLDB_TYPE_INTEGER, '10', null, null, null, null, 'id');
         $dbman->change_field_notnull($table, $field);
+
+        // Restore the FK (nullable FKs are valid — NULL means no outline linked).
+        $dbman->add_key($table, $key);
+
         upgrade_plugin_savepoint(true, 2026061500, 'local', 'studiolms');
     }
 
