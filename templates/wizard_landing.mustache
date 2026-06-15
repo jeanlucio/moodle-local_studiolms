@@ -59,22 +59,17 @@
         </div>
 
         <div class="col-12 col-md-4 mb-3">
-            <div class="card h-100 shadow-sm">
+            <div class="card h-100 shadow-sm border-primary">
                 <div class="card-body d-flex flex-column">
-                    <div class="mb-3 text-muted" aria-hidden="true">
+                    <div class="mb-3 text-primary" aria-hidden="true">
                         <i class="fa fa-list-alt fa-2x"></i>
                     </div>
-                    <h5 class="card-title">
-                        {{#str}}landing_section_title, local_studiolms{{/str}}
-                        <span class="badge bg-secondary fw-normal small ms-1">
-                            {{#str}}landing_coming_soon, local_studiolms{{/str}}
-                        </span>
-                    </h5>
+                    <h5 class="card-title">{{#str}}landing_section_title, local_studiolms{{/str}}</h5>
                     <p class="card-text text-muted flex-grow-1">
                         {{#str}}landing_section_desc, local_studiolms{{/str}}
                     </p>
-                    <button type="button" class="btn btn-outline-secondary mt-3"
-                            disabled aria-disabled="true">
+                    <button type="button" class="btn btn-primary mt-3"
+                            data-action="select-mode" data-mode="section">
                         {{#str}}landing_section_title, local_studiolms{{/str}}
                     </button>
                 </div>

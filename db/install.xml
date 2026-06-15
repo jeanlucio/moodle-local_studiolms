@@ -47,7 +47,7 @@
     <TABLE NAME="local_studiolms_progress" COMMENT="Background generation progress polled by step 3.">
       <FIELDS>
         <FIELD NAME="id" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="true"/>
-        <FIELD NAME="outlineid" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="false" COMMENT="FK to local_studiolms_outline."/>
+        <FIELD NAME="outlineid" TYPE="int" LENGTH="10" NOTNULL="false" SEQUENCE="false" COMMENT="FK to local_studiolms_outline. Null for section-only generation."/>
         <FIELD NAME="userid" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="false" COMMENT="Teacher (validates polling access)."/>
         <FIELD NAME="step" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0" SEQUENCE="false" COMMENT="Current completed step."/>
         <FIELD NAME="total" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0" SEQUENCE="false" COMMENT="Total planned steps."/>

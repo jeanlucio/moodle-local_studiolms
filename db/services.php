@@ -56,6 +56,15 @@ $functions = [
         'capabilities' => 'local/studiolms:generate',
     ],
 
+    'local_studiolms_generate_section' => [
+        'classname' => 'local_studiolms\external\generate_section',
+        'methodname' => 'execute',
+        'description' => 'Queues the background task that populates one existing section with AI activities.',
+        'type' => 'write',
+        'ajax' => true,
+        'capabilities' => 'local/studiolms:generate',
+    ],
+
     'local_studiolms_generate_activity' => [
         'classname' => 'local_studiolms\external\generate_activity',
         'methodname' => 'execute',

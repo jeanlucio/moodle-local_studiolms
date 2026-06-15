@@ -50,5 +50,12 @@ function xmldb_local_studiolms_upgrade($oldversion): bool {
         upgrade_plugin_savepoint(true, 2026061400, 'local', 'studiolms');
     }
 
+    if ($oldversion < 2026061500) {
+        $table = new xmldb_table('local_studiolms_progress');
+        $field = new xmldb_field('outlineid', XMLDB_TYPE_INTEGER, '10', null, null, null, null, 'id');
+        $dbman->change_field_notnull($table, $field);
+        upgrade_plugin_savepoint(true, 2026061500, 'local', 'studiolms');
+    }
+
     return true;
 }

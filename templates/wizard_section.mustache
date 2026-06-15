@@ -1,0 +1,119 @@
+{{!
+    This file is part of Moodle - https://moodle.org/
+
+    Moodle is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    Moodle is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with Moodle.  If not, see <https://www.gnu.org/licenses/>.
+}}
+{{!
+    @template local_studiolms/wizard_section
+
+    Section-level generation form for the StudioLMS course builder.
+    Shows a form initially; after submit switches to inline progress polling.
+
+    Context variables required for this template:
+    * courseid - Target course id.
+    * sections - Array of {num, name} course sections.
+
+    Example context (json):
+    {
+        "courseid": 5,
+        "sections": [
+            {"num": 0, "name": "General"},
+            {"num": 1, "name": "Section 1"}
+        ]
+    }
+}}
+<div class="local-studiolms-wizard d-none" id="local-studiolms-section">
+
+    {{! Form view — visible initially }}
+    <div data-region="form-view">
+        <h3 class="mb-3">{{#str}}section_heading, local_studiolms{{/str}}</h3>
+
+        <form id="local-studiolms-section-form" data-courseid="{{courseid}}">
+
+            <div class="alert alert-danger d-none" role="alert" data-region="error"></div>
+
+            <div class="mb-3">
+                <label class="form-label" for="section-sectionnum">
+                    {{#str}}activity_section, local_studiolms{{/str}}
+                </label>
+                <select class="form-select" id="section-sectionnum" name="sectionnum">
+                    {{#sections}}
+                        <option value="{{num}}">{{name}}</option>
+                    {{/sections}}
+                </select>
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label" for="section-theme">
+                    {{#str}}briefing_theme, local_studiolms{{/str}}
+                    <span class="text-danger" aria-hidden="true">*</span>
+                </label>
+                <input type="text" class="form-control" id="section-theme" name="theme" required
+                    placeholder="{{#str}}briefing_theme_placeholder, local_studiolms{{/str}}">
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label" for="section-reference">
+                    {{#str}}briefing_reference, local_studiolms{{/str}}
+                </label>
+                <textarea class="form-control" id="section-reference" name="reference" rows="4"
+                    placeholder="{{#str}}briefing_reference_placeholder, local_studiolms{{/str}}"></textarea>
+            </div>
+
+            <div class="d-flex justify-content-start">
+                <button type="button" class="btn btn-secondary me-2" data-action="back-to-landing">
+                    {{#str}}btn_back, local_studiolms{{/str}}
+                </button>
+                <button type="submit" class="btn btn-primary" data-action="generate-section">
+                    <span class="spinner-border spinner-border-sm d-none" role="status"
+                        aria-hidden="true" data-region="spinner"></span>
+                    <span data-region="btnlabel">
+                        {{#str}}btn_generate_section, local_studiolms{{/str}}
+                    </span>
+                </button>
+            </div>
+
+        </form>
+    </div>
+
+    {{! Progress view — hidden until generation starts }}
+    <div data-region="progress-view" class="d-none">
+        <h3 class="mb-3">{{#str}}section_heading, local_studiolms{{/str}}</h3>
+
+        <div class="progress mb-2" role="progressbar"
+             aria-label="{{#str}}section_heading, local_studiolms{{/str}}"
+             aria-valuemin="0" aria-valuemax="100">
+            <div class="progress-bar progress-bar-striped progress-bar-animated"
+                 data-region="bar" aria-valuenow="0"></div>
+        </div>
+        <p class="text-muted small mb-3" data-region="progress-message">
+            {{#str}}section_planning, local_studiolms{{/str}}
+        </p>
+
+        <div class="alert alert-success d-none" role="status" data-region="done">
+            <p class="mb-2">{{#str}}section_success, local_studiolms{{/str}}</p>
+            <div class="d-flex flex-wrap">
+                <a href="#" class="btn btn-sm btn-success me-2" data-region="viewlink" target="_blank" rel="noopener">
+                    {{#str}}section_view, local_studiolms{{/str}}
+                </a>
+                <button type="button" class="btn btn-sm btn-outline-secondary" data-action="generate-another">
+                    {{#str}}section_generate_another, local_studiolms{{/str}}
+                </button>
+            </div>
+        </div>
+
+        <div class="alert alert-danger d-none" role="alert" data-region="progress-error"></div>
+    </div>
+
+</div>

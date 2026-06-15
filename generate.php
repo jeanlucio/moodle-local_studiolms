@@ -117,6 +117,7 @@ $step1context = [
 $PAGE->requires->js_call_amd('local_studiolms/wizard_landing', 'init');
 $PAGE->requires->js_call_amd('local_studiolms/wizard_step1', 'init');
 $PAGE->requires->js_call_amd('local_studiolms/wizard_activity', 'init');
+$PAGE->requires->js_call_amd('local_studiolms/wizard_section', 'init');
 
 // Output.
 
@@ -131,6 +132,10 @@ echo $OUTPUT->render_from_template('local_studiolms/wizard_activity', [
     'courseid'      => $course->id,
     'sections'      => $sections,
     'activitytypes' => $activitytypes,
+]);
+echo $OUTPUT->render_from_template('local_studiolms/wizard_section', [
+    'courseid' => $course->id,
+    'sections' => $sections,
 ]);
 echo html_writer::div('', 'd-none', ['id' => 'local-studiolms-step2']);
 echo $OUTPUT->footer();

@@ -28,6 +28,7 @@ const VIEWS = {
     landing: 'local-studiolms-landing',
     step1: 'local-studiolms-step1-wrapper',
     activity: 'local-studiolms-activity',
+    section: 'local-studiolms-section',
 };
 
 const getView = id => document.getElementById(id);
@@ -58,6 +59,8 @@ export const init = () => {
                 showOnly(VIEWS.step1);
             } else if (mode === 'activity') {
                 showOnly(VIEWS.activity);
+            } else if (mode === 'section') {
+                showOnly(VIEWS.section);
             }
             return;
         }

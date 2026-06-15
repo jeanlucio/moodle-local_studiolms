@@ -1,0 +1,141 @@
+<?php
+// This file is part of Moodle - https://moodle.org/
+//
+// Moodle is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// Moodle is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with Moodle.  If not, see <https://www.gnu.org/licenses/>.
+
+/**
+ * External web service that queues section-level content generation.
+ *
+ * @package    local_studiolms
+ * @copyright  2026 Jean Lúcio <jeanlucio@gmail.com>
+ * @license    https://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
+ */
+
+namespace local_studiolms\external;
+
+use context_course;
+use core_external\external_api;
+use core_external\external_function_parameters;
+use core_external\external_single_structure;
+use core_external\external_value;
+use local_studiolms\task\generate_section_task;
+
+/**
+ * Validates the request and enqueues a background task that populates one section.
+ */
+class generate_section extends external_api {
+    /**
+     * Describes the parameters accepted by the web service.
+     *
+     * @return external_function_parameters
+     */
+    public static function execute_parameters(): external_function_parameters {
+        return new external_function_parameters([
+            'courseid'   => new external_value(PARAM_INT, 'Target course id.'),
+            'sectionnum' => new external_value(PARAM_INT, 'Target section number.'),
+            'theme'      => new external_value(PARAM_TEXT, 'Course theme or topic for AI generation.'),
+            'bloom'      => new external_value(
+                PARAM_ALPHA,
+                "Bloom's taxonomy level.",
+                VALUE_DEFAULT,
+                'general'
+            ),
+            'reference'  => new external_value(
+                PARAM_TEXT,
+                'Optional reference material.',
+                VALUE_DEFAULT,
+                ''
+            ),
+        ]);
+    }
+
+    /**
+     * Validates the section, creates a progress record and queues the generation task.
+     *
+     * @param int $courseid Target course id.
+     * @param int $sectionnum Target section number.
+     * @param string $theme Course theme used by the AI.
+     * @param string $bloom Bloom's taxonomy level, or 'general'.
+     * @param string $reference Optional reference material for the AI.
+     * @return array Payload with the created progress id.
+     */
+    public static function execute(
+        int $courseid,
+        int $sectionnum,
+        string $theme,
+        string $bloom,
+        string $reference
+    ): array {
+        global $DB, $USER;
+
+        $params = self::validate_parameters(self::execute_parameters(), [
+            'courseid'   => $courseid,
+            'sectionnum' => $sectionnum,
+            'theme'      => $theme,
+            'bloom'      => $bloom,
+            'reference'  => $reference,
+        ]);
+
+        $course = get_course($params['courseid']);
+        $context = context_course::instance($course->id);
+        self::validate_context($context);
+        require_capability('local/studiolms:generate', $context);
+
+        $DB->get_record(
+            'course_sections',
+            ['course' => $course->id, 'section' => $params['sectionnum']],
+            'id',
+            MUST_EXIST
+        );
+
+        $now = time();
+        $progressid = $DB->insert_record('local_studiolms_progress', (object) [
+            'outlineid'    => null,
+            'userid'       => $USER->id,
+            'step'         => 0,
+            'total'        => 0,
+            'message'      => '',
+            'status'       => 'queued',
+            'courseid'     => $course->id,
+            'createditems' => json_encode(['cmids' => []]),
+            'timecreated'  => $now,
+            'timemodified' => $now,
+        ]);
+
+        $task = new generate_section_task();
+        $task->set_custom_data([
+            'progressid' => $progressid,
+            'courseid'   => $course->id,
+            'sectionnum' => $params['sectionnum'],
+            'theme'      => $params['theme'],
+            'bloom'      => $params['bloom'],
+            'reference'  => $params['reference'],
+        ]);
+        $task->set_userid($USER->id);
+        \core\task\manager::queue_adhoc_task($task);
+
+        return ['progressid' => $progressid];
+    }
+
+    /**
+     * Describes the value returned by the web service.
+     *
+     * @return external_single_structure
+     */
+    public static function execute_returns(): external_single_structure {
+        return new external_single_structure([
+            'progressid' => new external_value(PARAM_INT, 'Created progress id.'),
+        ]);
+    }
+}
