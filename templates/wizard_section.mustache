@@ -17,8 +17,7 @@
 {{!
     @template local_studiolms/wizard_section
 
-    Section-level generation form for the StudioLMS course builder.
-    Shows a form initially; after submit switches to inline progress polling.
+    Three-step section generator: briefing → activity plan review → generation + report.
 
     Context variables required for this template:
     * courseid - Target course id.
@@ -33,9 +32,12 @@
         ]
     }
 }}
-<div class="local-studiolms-wizard d-none" id="local-studiolms-section">
+<div class="local-studiolms-wizard d-none" id="local-studiolms-section"
+     data-aria-type="{{#str}}aria_activity_type, local_studiolms{{/str}}"
+     data-aria-title="{{#str}}aria_activity_title, local_studiolms{{/str}}"
+     data-aria-remove="{{#str}}aria_remove_activity, local_studiolms{{/str}}">
 
-    {{! Form view — visible initially }}
+    {{! Step 1: Briefing form }}
     <div data-region="form-view">
         <h3 class="mb-3">{{#str}}section_heading, local_studiolms{{/str}}</h3>
 
@@ -48,10 +50,26 @@
                     {{#str}}activity_section, local_studiolms{{/str}}
                 </label>
                 <select class="form-select" id="section-sectionnum" name="sectionnum">
+                    <option value="-1">{{#str}}section_new, local_studiolms{{/str}}</option>
                     {{#sections}}
                         <option value="{{num}}">{{name}}</option>
                     {{/sections}}
                 </select>
+            </div>
+
+            <div class="mb-3 d-none" data-region="wipe-option">
+                <div class="form-check">
+                    <input class="form-check-input" type="checkbox" id="section-wipe" name="wipe"
+                           aria-describedby="section-wipe-warning">
+                    <label class="form-check-label" for="section-wipe">
+                        {{#str}}section_wipe, local_studiolms{{/str}}
+                    </label>
+                </div>
+                <div id="section-wipe-warning"
+                     class="alert alert-warning mt-2 mb-0 py-2 small d-none"
+                     data-region="wipe-warning">
+                    {{#str}}section_wipe_warning, local_studiolms{{/str}}
+                </div>
             </div>
 
             <div class="mb-3">
@@ -75,11 +93,11 @@
                 <button type="button" class="btn btn-secondary me-2" data-action="back-to-landing">
                     {{#str}}btn_back, local_studiolms{{/str}}
                 </button>
-                <button type="submit" class="btn btn-primary" data-action="generate-section">
+                <button type="submit" class="btn btn-primary" data-action="plan-section">
                     <span class="spinner-border spinner-border-sm d-none" role="status"
-                        aria-hidden="true" data-region="spinner"></span>
+                          aria-hidden="true" data-region="spinner"></span>
                     <span data-region="btnlabel">
-                        {{#str}}btn_generate_section, local_studiolms{{/str}}
+                        {{#str}}btn_plan_section, local_studiolms{{/str}}
                     </span>
                 </button>
             </div>
@@ -87,7 +105,34 @@
         </form>
     </div>
 
-    {{! Progress view — hidden until generation starts }}
+    {{! Step 2: Activity plan review }}
+    <div data-region="review-view" class="d-none">
+        <h3 class="mb-3">{{#str}}section_plan_heading, local_studiolms{{/str}}</h3>
+
+        <div class="alert alert-danger d-none" role="alert" data-region="review-error"></div>
+
+        <div data-region="activity-list" class="mb-3"></div>
+
+        <button type="button" class="btn btn-outline-secondary btn-sm mb-3"
+                data-action="add-activity">
+            {{#str}}section_plan_add, local_studiolms{{/str}}
+        </button>
+
+        <div class="d-flex justify-content-start">
+            <button type="button" class="btn btn-secondary me-2" data-action="back-to-form">
+                {{#str}}btn_back, local_studiolms{{/str}}
+            </button>
+            <button type="button" class="btn btn-primary" data-action="generate-section">
+                <span class="spinner-border spinner-border-sm d-none" role="status"
+                      aria-hidden="true" data-region="review-spinner"></span>
+                <span data-region="review-btnlabel">
+                    {{#str}}btn_generate_section, local_studiolms{{/str}}
+                </span>
+            </button>
+        </div>
+    </div>
+
+    {{! Step 3: Progress and report }}
     <div data-region="progress-view" class="d-none">
         <h3 class="mb-3">{{#str}}section_heading, local_studiolms{{/str}}</h3>
 
@@ -104,10 +149,12 @@
         <div class="alert alert-success d-none" role="status" data-region="done">
             <p class="mb-2">{{#str}}section_success, local_studiolms{{/str}}</p>
             <div class="d-flex flex-wrap">
-                <a href="#" class="btn btn-sm btn-success me-2" data-region="viewlink" target="_blank" rel="noopener">
+                <a href="#" class="btn btn-sm btn-success me-2"
+                   data-region="viewlink" target="_blank" rel="noopener">
                     {{#str}}section_view, local_studiolms{{/str}}
                 </a>
-                <button type="button" class="btn btn-sm btn-outline-secondary" data-action="generate-another">
+                <button type="button" class="btn btn-sm btn-outline-secondary"
+                        data-action="generate-another">
                     {{#str}}section_generate_another, local_studiolms{{/str}}
                 </button>
             </div>

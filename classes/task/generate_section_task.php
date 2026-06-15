@@ -25,8 +25,6 @@
 namespace local_studiolms\task;
 
 use context_course;
-use local_studiolms\local\ai_json;
-use local_studiolms\local\ai_resolver;
 use local_studiolms\local\course_builder;
 use local_studiolms\local\glossary_builder;
 use local_studiolms\local\page_builder;
@@ -34,7 +32,11 @@ use local_studiolms\local\quiz_builder;
 use stdClass;
 
 /**
- * Generates and inserts activities into an existing course section.
+ * Generates and inserts a teacher-approved list of activities into a course section.
+ *
+ * Activity planning is done synchronously by the plan_section web service before this
+ * task is queued. The task receives the approved plan via custom_data and only executes
+ * the content generation for each activity.
  */
 class generate_section_task extends \core\task\adhoc_task {
     /** @var stdClass The progress record being updated. */
@@ -43,8 +45,11 @@ class generate_section_task extends \core\task\adhoc_task {
     /** @var stdClass The target course. */
     private stdClass $course;
 
-    /** @var array Course-module ids created, used for rollback. */
-    private array $created = ['cmids' => []];
+    /** @var int[] Course-module ids created, used for rollback. */
+    private array $createdcmids = [];
+
+    /** @var int|null Section number created by this task; non-null triggers section rollback. */
+    private ?int $createdsectionnum = null;
 
     /** @var int Completed activity steps. */
     private int $step = 0;
@@ -79,29 +84,52 @@ class generate_section_task extends \core\task\adhoc_task {
             return;
         }
 
-        $sectionnum       = (int) $data->sectionnum;
-        $theme            = (string) $data->theme;
-        $this->reference  = (string) ($data->reference ?? '');
-        $this->bloom      = (string) ($data->bloom ?? 'general');
+        $sectionnum      = (int) $data->sectionnum;
+        $this->reference = (string) ($data->reference ?? '');
+        $this->bloom     = (string) ($data->bloom ?? 'general');
+        $wipe            = !empty($data->wipe);
+        $theme           = (string) $data->theme;
+
+        $activities = json_decode($data->activitiesjson, true);
+        if (!is_array($activities) || empty($activities)) {
+            $this->fail(get_string('error_populate', 'local_studiolms'));
+            return;
+        }
 
         $this->progress->status = 'running';
         $this->update();
 
         try {
-            $section = $DB->get_record(
+            if ($sectionnum < 0) {
+                $this->progress->message = get_string('section_planning', 'local_studiolms');
+                $this->update();
+                $sectionnum = (int) course_create_section($this->course->id);
+                $this->createdsectionnum = $sectionnum;
+            }
+
+            $secrecord = $DB->get_record(
                 'course_sections',
                 ['course' => $this->course->id, 'section' => $sectionnum],
                 '*',
                 MUST_EXIST
             );
-            $sectionname = ($section->name !== '' && $section->name !== null)
-                ? format_string($section->name)
+            $sectionname = ($secrecord->name !== '' && $secrecord->name !== null)
+                ? format_string($secrecord->name)
                 : get_string('section_number', 'local_studiolms', $sectionnum);
 
-            $this->progress->message = get_string('section_planning', 'local_studiolms');
-            $this->update();
-
-            $activities = $this->plan_activities($sectionname, $theme);
+            if ($wipe && $sectionnum >= 0) {
+                $this->progress->message = get_string('section_wiping', 'local_studiolms');
+                $this->update();
+                $cmids = $DB->get_fieldset_select(
+                    'course_modules',
+                    'id',
+                    'course = :cid AND section = :sid',
+                    ['cid' => $this->course->id, 'sid' => $secrecord->id]
+                );
+                foreach ($cmids as $cmid) {
+                    course_delete_module((int) $cmid);
+                }
+            }
 
             $this->progress->total = count($activities);
             $this->update();
@@ -120,60 +148,11 @@ class generate_section_task extends \core\task\adhoc_task {
     }
 
     /**
-     * Calls the AI provider to get a list of activities for the section.
-     *
-     * Falls back to a single page if the AI is unavailable or returns invalid JSON.
-     *
-     * @param string $sectionname The section display name.
-     * @param string $theme The course theme.
-     * @return array Array of {type, title} activity definitions.
-     */
-    private function plan_activities(string $sectionname, string $theme): array {
-        $language = current_language();
-        $system = 'Return ONLY a valid JSON array of learning activities for a course section. '
-            . 'Example: [{"type":"page","title":"Introduction"},{"type":"quiz","title":"Check"}]. '
-            . 'Allowed types: page, quiz, forum, assign, label, glossary. '
-            . 'Return between 3 and 6 activities. Titles must be under 80 characters. '
-            . "Write all titles in the language identified by the code: {$language}.";
-
-        if ($this->bloom !== 'general' && $this->bloom !== '') {
-            $system .= " Cognitive level (Bloom's taxonomy): {$this->bloom}.";
-        }
-
-        $user = "Section: {$sectionname}\nCourse theme: {$theme}";
-        if ($this->reference !== '') {
-            $user .= "\n\nReference material:\n" . mb_substr($this->reference, 0, 3000);
-        }
-
-        try {
-            $decoded = ai_json::decode(ai_resolver::generate_text($system, $user));
-            if (!is_array($decoded) || empty($decoded)) {
-                throw new \moodle_exception('invalidairesponse', 'local_studiolms');
-            }
-            $activities = [];
-            foreach ($decoded as $item) {
-                if (isset($item['type'], $item['title'])) {
-                    $activities[] = [
-                        'type'  => (string) $item['type'],
-                        'title' => (string) $item['title'],
-                    ];
-                }
-            }
-            if (empty($activities)) {
-                throw new \moodle_exception('invalidairesponse', 'local_studiolms');
-            }
-            return $activities;
-        } catch (\Throwable $e) {
-            return [['type' => 'page', 'title' => $sectionname]];
-        }
-    }
-
-    /**
      * Creates a single activity of the given type in the section.
      *
      * @param int $sectionnum The section number.
      * @param string $sectionname The section display name.
-     * @param array $activity The activity definition (type, title).
+     * @param array $activity The activity definition {type, title}.
      * @param string $theme The course theme.
      * @return void
      */
@@ -246,12 +225,12 @@ class generate_section_task extends \core\task\adhoc_task {
                 break;
 
             default:
-                $html = $this->generate_html('page', $theme, $sectionname, $title, $degraded);
+                $html   = $this->generate_html('page', $theme, $sectionname, $title, $degraded);
                 $result = course_builder::add_page($this->course, $sectionnum, $title, $html);
                 break;
         }
 
-        $this->created['cmids'][] = $result->coursemodule;
+        $this->createdcmids[] = $result->coursemodule;
         $this->step++;
         $this->progress->step    = $this->step;
         $this->progress->message = get_string('progress_activity', 'local_studiolms', $title);
@@ -297,7 +276,9 @@ class generate_section_task extends \core\task\adhoc_task {
             if ($this->reference !== '') {
                 $user .= "\n\nReference material:\n" . mb_substr($this->reference, 0, 3000);
             }
-            $decoded = ai_json::decode(ai_resolver::generate_text($system, $user));
+            $decoded = \local_studiolms\local\ai_json::decode(
+                \local_studiolms\local\ai_resolver::generate_text($system, $user)
+            );
             $html    = is_array($decoded) ? trim((string) ($decoded['content'] ?? '')) : '';
             if ($html === '' || trim(html_to_text($html)) === '') {
                 throw new \moodle_exception('invalidairesponse', 'local_studiolms');
@@ -310,16 +291,23 @@ class generate_section_task extends \core\task\adhoc_task {
     }
 
     /**
-     * Deletes all activities created so far after a failure.
+     * Deletes all activities and the section created during this run.
      *
      * @return void
      */
     private function rollback(): void {
-        foreach ($this->created['cmids'] as $cmid) {
+        foreach ($this->createdcmids as $cmid) {
             try {
                 course_delete_module($cmid);
             } catch (\Throwable $e) {
                 continue;
+            }
+        }
+        if ($this->createdsectionnum !== null) {
+            try {
+                course_delete_section($this->course, $this->createdsectionnum, true);
+            } catch (\Throwable $e) {
+                debugging('StudioLMS section rollback failed: ' . $e->getMessage(), DEBUG_DEVELOPER);
             }
         }
     }
@@ -331,7 +319,7 @@ class generate_section_task extends \core\task\adhoc_task {
      */
     private function update(): void {
         global $DB;
-        $this->progress->createditems = json_encode($this->created);
+        $this->progress->createditems = json_encode(['cmids' => $this->createdcmids]);
         $this->progress->timemodified = time();
         $DB->update_record('local_studiolms_progress', $this->progress);
     }
@@ -344,8 +332,8 @@ class generate_section_task extends \core\task\adhoc_task {
      */
     private function fail(string $message): void {
         global $DB;
-        $this->progress->status      = 'failed';
-        $this->progress->errormsg    = $message;
+        $this->progress->status       = 'failed';
+        $this->progress->errormsg     = $message;
         $this->progress->timemodified = time();
         $DB->update_record('local_studiolms_progress', $this->progress);
     }

@@ -56,6 +56,15 @@ $functions = [
         'capabilities' => 'local/studiolms:generate',
     ],
 
+    'local_studiolms_plan_section' => [
+        'classname'    => 'local_studiolms\external\plan_section',
+        'methodname'   => 'execute',
+        'description'  => 'Plans activities for a course section using the AI provider.',
+        'type'         => 'read',
+        'ajax'         => true,
+        'capabilities' => 'local/studiolms:generate',
+    ],
+
     'local_studiolms_generate_section' => [
         'classname' => 'local_studiolms\external\generate_section',
         'methodname' => 'execute',

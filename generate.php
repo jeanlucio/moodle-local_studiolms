@@ -133,6 +133,11 @@ echo $OUTPUT->render_from_template('local_studiolms/wizard_activity', [
     'sections'      => $sections,
     'activitytypes' => $activitytypes,
 ]);
+echo \html_writer::tag('div', '', [
+    'id'         => 'local-studiolms-section-types',
+    'hidden'     => true,
+    'data-types' => json_encode($activitytypes, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT),
+]);
 echo $OUTPUT->render_from_template('local_studiolms/wizard_section', [
     'courseid' => $course->id,
     'sections' => $sections,
