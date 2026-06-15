@@ -5,6 +5,16 @@ Versions align with `$plugin->release` in `version.php`.
 
 ---
 
+## v0.2.2 — 2026-06-15
+
+- Generated activities now use "view to complete" completion tracking (the
+  course gets completion enabled automatically if it was off). Labels are
+  excluded, as view completion is not meaningful for visual separators. This
+  also lets the gamified mode map activity-completion quests to the generated
+  content.
+
+---
+
 ## v0.2.1 — 2026-06-15
 
 - Fixed the gamified mode adding no PlayerHUD block when the generation runs in

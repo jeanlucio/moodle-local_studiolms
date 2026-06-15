@@ -30,6 +30,7 @@ defined('MOODLE_INTERNAL') || die();
 
 require_once($GLOBALS['CFG']->dirroot . '/course/modlib.php');
 require_once($GLOBALS['CFG']->dirroot . '/course/lib.php');
+require_once($GLOBALS['CFG']->libdir . '/completionlib.php');
 
 /**
  * Creates course sections and native Moodle activities through the standard course APIs.
@@ -78,7 +79,8 @@ class course_builder {
      * @return stdClass The add_moduleinfo result.
      */
     public static function add_label(stdClass $course, int $sectionnum, string $content): stdClass {
-        $moduleinfo = self::base($course, 'label', $sectionnum, '', $content);
+        // Labels are visual separators: view completion is not meaningful for them.
+        $moduleinfo = self::base($course, 'label', $sectionnum, '', $content, false);
         return add_moduleinfo($moduleinfo, $course);
     }
 
@@ -214,6 +216,7 @@ class course_builder {
      * @param int $sectionnum The section number.
      * @param string $name The activity name.
      * @param string $intro The activity introduction HTML.
+     * @param bool $trackcompletion Whether to enable "view to complete" tracking.
      * @return stdClass The base module info.
      */
     private static function base(
@@ -221,7 +224,8 @@ class course_builder {
         string $modulename,
         int $sectionnum,
         string $name,
-        string $intro
+        string $intro,
+        bool $trackcompletion = true
     ): stdClass {
         global $DB;
 
@@ -236,6 +240,38 @@ class course_builder {
             $moduleinfo->name = $name;
         }
         $moduleinfo->introeditor = ['text' => $intro, 'format' => FORMAT_HTML, 'itemid' => 0];
+
+        if ($trackcompletion) {
+            self::ensure_completion_enabled($course);
+            if (!empty($course->enablecompletion)) {
+                // View-to-complete is the simplest standard rule, which the teacher can refine later.
+                $moduleinfo->completion = COMPLETION_TRACKING_AUTOMATIC;
+                $moduleinfo->completionview = 1;
+                $moduleinfo->completionusegrade = 0;
+                $moduleinfo->completionexpected = 0;
+            }
+        }
+
         return $moduleinfo;
+    }
+
+    /**
+     * Enables completion tracking on the course when the site allows it.
+     *
+     * Idempotent: updates the course only once, then flips the in-memory flag so
+     * repeated calls during a single generation are no-ops.
+     *
+     * @param stdClass $course The target course (updated in place).
+     * @return void
+     */
+    private static function ensure_completion_enabled(stdClass $course): void {
+        global $CFG;
+
+        if (empty($CFG->enablecompletion) || !empty($course->enablecompletion)) {
+            return;
+        }
+
+        update_course((object) ['id' => $course->id, 'enablecompletion' => 1]);
+        $course->enablecompletion = 1;
     }
 }
