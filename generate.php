@@ -121,7 +121,11 @@ $PAGE->requires->js_call_amd('local_studiolms/wizard_activity', 'init');
 // Output.
 
 echo $OUTPUT->header();
-echo $OUTPUT->render_from_template('local_studiolms/wizard_landing', ['cancelurl' => $cancelurl]);
+echo $OUTPUT->render_from_template('local_studiolms/wizard_landing', [
+    'cancelurl'      => $cancelurl,
+    'logourl'        => $OUTPUT->image_url('logo', 'local_studiolms')->out(false),
+    'landingheading' => get_string('landing_heading', 'local_studiolms', $USER->firstname),
+]);
 echo $OUTPUT->render_from_template('local_studiolms/wizard_step1', $step1context);
 echo $OUTPUT->render_from_template('local_studiolms/wizard_activity', [
     'courseid'      => $course->id,

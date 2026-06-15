@@ -182,7 +182,10 @@
         </div>
 
         <div class="d-flex justify-content-start">
-            <a class="btn btn-secondary me-2" href="{{cancelurl}}">{{#str}}btn_cancel, local_studiolms{{/str}}</a>
+            <button type="button" class="btn btn-secondary me-2" data-action="back-to-landing">
+                {{#str}}btn_back, local_studiolms{{/str}}
+            </button>
+            <a class="btn btn-link me-2" href="{{cancelurl}}">{{#str}}btn_cancel, local_studiolms{{/str}}</a>
             <button type="submit" class="btn btn-primary" data-action="generate">
                 <span class="spinner-border spinner-border-sm d-none" role="status"
                     aria-hidden="true" data-region="spinner"></span>

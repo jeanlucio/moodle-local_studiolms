@@ -24,11 +24,20 @@
 
     Example context (json):
     {
-        "cancelurl": "https://example.com/course/view.php?id=5"
+        "cancelurl": "https://example.com/course/view.php?id=5",
+        "logourl": "https://example.com/pluginfile.php/1/local_studiolms/pix/logo.svg",
+        "landingheading": "Hello Jane, what would you like to do today?"
     }
 }}
 <div class="local-studiolms-wizard" id="local-studiolms-landing">
-    <h3 class="mb-4">{{#str}}landing_heading, local_studiolms{{/str}}</h3>
+    <div class="text-center mb-4">
+        <div class="d-flex align-items-center justify-content-center mb-2">
+            <img src="{{logourl}}" alt="StudioLMS"
+                 class="studiolms-landing-logo me-3" width="48" height="48">
+            <span class="studiolms-landing-brand">StudioLMS</span>
+        </div>
+        <p class="studiolms-landing-greeting mb-0">{{landingheading}}</p>
+    </div>
 
     <div class="row mb-4">
         <div class="col-12 col-md-4 mb-3">
