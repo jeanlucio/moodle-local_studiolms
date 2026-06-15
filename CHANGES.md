@@ -5,6 +5,15 @@ Versions align with `$plugin->release` in `version.php`.
 
 ---
 
+## v0.2.5 — 2026-06-15
+
+- The Moodle `core_ai` manager (used as the direct fallback when the PlayerGames
+  hub is absent) is now retrieved through the dependency container
+  (`\core\di::get(\core_ai\manager::class)`), the documented retrieval pattern,
+  instead of a reflection-based constructor shim. Behaviour is unchanged.
+
+---
+
 ## v0.2.4 — 2026-06-15
 
 - Removed the now-unused "preferred AI provider" admin setting (the AI engine is
