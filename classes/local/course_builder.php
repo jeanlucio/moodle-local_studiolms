@@ -99,6 +99,7 @@ class course_builder {
         $moduleinfo->forcesubscribe = 0;
         $moduleinfo->assessed = 0;
         $moduleinfo->scale = 0;
+        $moduleinfo->grade_forum = 0;
         return add_moduleinfo($moduleinfo, $course);
     }
 
@@ -169,6 +170,8 @@ class course_builder {
         $moduleinfo->usedynalink = 1;
         $moduleinfo->defaultapproval = 1;
         $moduleinfo->entbypage = 10;
+        $moduleinfo->assessed = 0;
+        $moduleinfo->scale = 0;
         return add_moduleinfo($moduleinfo, $course);
     }
 
