@@ -25,8 +25,8 @@ import {call as fetchMany} from 'core/ajax';
 import {get_string as getString} from 'core/str';
 import Config from 'core/config';
 
-const FORM_ID      = 'local-studiolms-section-form';
-const WRAPPER_ID   = 'local-studiolms-section';
+const FORM_ID = 'local-studiolms-section-form';
+const WRAPPER_ID = 'local-studiolms-section';
 const POLL_INTERVAL = 2000;
 
 let initialised = false;
@@ -53,16 +53,16 @@ export const init = () => {
 };
 
 const handleSubmit = async form => {
-    const wrapper    = document.getElementById(WRAPPER_ID);
+    const wrapper = document.getElementById(WRAPPER_ID);
     const errorRegion = form.querySelector('[data-region="error"]');
-    const spinner    = form.querySelector('[data-region="spinner"]');
-    const btnLabel   = form.querySelector('[data-region="btnlabel"]');
-    const submitBtn  = form.querySelector('[data-action="generate-section"]');
+    const spinner = form.querySelector('[data-region="spinner"]');
+    const btnLabel = form.querySelector('[data-region="btnlabel"]');
+    const submitBtn = form.querySelector('[data-action="generate-section"]');
 
-    const courseid   = parseInt(form.dataset.courseid, 10);
+    const courseid = parseInt(form.dataset.courseid, 10);
     const sectionnum = parseInt(form.querySelector('#section-sectionnum').value, 10);
-    const theme      = form.querySelector('#section-theme').value.trim();
-    const reference  = form.querySelector('#section-reference').value;
+    const theme = form.querySelector('#section-theme').value.trim();
+    const reference = form.querySelector('#section-reference').value;
 
     errorRegion.classList.add('d-none');
 
@@ -107,11 +107,11 @@ const showProgressView = wrapper => {
 };
 
 const startPolling = (wrapper, progressid, courseid) => {
-    const bar           = wrapper.querySelector('[data-region="bar"]');
-    const messageEl     = wrapper.querySelector('[data-region="progress-message"]');
-    const doneRegion    = wrapper.querySelector('[data-region="done"]');
-    const errorRegion   = wrapper.querySelector('[data-region="progress-error"]');
-    const viewLink      = wrapper.querySelector('[data-region="viewlink"]');
+    const bar = wrapper.querySelector('[data-region="bar"]');
+    const messageEl = wrapper.querySelector('[data-region="progress-message"]');
+    const doneRegion = wrapper.querySelector('[data-region="done"]');
+    const errorRegion = wrapper.querySelector('[data-region="progress-error"]');
+    const viewLink = wrapper.querySelector('[data-region="viewlink"]');
 
     const intervalId = setInterval(async() => {
         try {
@@ -159,7 +159,7 @@ const resetToForm = () => {
     const form = formView.querySelector(`#${FORM_ID}`);
     form.reset();
     form.querySelector('[data-region="error"]').classList.add('d-none');
-    const spinner  = form.querySelector('[data-region="spinner"]');
+    const spinner = form.querySelector('[data-region="spinner"]');
     const btnLabel = form.querySelector('[data-region="btnlabel"]');
     const submitBtn = form.querySelector('[data-action="generate-section"]');
     spinner.classList.add('d-none');

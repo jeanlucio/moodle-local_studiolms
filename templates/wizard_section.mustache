@@ -91,11 +91,11 @@
     <div data-region="progress-view" class="d-none">
         <h3 class="mb-3">{{#str}}section_heading, local_studiolms{{/str}}</h3>
 
-        <div class="progress mb-2" role="progressbar"
-             aria-label="{{#str}}section_heading, local_studiolms{{/str}}"
-             aria-valuemin="0" aria-valuemax="100">
+        <div class="progress mb-2">
             <div class="progress-bar progress-bar-striped progress-bar-animated"
-                 data-region="bar" aria-valuenow="0"></div>
+                 role="progressbar" data-region="bar"
+                 aria-valuenow="0" aria-valuemin="0" aria-valuemax="100"
+                 aria-label="{{#str}}section_heading, local_studiolms{{/str}}"></div>
         </div>
         <p class="text-muted small mb-3" data-region="progress-message">
             {{#str}}section_planning, local_studiolms{{/str}}
