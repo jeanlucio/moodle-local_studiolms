@@ -56,6 +56,35 @@ class ai_resolver {
     }
 
     /**
+     * Returns true when any AI source in the resolution chain can be used.
+     *
+     * Mirrors the order of generate_text() without performing a call, so the
+     * wizard can fail fast (a friendly panel before the briefing, a clear error
+     * before queueing a background task) instead of letting an existential
+     * dependency surface only when generation runs.
+     *
+     * @return bool
+     */
+    public static function is_available(): bool {
+        if (self::$testingprovider !== null && (defined('PHPUNIT_TEST') || defined('BEHAT_SITE_RUNNING'))) {
+            return true;
+        }
+
+        if (class_exists('\local_playergames\cartridge\ai_generator')) {
+            $hub = new \local_playergames\cartridge\ai_generator();
+            if ($hub->has_key()) {
+                return true;
+            }
+        }
+
+        if (class_exists('\tiny_studiolms\ai\generator') && self::tiny_has_key()) {
+            return true;
+        }
+
+        return self::has_core_ai_provider();
+    }
+
+    /**
      * Generates free text from the resolved AI provider.
      *
      * @param string $systemprompt System instruction text.

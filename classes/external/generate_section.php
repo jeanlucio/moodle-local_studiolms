@@ -29,6 +29,7 @@ use core_external\external_api;
 use core_external\external_function_parameters;
 use core_external\external_single_structure;
 use core_external\external_value;
+use local_studiolms\local\ai_resolver;
 use local_studiolms\task\generate_section_task;
 
 /**
@@ -113,6 +114,11 @@ class generate_section extends external_api {
         $context = context_course::instance($course->id);
         self::validate_context($context);
         require_capability('local/studiolms:generate', $context);
+
+        // Fail fast: the background task cannot generate without AI.
+        if (!ai_resolver::is_available()) {
+            throw new \moodle_exception('noaiprovider', 'local_studiolms');
+        }
 
         if ($params['sectionnum'] >= 0) {
             $DB->get_record(

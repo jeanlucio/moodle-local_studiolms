@@ -1,0 +1,70 @@
+{{!
+    This file is part of Moodle - https://moodle.org/
+
+    Moodle is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    Moodle is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with Moodle.  If not, see <https://www.gnu.org/licenses/>.
+}}
+{{!
+    @template local_studiolms/wizard_noai
+
+    Pre-flight panel shown when no AI provider is resolvable. StudioLMS cannot
+    generate without AI, so the wizard is replaced by clear, role-aware guidance.
+
+    Context variables required for this template:
+    * heading - Panel heading text.
+    * intro - Existential explanation paragraph.
+    * isadmin - Whether the current user can configure Moodle AI.
+    * adminhint - Guidance shown to administrators.
+    * adminlink - URL to the Moodle AI providers admin page.
+    * adminlinklabel - Label for the admin link button.
+    * teacherhint - Guidance shown to teachers.
+    * cancelurl - URL back to the course.
+    * backlabel - Label for the back-to-course button.
+
+    Example context (json):
+    {
+        "heading": "AI provider required",
+        "intro": "StudioLMS generates course content with AI, so it needs an available provider.",
+        "isadmin": true,
+        "adminhint": "You are an administrator — enable a provider now.",
+        "adminlink": "https://example.com/admin/settings.php?section=aiprovider",
+        "adminlinklabel": "Configure Moodle AI",
+        "teacherhint": "Ask your administrator to enable an AI provider.",
+        "cancelurl": "https://example.com/course/view.php?id=2",
+        "backlabel": "Back to the course"
+    }
+}}
+<div class="local-studiolms-noai my-4">
+    <div class="alert alert-warning" role="alert">
+        <h2 class="h4 mt-0">
+            <i class="fa fa-robot me-2" aria-hidden="true"></i>{{heading}}
+        </h2>
+        <p class="mb-0">{{intro}}</p>
+    </div>
+
+    {{#isadmin}}
+        <p>{{adminhint}}</p>
+        <p>
+            <a class="btn btn-primary" href="{{adminlink}}">
+                <i class="fa fa-gear me-2" aria-hidden="true"></i>{{adminlinklabel}}
+            </a>
+        </p>
+    {{/isadmin}}
+    {{^isadmin}}
+        <p>{{teacherhint}}</p>
+    {{/isadmin}}
+
+    <p class="mt-3">
+        <a class="btn btn-secondary" href="{{cancelurl}}">{{backlabel}}</a>
+    </p>
+</div>

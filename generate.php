@@ -46,6 +46,26 @@ $PAGE->set_heading(format_string($course->fullname));
 
 $cancelurl = (new moodle_url('/course/view.php', ['id' => $course->id]))->out(false);
 
+// Pre-flight: StudioLMS cannot generate anything without AI, so stop here with
+// clear, role-aware guidance instead of letting the wizard fail at generation.
+if (!\local_studiolms\local\ai_resolver::is_available()) {
+    $isadmin = has_capability('moodle/site:config', context_system::instance());
+    echo $OUTPUT->header();
+    echo $OUTPUT->render_from_template('local_studiolms/wizard_noai', [
+        'heading'        => get_string('noai_heading', 'local_studiolms'),
+        'intro'          => get_string('noai_intro', 'local_studiolms'),
+        'isadmin'        => $isadmin,
+        'adminhint'      => get_string('noai_admin', 'local_studiolms'),
+        'adminlink'      => (new moodle_url('/admin/settings.php', ['section' => 'aiprovider']))->out(false),
+        'adminlinklabel' => get_string('noai_adminlink', 'local_studiolms'),
+        'teacherhint'    => get_string('noai_teacher', 'local_studiolms'),
+        'cancelurl'      => $cancelurl,
+        'backlabel'      => get_string('back_to_course', 'local_studiolms'),
+    ]);
+    echo $OUTPUT->footer();
+    exit;
+}
+
 // Section list for the single-activity form.
 
 $sectionrecords = $DB->get_records('course_sections', ['course' => $course->id], 'section ASC');

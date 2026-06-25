@@ -29,6 +29,7 @@ use core_external\external_function_parameters;
 use core_external\external_multiple_structure;
 use core_external\external_single_structure;
 use core_external\external_value;
+use local_studiolms\local\ai_resolver;
 use local_studiolms\task\generate_course_task;
 
 /**
@@ -95,6 +96,11 @@ class populate_course extends external_api {
         require_capability('local/studiolms:generate', $context);
         if ($params['wipe']) {
             require_capability('moodle/course:manageactivities', $context);
+        }
+
+        // Fail fast: the background task cannot generate without AI.
+        if (!ai_resolver::is_available()) {
+            throw new \moodle_exception('noaiprovider', 'local_studiolms');
         }
 
         $outline = $DB->get_record('local_studiolms_outline', [
