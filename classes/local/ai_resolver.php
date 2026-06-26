@@ -70,6 +70,14 @@ class ai_resolver {
             return true;
         }
 
+        // Behat-only override: the test seam is process-local, so a Behat web
+        // request cannot see an injected provider. A scenario sets this config to
+        // exercise the wizard as if AI were available; left unset, the no-provider
+        // panel is shown. Guarded by BEHAT_SITE_RUNNING, so it is inert in production.
+        if (defined('BEHAT_SITE_RUNNING') && BEHAT_SITE_RUNNING && get_config('local_studiolms', 'behatfakeai')) {
+            return true;
+        }
+
         if (class_exists('\local_playergames\cartridge\ai_generator')) {
             $hub = new \local_playergames\cartridge\ai_generator();
             if ($hub->has_key()) {

@@ -16,8 +16,15 @@ Feature: The StudioLMS generation wizard landing
       | teacher1 | C1     | editingteacher |
 
   Scenario: A teacher can open the wizard and see the generation modes
+    Given the following config values are set as admin:
+      | behatfakeai | 1 | local_studiolms |
     When I am on the "C1" "local_studiolms > wizard" page logged in as "teacher1"
     Then I should see "what would you like to do today"
     And I should see "Single Activity"
     And I should see "Section"
     And I should see "Full Course"
+
+  Scenario: Without an AI provider the wizard shows guidance instead of the modes
+    When I am on the "C1" "local_studiolms > wizard" page logged in as "teacher1"
+    Then I should see "AI provider required"
+    And I should not see "Single Activity"
