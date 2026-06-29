@@ -60,7 +60,7 @@ StudioLMS runs standalone on Moodle 4.5+ alone. Every integration is **soft** (`
 |---|---|
 | `tiny_studiolms` | Rich visual templates for generated pages (and an AI text fallback for keys of its own); without it, pages fall back to clean semantic HTML |
 | `block_playerhud` | Enables the gamified mode |
-| `local_playergames` | AI hub (canonical key precedence) |
+| `local_aihub` | AI Hub — BYOK API keys (personal → site) |
 | `local_aiassess` | AI rubrics for assignments/forums (planned) |
 
 ---
@@ -71,7 +71,7 @@ StudioLMS has **no key widget of its own** — there is no key to configure in i
 
 | Order | Source |
 |------|--------|
-| 1 | **`local_playergames` hub** — when installed and holding a key; owns the canonical precedence (personal → site → `core_ai`) |
+| 1 | **`local_aihub`** — when installed and holding a BYOK key (personal → site) |
 | 2 | **`tiny_studiolms` own keys** — when the editor is installed and has a key of its own (personal → site), used only when the hub is absent |
 | 3 | **Moodle `core_ai`** — called directly; no external key needed when the site already has a provider configured |
 | 4 | A clear message asks the admin to configure AI (Admin → AI) or install the hub |
@@ -159,7 +159,7 @@ There are **no dates** in any step — the teacher edits them through the standa
 
 StudioLMS generates course content using AI. AI is **existential** to the plugin (a course cannot be generated without it), but it relies entirely on AI that the site already provides — StudioLMS ships **no API key and no key widget of its own**.
 
-The teacher's prompt and any pasted reference material are transmitted to the resolved provider (the `local_playergames` hub, the `tiny_studiolms` editor's configured provider, or Moodle's `core_ai`) for processing. External services operate under their own terms of service and privacy policies. StudioLMS does not store prompts or raw AI responses; only the generated course content the teacher confirms is saved into the course.
+The teacher's prompt and any pasted reference material are transmitted to the resolved provider (the `local_aihub` broker, the `tiny_studiolms` editor's configured provider, or Moodle's `core_ai`) for processing. External services operate under their own terms of service and privacy policies. StudioLMS does not store prompts or raw AI responses; only the generated course content the teacher confirms is saved into the course.
 
 No external communication occurs unless a generation is explicitly started.
 
@@ -224,7 +224,7 @@ O StudioLMS funciona de forma autônoma apenas com o Moodle 4.5+. Toda integraç
 |---|---|
 | `tiny_studiolms` | Templates visuais ricos nas páginas geradas (e fallback de IA com chaves próprias); sem ele, as páginas caem em HTML semântico limpo |
 | `block_playerhud` | Habilita o modo gamificado |
-| `local_playergames` | Hub de IA (precedência canônica de chaves) |
+| `local_aihub` | Central de IA — chaves de API BYOK (pessoal → site) |
 | `local_aiassess` | Rubricas por IA em tarefas/fóruns (planejado) |
 
 ---
@@ -235,7 +235,7 @@ O StudioLMS **não tem widget de chaves próprio** — não há chave para confi
 
 | Ordem | Fonte |
 |------|--------|
-| 1 | **Hub `local_playergames`** — quando instalado e com chave; detém a precedência canônica (pessoal → site → `core_ai`) |
+| 1 | **`local_aihub`** — quando instalada e com chave BYOK (pessoal → site) |
 | 2 | **Chaves próprias do `tiny_studiolms`** — quando o editor está instalado e tem chave própria (pessoal → site), usado apenas quando o hub está ausente |
 | 3 | **`core_ai` do Moodle** — chamada direta; nenhuma chave externa necessária quando o site já tem um provedor configurado |
 | 4 | Uma mensagem clara orienta o admin a configurar a IA (Admin → IA) ou instalar o hub |
@@ -323,7 +323,7 @@ O visual rico não é cosmético — cada tipo de bloco tem base em ciência da 
 
 O StudioLMS gera conteúdo de curso usando IA. A IA é **existencial** ao plugin (não há como gerar um curso sem ela), mas o plugin depende inteiramente da IA que o site já fornece — o StudioLMS **não traz nenhuma chave de API nem widget de chave próprio**.
 
-O prompt do professor e qualquer material de referência colado são enviados ao provedor resolvido (o hub `local_playergames`, o provedor configurado do editor `tiny_studiolms`, ou o `core_ai` do Moodle) para processamento. Os serviços externos seguem seus próprios termos de uso e políticas de privacidade. O StudioLMS não armazena prompts nem respostas brutas da IA; apenas o conteúdo de curso gerado que o professor confirma é salvo no curso.
+O prompt do professor e qualquer material de referência colado são enviados ao provedor resolvido (o intermediário `local_aihub`, o provedor configurado do editor `tiny_studiolms`, ou o `core_ai` do Moodle) para processamento. Os serviços externos seguem seus próprios termos de uso e políticas de privacidade. O StudioLMS não armazena prompts nem respostas brutas da IA; apenas o conteúdo de curso gerado que o professor confirma é salvo no curso.
 
 Nenhuma comunicação externa ocorre sem que uma geração seja explicitamente iniciada.
 

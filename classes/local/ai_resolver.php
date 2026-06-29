@@ -25,14 +25,13 @@
 namespace local_studiolms\local;
 
 /**
- * Delegates free-text AI generation to the PlayerGames ecosystem.
+ * Delegates free-text AI generation across the ecosystem's AI sources.
  *
- * Resolution order: the local_playergames hub (cartridge\ai_generator) first,
- * which owns the canonical key precedence (personal → site → core_ai); then the
- * tiny_studiolms editor's own keys when it is installed and has a key of its own;
- * then Moodle core_ai directly. When none is available, a clear message asks the
- * admin to configure AI. Every integration is soft (class_exists), so
- * local_studiolms does not hard-depend on the hub or the editor.
+ * Resolution order: the AI Hub (local_aihub) first, which resolves BYOK keys
+ * personal → site; then the tiny_studiolms editor's own keys when it is installed
+ * and has a key of its own; then Moodle core_ai directly. When none is available,
+ * a clear message asks the admin to configure AI. Every integration is soft
+ * (class_exists), so local_studiolms does not hard-depend on the hub or the editor.
  */
 class ai_resolver {
     /** @var callable|null Deterministic provider injected by tests, bypassing real AI. */
@@ -78,11 +77,8 @@ class ai_resolver {
             return true;
         }
 
-        if (class_exists('\local_playergames\cartridge\ai_generator')) {
-            $hub = new \local_playergames\cartridge\ai_generator();
-            if ($hub->has_key()) {
-                return true;
-            }
+        if (class_exists(\local_aihub\ai::class) && \local_aihub\ai::is_available()) {
+            return true;
         }
 
         if (class_exists('\tiny_studiolms\ai\generator') && self::tiny_has_key()) {
@@ -109,11 +105,18 @@ class ai_resolver {
             return (string) (self::$testingprovider)($systemprompt, $userprompt);
         }
 
-        // Primary: the PlayerGames hub resolves personal → site → core_ai internally.
-        if (class_exists('\local_playergames\cartridge\ai_generator')) {
-            $hub = new \local_playergames\cartridge\ai_generator();
-            if ($hub->has_key()) {
-                return $hub->generate_text($systemprompt, $userprompt);
+        // Primary: the AI Hub resolves personal → site BYOK keys. On a successful
+        // generation return its text; otherwise fall through to the next source.
+        if (class_exists(\local_aihub\ai::class)) {
+            $result = \local_aihub\ai::generate_text(
+                $systemprompt,
+                $userprompt,
+                false,
+                'local_studiolms',
+                get_string('aiusage', 'local_studiolms')
+            );
+            if (!empty($result['success'])) {
+                return (string) $result['data'];
             }
         }
 
@@ -134,10 +137,9 @@ class ai_resolver {
     /**
      * Returns true when the tiny_studiolms editor has an AI key of its own.
      *
-     * Checks only the editor's own personal preferences and site config; the
-     * PlayerGames hub tiers it also consults are intentionally ignored, since this
-     * branch runs only when the hub is absent. Mirrors the hub's has_key() gate so
-     * that, with no editor key, resolution falls through to core_ai cleanly.
+     * Checks only the editor's own personal preferences and site config; this
+     * branch runs only when the AI Hub holds no key, so resolution falls through
+     * to core_ai cleanly when the editor has no key of its own.
      *
      * @return bool
      */
