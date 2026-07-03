@@ -15,7 +15,7 @@
 // along with Moodle.  If not, see <https://www.gnu.org/licenses/>.
 
 /**
- * Version details for the local_studiolms plugin.
+ * Event observers for local_studiolms.
  *
  * @package    local_studiolms
  * @copyright  2026 Jean Lúcio <jeanlucio@gmail.com>
@@ -24,9 +24,9 @@
 
 defined('MOODLE_INTERNAL') || die();
 
-$plugin->version = 2026070300;
-$plugin->requires = 2024100700; // Requires Moodle 4.5+ (Compatible with 5.x).
-$plugin->supported = [405, 502];
-$plugin->component = 'local_studiolms';
-$plugin->maturity = MATURITY_ALPHA;
-$plugin->release = 'v0.4.0';
+$observers = [
+    [
+        'eventname' => \core\event\course_deleted::class,
+        'callback'  => \local_studiolms\observer::class . '::course_deleted',
+    ],
+];
