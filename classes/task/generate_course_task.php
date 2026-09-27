@@ -199,6 +199,7 @@ class generate_course_task extends \core\task\adhoc_task {
                     }
                 }
                 $html = page_builder::render(
+                    context_course::instance($this->course->id),
                     $theme,
                     $sectiontitle,
                     $title,

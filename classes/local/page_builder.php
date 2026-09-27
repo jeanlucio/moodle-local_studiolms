@@ -39,6 +39,7 @@ class page_builder {
     /**
      * Renders the full HTML for a course page.
      *
+     * @param \context $context Course context the page is generated for (scopes the editor's AI call).
      * @param string $theme The course theme.
      * @param string $sectiontitle The section title.
      * @param string $pagetitle The page title.
@@ -51,6 +52,7 @@ class page_builder {
      * @return string The page HTML.
      */
     public static function render(
+        \context $context,
         string $theme,
         string $sectiontitle,
         string $pagetitle,
@@ -68,6 +70,7 @@ class page_builder {
         }
 
         $body = self::generate_body(
+            $context,
             $theme,
             $sectiontitle,
             $pagetitle,
@@ -165,6 +168,7 @@ class page_builder {
      *
      * Returns an empty string (degraded) when the AI is unavailable.
      *
+     * @param \context $context Course context the page is generated for.
      * @param string $theme Course theme.
      * @param string $sectiontitle Section title.
      * @param string $pagetitle Page title.
@@ -175,6 +179,7 @@ class page_builder {
      * @return string Rendered body HTML.
      */
     private static function generate_body(
+        \context $context,
         string $theme,
         string $sectiontitle,
         string $pagetitle,
@@ -185,6 +190,7 @@ class page_builder {
     ): string {
         try {
             return self::plan_and_build(
+                $context,
                 $theme,
                 $sectiontitle,
                 $pagetitle,
@@ -270,6 +276,7 @@ class page_builder {
     /**
      * Asks the AI to plan the page, then builds it.
      *
+     * @param \context $context Course context the page is generated for.
      * @param string $theme Course theme.
      * @param string $sectiontitle Section title.
      * @param string $pagetitle Page title.
@@ -280,6 +287,7 @@ class page_builder {
      * @return string Rendered body HTML.
      */
     private static function plan_and_build(
+        \context $context,
         string $theme,
         string $sectiontitle,
         string $pagetitle,
@@ -308,7 +316,7 @@ class page_builder {
             foreach ($plan['blocks'] as $block) {
                 $html .= self::render_block($block);
             }
-            $html .= self::generate_mindmap_block($pagetitle);
+            $html .= self::generate_mindmap_block($pagetitle, $context);
             return $html;
         }
 
@@ -441,20 +449,22 @@ class page_builder {
      * Generates a mind map block as a visual summary for a content page.
      *
      * Calls the tiny_studiolms AI generator directly for the mind map structure
-     * (topic + branches). Silently returns empty string on AI failure so the
-     * page degrades gracefully without losing the text blocks. The mind map is
-     * skipped entirely when the tiny_studiolms editor is not installed, since its
-     * structured generator lives there.
+     * (topic + branches); the editor routes it through local_aihub then core_ai in
+     * the given context. Silently returns empty string on AI failure so the page
+     * degrades gracefully without losing the text blocks. The mind map is skipped
+     * entirely when the tiny_studiolms editor is not installed, since its structured
+     * generator lives there.
      *
      * @param string $topic Page topic used as the mind map central node and prompt.
+     * @param \context $context Course context the page is generated for.
      * @return string Rendered mindmap block HTML, or empty string on failure.
      */
-    private static function generate_mindmap_block(string $topic): string {
+    private static function generate_mindmap_block(string $topic, \context $context): string {
         if (!class_exists('\tiny_studiolms\ai\generator')) {
             return '';
         }
         try {
-            $data     = \tiny_studiolms\ai\generator::generate_mindmap($topic);
+            $data     = \tiny_studiolms\ai\generator::generate_mindmap($topic, $context);
             $branches = json_decode((string)($data['branches'] ?? '[]'), true);
             if (!is_array($branches) || empty($branches)) {
                 return '';

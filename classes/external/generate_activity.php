@@ -126,6 +126,7 @@ class generate_activity extends external_api {
             case 'page':
                 $preset = '';
                 $html = page_builder::render(
+                    $context,
                     $theme,
                     $theme,
                     $title,

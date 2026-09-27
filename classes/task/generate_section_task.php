@@ -177,6 +177,7 @@ class generate_section_task extends \core\task\adhoc_task {
         switch ($type) {
             case 'page':
                 $html = page_builder::render(
+                    context_course::instance($this->course->id),
                     $theme,
                     $sectionname,
                     $title,

@@ -28,10 +28,9 @@ namespace local_studiolms\local;
  * Delegates free-text AI generation across the ecosystem's AI sources.
  *
  * Resolution order: the AI Hub (local_aihub) first, which resolves BYOK keys
- * personal → site; then the tiny_studiolms editor's own keys when it is installed
- * and has a key of its own; then Moodle core_ai directly. When none is available,
- * a clear message asks the admin to configure AI. Every integration is soft
- * (class_exists), so local_studiolms does not hard-depend on the hub or the editor.
+ * personal → site; then Moodle core_ai directly. When neither is available, a
+ * clear message asks the admin to configure AI. The hub integration is soft
+ * (class_exists), so local_studiolms does not hard-depend on it.
  */
 class ai_resolver {
     /** @var callable|null Deterministic provider injected by tests, bypassing real AI. */
@@ -81,10 +80,6 @@ class ai_resolver {
             return true;
         }
 
-        if (class_exists('\tiny_studiolms\ai\generator') && self::tiny_has_key()) {
-            return true;
-        }
-
         return self::has_core_ai_provider();
     }
 
@@ -120,42 +115,13 @@ class ai_resolver {
             }
         }
 
-        // Fallback: the tiny_studiolms editor's own keys, when the hub is absent.
-        if (class_exists('\tiny_studiolms\ai\generator') && self::tiny_has_key()) {
-            return \tiny_studiolms\ai\generator::generate_text($systemprompt, $userprompt);
-        }
-
-        // Fallback: Moodle core_ai directly when neither the hub nor the editor apply.
+        // Fallback: Moodle core_ai directly when the hub is absent or has failed.
         if (self::has_core_ai_provider()) {
             return self::call_core_ai($systemprompt, $userprompt);
         }
 
         // No AI source available: guide the admin to configure one.
         throw new \moodle_exception('noaiprovider', 'local_studiolms');
-    }
-
-    /**
-     * Returns true when the tiny_studiolms editor has an AI key of its own.
-     *
-     * Checks only the editor's own personal preferences and site config; this
-     * branch runs only when the AI Hub holds no key, so resolution falls through
-     * to core_ai cleanly when the editor has no key of its own.
-     *
-     * @return bool
-     */
-    private static function tiny_has_key(): bool {
-        $personal = (string) get_user_preferences('tiny_studiolms_gemini_key', '')
-            . (string) get_user_preferences('tiny_studiolms_groq_key', '')
-            . (string) get_user_preferences('tiny_studiolms_custom_key', '');
-        if ($personal !== '') {
-            return true;
-        }
-
-        $site = (string) get_config('tiny_studiolms', 'apikey_gemini')
-            . (string) get_config('tiny_studiolms', 'apikey_groq')
-            . (string) get_config('tiny_studiolms', 'apikey_custom');
-
-        return $site !== '';
     }
 
     /**
