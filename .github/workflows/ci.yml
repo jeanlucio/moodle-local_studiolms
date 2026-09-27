@@ -65,6 +65,10 @@ jobs:
       - name: Add tiny_studiolms plugin
         run: moodle-plugin-ci add-plugin jeanlucio/moodle-tiny_studiolms
 
+      # Soft dependency: without it the hub-stubbed page builder test is skipped instead of run.
+      - name: Add local_aihub plugin
+        run: moodle-plugin-ci add-plugin jeanlucio/moodle-local_aihub
+
       - name: Install moodle-plugin-ci
         run: moodle-plugin-ci install --plugin ./plugin --db-host=127.0.0.1
         env:
