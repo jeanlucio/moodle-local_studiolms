@@ -78,10 +78,12 @@ class generate_section_task extends \core\task\adhoc_task {
         require_once($CFG->dirroot . '/course/lib.php');
 
         $data = $this->get_custom_data();
-        $this->progress = $DB->get_record('local_studiolms_progress', ['id' => $data->progressid]);
-        if ($this->progress === false) {
+        // Checked before assigning: $progress is typed stdClass, so it cannot hold the false of a missing row.
+        $progress = $DB->get_record('local_studiolms_progress', ['id' => $data->progressid]);
+        if ($progress === false) {
             return;
         }
+        $this->progress = $progress;
 
         $this->course = get_course($data->courseid);
         $context = context_course::instance($this->course->id);

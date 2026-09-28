@@ -192,4 +192,26 @@ final class generate_section_task_test extends \advanced_testcase {
         $this->assertSame('failed', $DB->get_field('local_studiolms_progress', 'status', ['id' => $progressid]));
         $this->assertSame(2, $DB->count_records('course_sections', ['course' => $course->id]));
     }
+
+    /**
+     * A task whose progress record no longer exists (for example the course was deleted while it was
+     * queued) returns quietly instead of failing.
+     *
+     * Regression test: the record was assigned straight to a property typed stdClass, so the false
+     * returned for a missing row raised a TypeError before the "not found" check could run, and the
+     * task was retried with a failure every time.
+     */
+    public function test_missing_progress_record_returns_without_error(): void {
+        global $DB;
+
+        $this->setAdminUser();
+        $course = $this->getDataGenerator()->create_course(['numsections' => 1]);
+        $progressid = $this->seed_progress(2, $course->id);
+        $DB->delete_records('local_studiolms_progress', ['id' => $progressid]);
+
+        $this->run_task($progressid, $course->id, 1, [['type' => 'label', 'title' => 'New']], false);
+
+        $this->assertFalse($DB->record_exists('local_studiolms_progress', ['id' => $progressid]));
+        $this->assertCount(0, get_fast_modinfo($course)->get_instances_of('label'));
+    }
 }
