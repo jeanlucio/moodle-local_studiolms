@@ -96,6 +96,13 @@ class generate_section_task extends \core\task\adhoc_task {
         $wipe            = !empty($data->wipe);
         $theme           = (string) $data->theme;
 
+        // Re-checked here, not just in the web service: the permission can have been
+        // revoked between enqueueing and execution.
+        if ($wipe && !has_capability('moodle/course:manageactivities', $context, $USER->id)) {
+            $this->fail(get_string('error_populate', 'local_studiolms'));
+            return;
+        }
+
         $activities = json_decode($data->activitiesjson, true);
         if (!is_array($activities) || empty($activities)) {
             $this->fail(get_string('error_populate', 'local_studiolms'));

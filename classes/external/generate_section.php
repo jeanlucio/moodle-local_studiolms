@@ -114,6 +114,9 @@ class generate_section extends external_api {
         $context = context_course::instance($course->id);
         self::validate_context($context);
         require_capability('local/studiolms:generate', $context);
+        if ($params['wipe']) {
+            require_capability('moodle/course:manageactivities', $context);
+        }
 
         // Fail fast: the background task cannot generate without AI.
         if (!ai_resolver::is_available()) {
