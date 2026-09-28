@@ -240,7 +240,7 @@ class page_builder {
                 debugging('StudioLMS: course plan fill skipped — ' . $e->getMessage(), DEBUG_DEVELOPER);
             }
             $preset = self::fill_preset($preset, $fill);
-            return preset_loader::render($preset);
+            return self::render_preset($preset);
         } catch (\Throwable $e) {
             return '';
         }
@@ -406,19 +406,52 @@ class page_builder {
             $preset = self::fill_preset($preset, $fill);
         }
 
-        return preset_loader::render($preset);
+        return self::render_preset($preset);
+    }
+
+    /**
+     * Renders a filled preset to HTML, sanitizing the result as defense in depth.
+     *
+     * The preset's own static markup is authored by the plugin, but by the time this is
+     * called it has been through fill_preset() with AI-generated values. clean_text() is a
+     * second, independent safety net on top of the sanitization already done there.
+     *
+     * @param array $preset Filled preset definition.
+     * @return string Sanitized HTML.
+     */
+    private static function render_preset(array $preset): string {
+        return clean_text(preset_loader::render($preset), FORMAT_HTML);
     }
 
     /**
      * Recursively replaces placeholder tokens in all string values of a preset.
      *
+     * The fill map is AI-generated and therefore untrusted: only keys shaped like a
+     * bracketed placeholder (e.g. "[Tópico 1]") that actually occur in the preset are
+     * honoured, and every replacement value is reduced to plain text before substitution,
+     * since the preset's HTML is later rendered with format_text's noclean flag.
+     *
      * @param array $preset Preset definition.
-     * @param array $fill Map of [Placeholder] => replacement text.
+     * @param array $fill Map of [Placeholder] => replacement text, from the AI.
      * @return array Preset with placeholders replaced.
      */
     private static function fill_preset(array $preset, array $fill): array {
-        $search  = array_keys($fill);
-        $replace = array_values($fill);
+        $haystack = json_encode($preset, JSON_UNESCAPED_UNICODE);
+        $search   = [];
+        $replace  = [];
+        foreach ($fill as $key => $value) {
+            if (!is_string($key) || !preg_match('/^\[[^\]]{1,80}\]$/u', $key)) {
+                continue;
+            }
+            if (!is_scalar($value)) {
+                continue;
+            }
+            if ($haystack === false || strpos($haystack, $key) === false) {
+                continue;
+            }
+            $search[]  = $key;
+            $replace[] = s(clean_param((string) $value, PARAM_TEXT));
+        }
         return self::fill_recursive($preset, $search, $replace);
     }
 

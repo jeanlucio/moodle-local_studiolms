@@ -126,4 +126,70 @@ final class page_builder_test extends \advanced_testcase {
         $this->assertStringContainsString('Photosynthesis basics', $html);
         $this->assertStringNotContainsString('data-slms-block-type="mindmap"', $html);
     }
+
+    /**
+     * fill_preset() only honours bracket-shaped placeholder keys that occur in the preset,
+     * and reduces every replacement value to sanitized plain text.
+     *
+     * Regression test for a stored XSS: the AI-supplied fill map used to be substituted into
+     * the preset's HTML with a raw str_replace(), and fields like contentHtml are rendered
+     * through triple-mustache into a mod_page saved with format_text's noclean flag. A crafted
+     * fill value (or an arbitrary, non-placeholder key) could inject markup that runs in every
+     * viewer's browser.
+     */
+    public function test_fill_preset_sanitizes_ai_supplied_values(): void {
+        $preset = [
+            'blocks' => [
+                [
+                    'type' => 'callout',
+                    'config' => [
+                        'contentHtml' => '<strong>[Tópico 1]</strong> and <strong>fixed</strong>',
+                    ],
+                ],
+            ],
+        ];
+        $fill = [
+            '[Tópico 1]'      => '<img src=x onerror=alert(1)>PWNED',
+            '<strong>'        => 'PWNED2',
+            '[not in preset]' => 'ignored',
+        ];
+
+        $method = new \ReflectionMethod(page_builder::class, 'fill_preset');
+        $method->setAccessible(true);
+        $filled = $method->invoke(null, $preset, $fill);
+
+        $html = $filled['blocks'][0]['config']['contentHtml'];
+        $this->assertStringNotContainsString('<img', $html);
+        $this->assertStringNotContainsString('onerror', $html);
+        $this->assertStringContainsString('PWNED', $html);
+        $this->assertStringContainsString('<strong>fixed</strong>', $html);
+        $this->assertStringNotContainsString('PWNED2', $html);
+    }
+
+    /**
+     * End-to-end reproduction of the reported PoC: a course intro page built from the real
+     * "Plano de Disciplina" preset, with an AI fill response carrying an XSS payload, renders
+     * with the payload neutralized. Skipped where the pt_br language pack (the only one that
+     * ships this preset) is not installed, which is expected in a bare CI environment — the
+     * language-independent test_fill_preset_sanitizes_ai_supplied_values() above covers the
+     * same contract everywhere.
+     */
+    public function test_course_intro_neutralizes_malicious_ai_fill_end_to_end(): void {
+        if (!get_string_manager()->translation_exists('pt_br', false)) {
+            $this->markTestSkipped('pt_br language pack not installed.');
+        }
+        force_current_language('pt_br');
+        if (preset_loader::find('Plano de Disciplina') === null) {
+            $this->markTestSkipped('Plano de Disciplina preset not available.');
+        }
+
+        $payload = '{"[Tópico 1]": "<img src=x onerror=fetch(1)>PWNED"}';
+        ai_resolver::set_provider_for_testing(fn(string $system, string $user): string => $payload);
+
+        $html = page_builder::render_course_intro('Biology', 'Course X', []);
+
+        $this->assertStringNotContainsString('<img', $html);
+        $this->assertStringNotContainsString('onerror', $html);
+        $this->assertStringContainsString('PWNED', $html);
+    }
 }
