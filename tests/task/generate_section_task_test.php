@@ -146,4 +146,50 @@ final class generate_section_task_test extends \advanced_testcase {
         $this->assertArrayHasKey($existing->cmid, $modinfo->get_cms());
         $this->assertCount(1, $modinfo->get_instances_of('label'));
     }
+
+    /**
+     * Regression test: the task re-checks mod/<type>:addinstance, so a permission revoked after queueing
+     * cannot be used to create that activity type, and nothing at all is created.
+     */
+    public function test_activity_type_without_addinstance_fails_and_creates_nothing(): void {
+        global $DB;
+
+        $course = $this->getDataGenerator()->create_course(['numsections' => 1]);
+        $context = \context_course::instance($course->id);
+        $teacher = $this->getDataGenerator()->create_and_enrol($course, 'editingteacher');
+        $roleid = $DB->get_field('role', 'id', ['shortname' => 'editingteacher'], MUST_EXIST);
+        assign_capability('mod/forum:addinstance', CAP_PREVENT, $roleid, $context->id, true);
+        accesslib_clear_all_caches_for_unit_testing();
+        $this->setUser($teacher);
+
+        $progressid = $this->seed_progress((int) $teacher->id, $course->id);
+        $activities = [['type' => 'label', 'title' => 'Ok'], ['type' => 'forum', 'title' => 'Denied']];
+        $this->run_task($progressid, $course->id, 1, $activities, false);
+
+        $this->assertSame('failed', $DB->get_field('local_studiolms_progress', 'status', ['id' => $progressid]));
+        $modinfo = get_fast_modinfo($course);
+        $this->assertCount(0, $modinfo->get_instances_of('label'));
+        $this->assertCount(0, $modinfo->get_instances_of('forum'));
+    }
+
+    /**
+     * Creating a new section (sectionnum -1) is refused when moodle/course:update was revoked.
+     */
+    public function test_new_section_without_course_update_fails_and_creates_nothing(): void {
+        global $DB;
+
+        $course = $this->getDataGenerator()->create_course(['numsections' => 1]);
+        $context = \context_course::instance($course->id);
+        $teacher = $this->getDataGenerator()->create_and_enrol($course, 'editingteacher');
+        $roleid = $DB->get_field('role', 'id', ['shortname' => 'editingteacher'], MUST_EXIST);
+        assign_capability('moodle/course:update', CAP_PREVENT, $roleid, $context->id, true);
+        accesslib_clear_all_caches_for_unit_testing();
+        $this->setUser($teacher);
+
+        $progressid = $this->seed_progress((int) $teacher->id, $course->id);
+        $this->run_task($progressid, $course->id, -1, [['type' => 'label', 'title' => 'New']], false);
+
+        $this->assertSame('failed', $DB->get_field('local_studiolms_progress', 'status', ['id' => $progressid]));
+        $this->assertSame(2, $DB->count_records('course_sections', ['course' => $course->id]));
+    }
 }

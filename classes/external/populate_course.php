@@ -30,6 +30,7 @@ use core_external\external_multiple_structure;
 use core_external\external_single_structure;
 use core_external\external_value;
 use local_studiolms\local\ai_resolver;
+use local_studiolms\local\content_access;
 use local_studiolms\task\generate_course_task;
 
 /**
@@ -94,9 +95,12 @@ class populate_course extends external_api {
         $context = \context_course::instance($course->id);
         self::validate_context($context);
         require_capability('local/studiolms:generate', $context);
-        if ($params['wipe']) {
-            require_capability('moodle/course:manageactivities', $context);
+        // Also covers wipe: deleting activities is governed by the same manageactivities capability.
+        $types = [];
+        foreach ($params['sections'] as $section) {
+            $types = array_merge($types, content_access::types_of($section['activities']));
         }
+        content_access::require_can_create($context, $types, true);
 
         // Fail fast: the background task cannot generate without AI.
         if (!ai_resolver::is_available()) {

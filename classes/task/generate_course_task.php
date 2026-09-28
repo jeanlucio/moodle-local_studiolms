@@ -27,6 +27,7 @@ namespace local_studiolms\task;
 use context_course;
 use local_studiolms\local\ai_json;
 use local_studiolms\local\ai_resolver;
+use local_studiolms\local\content_access;
 use local_studiolms\local\course_builder;
 use local_studiolms\local\gamification_setup;
 use local_studiolms\local\glossary_builder;
@@ -105,6 +106,17 @@ class generate_course_task extends \core\task\adhoc_task {
         $briefing = json_decode($outline->briefingjson, true) ?: [];
         $structure = json_decode($outline->outlinejson, true) ?: [];
         $sections = $structure['sections'] ?? [];
+
+        // Re-checked here, not just in the web service: the permission can have been
+        // revoked between enqueueing and execution. Also covers wipe (manageactivities).
+        $types = [];
+        foreach ($sections as $section) {
+            $types = array_merge($types, content_access::types_of($section['activities'] ?? []));
+        }
+        if (!content_access::can_create($context, $types, true, (int) $USER->id)) {
+            $this->fail(get_string('error_populate', 'local_studiolms'));
+            return;
+        }
         $theme = $briefing['theme'] ?? '';
         $this->reference = $briefing['reference'] ?? '';
         $this->bloom = $briefing['bloom'] ?? 'general';

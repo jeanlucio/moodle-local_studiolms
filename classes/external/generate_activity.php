@@ -31,6 +31,7 @@ use core_external\external_single_structure;
 use core_external\external_value;
 use local_studiolms\local\ai_json;
 use local_studiolms\local\ai_resolver;
+use local_studiolms\local\content_access;
 use local_studiolms\local\course_builder;
 use local_studiolms\local\glossary_builder;
 use local_studiolms\local\page_builder;
@@ -105,6 +106,7 @@ class generate_activity extends external_api {
         $context = context_course::instance($course->id);
         self::validate_context($context);
         require_capability('local/studiolms:generate', $context);
+        content_access::require_can_create($context, [$params['type']], false);
 
         $DB->get_record(
             'course_sections',

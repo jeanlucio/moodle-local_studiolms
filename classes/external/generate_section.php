@@ -30,6 +30,7 @@ use core_external\external_function_parameters;
 use core_external\external_single_structure;
 use core_external\external_value;
 use local_studiolms\local\ai_resolver;
+use local_studiolms\local\content_access;
 use local_studiolms\task\generate_section_task;
 
 /**
@@ -114,9 +115,12 @@ class generate_section extends external_api {
         $context = context_course::instance($course->id);
         self::validate_context($context);
         require_capability('local/studiolms:generate', $context);
-        if ($params['wipe']) {
-            require_capability('moodle/course:manageactivities', $context);
-        }
+        // Also covers wipe: deleting activities is governed by the same manageactivities capability.
+        content_access::require_can_create(
+            $context,
+            content_access::types_of(json_decode($params['activitiesjson'], true)),
+            $params['sectionnum'] < 0
+        );
 
         // Fail fast: the background task cannot generate without AI.
         if (!ai_resolver::is_available()) {

@@ -177,4 +177,43 @@ final class generate_course_task_test extends \advanced_testcase {
         $this->assertCount(1, $failed);
         $this->assertSame($course->id, reset($failed)->courseid);
     }
+
+    /**
+     * Regression test: a teacher whose role is denied an activity type through core capabilities cannot
+     * have the task create it (the permission may be revoked after the web service queued the run).
+     *
+     * @return void
+     */
+    public function test_activity_type_without_addinstance_fails_and_creates_nothing(): void {
+        global $DB;
+
+        $teacher = $this->getDataGenerator()->create_user();
+        [$course, $progressid] = $this->seed((int) $teacher->id, [
+            'objectives' => [],
+            'sections' => [
+                ['title' => 'Basics', 'activities' => [
+                    ['type' => 'label', 'title' => 'Intro'],
+                    ['type' => 'forum', 'title' => 'Discuss'],
+                ]],
+            ],
+        ]);
+        $this->getDataGenerator()->enrol_user($teacher->id, $course->id, 'editingteacher');
+        $roleid = $DB->get_field('role', 'id', ['shortname' => 'editingteacher'], MUST_EXIST);
+        assign_capability(
+            'mod/forum:addinstance',
+            CAP_PREVENT,
+            $roleid,
+            \context_course::instance($course->id)->id,
+            true
+        );
+        accesslib_clear_all_caches_for_unit_testing();
+        $this->setUser($teacher);
+
+        $this->run_task($progressid);
+
+        $this->assertSame('failed', $DB->get_field('local_studiolms_progress', 'status', ['id' => $progressid]));
+        $modinfo = get_fast_modinfo($course);
+        $this->assertCount(0, $modinfo->get_instances_of('label'));
+        $this->assertCount(0, $modinfo->get_instances_of('forum'));
+    }
 }

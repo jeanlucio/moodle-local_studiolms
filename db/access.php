@@ -27,7 +27,7 @@ defined('MOODLE_INTERNAL') || die();
 $capabilities = [
 
     'local/studiolms:generate' => [
-        'riskbitmask' => RISK_SPAM | RISK_DATALOSS,
+        'riskbitmask' => RISK_SPAM | RISK_DATALOSS | RISK_XSS,
         'captype' => 'write',
         'contextlevel' => CONTEXT_COURSE,
         'archetypes' => [

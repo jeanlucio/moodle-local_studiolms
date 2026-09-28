@@ -82,34 +82,83 @@ final class generate_section_test extends \advanced_testcase {
     }
 
     /**
-     * The same user, without wipe, can still queue ordinary generation.
+     * Ordinary generation (no wipe) is gated by manageactivities too: add_moduleinfo() checks nothing itself.
      */
-    public function test_generation_without_wipe_does_not_require_manageactivities(): void {
-        global $DB;
-
-        $course = $this->getDataGenerator()->create_course(['numsections' => 1]);
-        $context = \context_course::instance($course->id);
-        $teacher = $this->getDataGenerator()->create_and_enrol($course, 'editingteacher');
-
-        $roleid = $DB->get_field('role', 'id', ['shortname' => 'editingteacher'], MUST_EXIST);
-        assign_capability('moodle/course:manageactivities', CAP_PREVENT, $roleid, $context->id, true);
-        accesslib_clear_all_caches_for_unit_testing();
+    public function test_generation_requires_manageactivities_capability(): void {
+        [$course, $teacher] = $this->teacher_denied('moodle/course:manageactivities');
         $this->setUser($teacher);
 
-        $result = generate_section::execute(
-            $course->id,
-            1,
-            'Theme',
-            json_encode([['type' => 'label', 'title' => 'New']]),
-            'general',
-            '',
-            false
-        );
+        $this->expectException(\required_capability_exception::class);
+        $this->queue($course, 1, [['type' => 'label', 'title' => 'New']]);
+    }
+
+    /**
+     * Regression test: a role denied mod/forum:addinstance could still create forums through the plugin.
+     */
+    public function test_generation_requires_addinstance_for_each_activity_type(): void {
+        [$course, $teacher] = $this->teacher_denied('mod/forum:addinstance');
+        $this->setUser($teacher);
+
+        $this->expectException(\required_capability_exception::class);
+        $this->queue($course, 1, [['type' => 'label', 'title' => 'A'], ['type' => 'forum', 'title' => 'B']]);
+    }
+
+    /**
+     * Creating a new section (sectionnum -1) needs moodle/course:update.
+     */
+    public function test_new_section_requires_course_update_capability(): void {
+        [$course, $teacher] = $this->teacher_denied('moodle/course:update');
+        $this->setUser($teacher);
+
+        $this->expectException(\required_capability_exception::class);
+        $this->queue($course, -1, [['type' => 'label', 'title' => 'New']]);
+    }
+
+    /**
+     * A user holding every core capability for the requested types can still queue generation.
+     */
+    public function test_generation_is_queued_when_core_capabilities_are_held(): void {
+        global $DB;
+
+        [$course, $teacher] = $this->teacher_denied('mod/forum:addinstance');
+        $this->setUser($teacher);
+
+        $result = $this->queue($course, 1, [['type' => 'label', 'title' => 'New']]);
 
         $this->assertGreaterThan(0, $result['progressid']);
         $this->assertSame(
             'queued',
             $DB->get_field('local_studiolms_progress', 'status', ['id' => $result['progressid']])
         );
+    }
+
+    /**
+     * Creates a course with an editing teacher whose role is denied one capability.
+     *
+     * @param string $capability The capability to prevent for the editing teacher role.
+     * @return array [course, teacher].
+     */
+    private function teacher_denied(string $capability): array {
+        global $DB;
+
+        $course = $this->getDataGenerator()->create_course(['numsections' => 1]);
+        $teacher = $this->getDataGenerator()->create_and_enrol($course, 'editingteacher');
+        $roleid = $DB->get_field('role', 'id', ['shortname' => 'editingteacher'], MUST_EXIST);
+        assign_capability($capability, CAP_PREVENT, $roleid, \context_course::instance($course->id)->id, true);
+        accesslib_clear_all_caches_for_unit_testing();
+
+        return [$course, $teacher];
+    }
+
+    /**
+     * Calls the web service for the given activities, without wipe.
+     *
+     * @param \stdClass $course Target course.
+     * @param int $sectionnum Target section number.
+     * @param array $activities Activity definitions.
+     * @return array The web service result.
+     */
+    private function queue(\stdClass $course, int $sectionnum, array $activities): array {
+        return generate_section::execute($course->id, $sectionnum, 'Theme', json_encode($activities));
     }
 }

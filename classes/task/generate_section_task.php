@@ -25,6 +25,7 @@
 namespace local_studiolms\task;
 
 use context_course;
+use local_studiolms\local\content_access;
 use local_studiolms\local\course_builder;
 use local_studiolms\local\glossary_builder;
 use local_studiolms\local\page_builder;
@@ -96,15 +97,16 @@ class generate_section_task extends \core\task\adhoc_task {
         $wipe            = !empty($data->wipe);
         $theme           = (string) $data->theme;
 
-        // Re-checked here, not just in the web service: the permission can have been
-        // revoked between enqueueing and execution.
-        if ($wipe && !has_capability('moodle/course:manageactivities', $context, $USER->id)) {
+        $activities = json_decode($data->activitiesjson, true);
+        if (!is_array($activities) || empty($activities)) {
             $this->fail(get_string('error_populate', 'local_studiolms'));
             return;
         }
 
-        $activities = json_decode($data->activitiesjson, true);
-        if (!is_array($activities) || empty($activities)) {
+        // Re-checked here, not just in the web service: the permission can have been
+        // revoked between enqueueing and execution. Also covers wipe (manageactivities).
+        $types = content_access::types_of($activities);
+        if (!content_access::can_create($context, $types, $sectionnum < 0, (int) $USER->id)) {
             $this->fail(get_string('error_populate', 'local_studiolms'));
             return;
         }
