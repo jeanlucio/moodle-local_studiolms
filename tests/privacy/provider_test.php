@@ -76,6 +76,31 @@ final class provider_test extends \advanced_testcase {
     }
 
     /**
+     * Every declared table lists exactly the columns it really has, each with an existing lang string.
+     *
+     * Regression test: columns added by upgrade steps (warnings, reportjson) were left out of the
+     * declaration, so the privacy registry under-reported what the progress table stores. Comparing
+     * key sets, rather than asserting individual keys, fails when any future column is added silently.
+     *
+     * @return void
+     */
+    public function test_metadata_declares_every_column_of_its_tables(): void {
+        global $DB;
+
+        $collection = provider::get_metadata(new collection('local_studiolms'));
+        foreach ($collection->get_collection() as $table) {
+            $columns = array_keys($DB->get_columns($table->get_name()));
+            $columns = array_values(array_diff($columns, ['id']));
+            $declared = array_keys($table->get_privacy_fields());
+
+            $this->assertEqualsCanonicalizing($columns, $declared, $table->get_name());
+            foreach ($table->get_privacy_fields() as $stringkey) {
+                $this->assertTrue(get_string_manager()->string_exists($stringkey, 'local_studiolms'), $stringkey);
+            }
+        }
+    }
+
+    /**
      * The user's course context is discovered and the user is listed in it.
      *
      * @return void

@@ -76,10 +76,17 @@ class provider implements
         ], 'privacy:metadata:local_studiolms_outline');
 
         $collection->add_database_table('local_studiolms_progress', [
+            'outlineid'    => 'privacy:metadata:local_studiolms_progress:outlineid',
             'userid'       => 'privacy:metadata:local_studiolms_progress:userid',
-            'courseid'     => 'privacy:metadata:local_studiolms_progress:courseid',
+            'step'         => 'privacy:metadata:local_studiolms_progress:step',
+            'total'        => 'privacy:metadata:local_studiolms_progress:total',
+            'message'      => 'privacy:metadata:local_studiolms_progress:message',
             'status'       => 'privacy:metadata:local_studiolms_progress:status',
+            'courseid'     => 'privacy:metadata:local_studiolms_progress:courseid',
+            'createditems' => 'privacy:metadata:local_studiolms_progress:createditems',
             'errormsg'     => 'privacy:metadata:local_studiolms_progress:errormsg',
+            'warnings'     => 'privacy:metadata:local_studiolms_progress:warnings',
+            'reportjson'   => 'privacy:metadata:local_studiolms_progress:reportjson',
             'timecreated'  => 'privacy:metadata:local_studiolms_progress:timecreated',
             'timemodified' => 'privacy:metadata:local_studiolms_progress:timemodified',
         ], 'privacy:metadata:local_studiolms_progress');
