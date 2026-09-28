@@ -97,6 +97,7 @@ class page_builder {
      * values for content placeholders (topics, objectives). Structural placeholders
      * (dates, chapter titles) are left for the teacher to complete manually.
      *
+     * @param \context $context Course context the page is generated for (scopes the editor's AI call).
      * @param string $theme The course theme.
      * @param string $pagetitle The page title (used as the course name).
      * @param array $glossaryterms Glossary terms for the pre-training block.
@@ -104,6 +105,7 @@ class page_builder {
      * @return string The page HTML.
      */
     public static function render_course_intro(
+        \context $context,
         string $theme,
         string $pagetitle,
         array $glossaryterms,
@@ -113,7 +115,7 @@ class page_builder {
         if (!empty($glossaryterms)) {
             $html .= self::pretraining($glossaryterms);
         }
-        $body = self::build_course_plan($theme, $pagetitle);
+        $body = self::build_course_plan($context, $theme, $pagetitle);
         if ($body === '') {
             $degraded = true;
         }
@@ -211,11 +213,12 @@ class page_builder {
      * with AI-generated topics and objectives. Falls back gracefully when the preset
      * is unavailable or the AI cannot be reached.
      *
+     * @param \context $context Course context the page is generated for.
      * @param string $theme Course theme.
      * @param string $pagetitle Page title (used as the course name placeholder).
      * @return string Rendered preset HTML, or empty string on failure.
      */
-    private static function build_course_plan(string $theme, string $pagetitle): string {
+    private static function build_course_plan(\context $context, string $theme, string $pagetitle): string {
         try {
             $lang   = current_language();
             $preset = preset_loader::find('Plano de Disciplina', $lang);
@@ -223,7 +226,7 @@ class page_builder {
                 // No preset catalog (e.g. tiny_studiolms not installed): fall back to
                 // AI-generated custom blocks so the intro page still has content.
                 $discard = '';
-                return self::generate_body($theme, $pagetitle, $pagetitle, '', 'general', [], $discard);
+                return self::generate_body($context, $theme, $pagetitle, $pagetitle, '', 'general', [], $discard);
             }
             $fill = [
                 '[Nome da Disciplina]' => $pagetitle,

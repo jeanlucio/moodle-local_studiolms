@@ -186,10 +186,37 @@ final class page_builder_test extends \advanced_testcase {
         $payload = '{"[Tópico 1]": "<img src=x onerror=fetch(1)>PWNED"}';
         ai_resolver::set_provider_for_testing(fn(string $system, string $user): string => $payload);
 
-        $html = page_builder::render_course_intro('Biology', 'Course X', []);
+        $course = $this->getDataGenerator()->create_course();
+        $html = page_builder::render_course_intro(\context_course::instance($course->id), 'Biology', 'Course X', []);
 
         $this->assertStringNotContainsString('<img', $html);
         $this->assertStringNotContainsString('onerror', $html);
         $this->assertStringContainsString('PWNED', $html);
+    }
+
+    /**
+     * Without the "Plano de Disciplina" preset, the course intro falls back to AI-generated blocks.
+     *
+     * Regression test: the fallback called generate_body() without its context argument, which shifted every
+     * argument and raised a TypeError swallowed by the catch-all, so the intro page silently came out empty
+     * (degraded) whenever the preset catalog lacked that preset.
+     */
+    public function test_course_intro_falls_back_to_blocks_when_preset_is_missing(): void {
+        if (preset_loader::find('Plano de Disciplina') !== null) {
+            $this->markTestSkipped('The preset is available, so the fallback path is not taken.');
+        }
+        $course = $this->getDataGenerator()->create_course();
+        $degraded = false;
+
+        $html = page_builder::render_course_intro(
+            \context_course::instance($course->id),
+            'Biology',
+            'Course X',
+            [],
+            $degraded
+        );
+
+        $this->assertFalse($degraded);
+        $this->assertStringContainsString('Photosynthesis basics', $html);
     }
 }
