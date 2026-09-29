@@ -89,11 +89,12 @@ final class generate_course_task_test extends \advanced_testcase {
      * Runs the configured task synchronously.
      *
      * @param int $progressid The progress record id.
+     * @param bool $wipe Whether to wipe the course first.
      * @return void
      */
-    private function run_task(int $progressid): void {
+    private function run_task(int $progressid, bool $wipe = false): void {
         $task = new generate_course_task();
-        $task->set_custom_data(['progressid' => $progressid, 'wipe' => 0]);
+        $task->set_custom_data(['progressid' => $progressid, 'wipe' => $wipe ? 1 : 0]);
         $task->execute();
     }
 
@@ -215,5 +216,33 @@ final class generate_course_task_test extends \advanced_testcase {
         $modinfo = get_fast_modinfo($course);
         $this->assertCount(0, $modinfo->get_instances_of('label'));
         $this->assertCount(0, $modinfo->get_instances_of('forum'));
+    }
+
+    /**
+     * Wiping removes the existing activities but always keeps the course's news forum.
+     *
+     * @return void
+     */
+    public function test_wipe_removes_activities_but_keeps_the_news_forum(): void {
+        global $CFG, $DB, $USER;
+        require_once($CFG->dirroot . '/mod/forum/lib.php');
+        $this->setAdminUser();
+
+        [$course, $progressid] = $this->seed((int) $USER->id, [
+            'objectives' => [],
+            'sections' => [['title' => 'Fresh', 'activities' => [['type' => 'label', 'title' => 'New']]]],
+        ]);
+        forum_get_course_forum($course->id, 'news');
+        for ($i = 1; $i <= 3; $i++) {
+            $this->getDataGenerator()->create_module('forum', ['course' => $course->id, 'section' => 1, 'type' => 'general']);
+        }
+        $this->getDataGenerator()->create_module('label', ['course' => $course->id, 'section' => 1]);
+
+        $this->run_task($progressid, true);
+
+        $this->assertSame('completed', $DB->get_field('local_studiolms_progress', 'status', ['id' => $progressid]));
+        $this->assertSame(0, $DB->count_records('forum', ['course' => $course->id, 'type' => 'general']));
+        $this->assertSame(1, $DB->count_records('forum', ['course' => $course->id, 'type' => 'news']));
+        $this->assertCount(1, get_fast_modinfo($course)->get_instances_of('label'));
     }
 }

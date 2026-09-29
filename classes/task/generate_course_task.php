@@ -402,11 +402,19 @@ class generate_course_task extends \core\task\adhoc_task {
         global $DB;
 
         $modinfo = get_fast_modinfo($this->course);
+        // Loaded once, on the first forum found, so courses without forums cost no extra query.
+        $newsids = null;
         foreach ($modinfo->get_cms() as $cm) {
-            $isnewsforum = $cm->modname === 'forum'
-                && $DB->record_exists('forum', ['id' => $cm->instance, 'course' => $this->course->id, 'type' => 'news']);
-            if ($isnewsforum) {
-                continue;
+            if ($cm->modname === 'forum') {
+                $newsids ??= array_map('intval', $DB->get_fieldset_select(
+                    'forum',
+                    'id',
+                    'course = :courseid AND type = :type',
+                    ['courseid' => $this->course->id, 'type' => 'news']
+                ));
+                if (in_array((int) $cm->instance, $newsids, true)) {
+                    continue;
+                }
             }
             course_delete_module($cm->id);
         }
