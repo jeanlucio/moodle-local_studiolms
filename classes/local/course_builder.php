@@ -36,6 +36,9 @@ require_once($GLOBALS['CFG']->libdir . '/completionlib.php');
  * Creates course sections and native Moodle activities through the standard course APIs.
  */
 class course_builder {
+    /** @var int[] Module ids by module name, looked up once per request (the modules table only changes on upgrade). */
+    private static array $moduleids = [];
+
     /**
      * Creates a new section at the end of the course and names it.
      *
@@ -230,11 +233,9 @@ class course_builder {
         string $intro,
         bool $trackcompletion = true
     ): stdClass {
-        global $DB;
-
         $moduleinfo = new stdClass();
         $moduleinfo->modulename = $modulename;
-        $moduleinfo->module = $DB->get_field('modules', 'id', ['name' => $modulename], MUST_EXIST);
+        $moduleinfo->module = self::module_id($modulename);
         $moduleinfo->course = $course->id;
         $moduleinfo->section = $sectionnum;
         $moduleinfo->visible = 1;
@@ -256,6 +257,21 @@ class course_builder {
         }
 
         return $moduleinfo;
+    }
+
+    /**
+     * Returns the id of a module, querying the database only the first time each name is asked for.
+     *
+     * @param string $modulename The module name (page, forum, ...).
+     * @return int The modules table id.
+     */
+    private static function module_id(string $modulename): int {
+        global $DB;
+
+        if (!isset(self::$moduleids[$modulename])) {
+            self::$moduleids[$modulename] = (int) $DB->get_field('modules', 'id', ['name' => $modulename], MUST_EXIST);
+        }
+        return self::$moduleids[$modulename];
     }
 
     /**

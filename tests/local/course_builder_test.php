@@ -118,4 +118,54 @@ final class course_builder_test extends \advanced_testcase {
                  WHERE cm.id = :cmid";
         return (string) $DB->get_field_sql($sql, ['cmid' => $cmid], MUST_EXIST);
     }
+
+    /**
+     * The module id is looked up once per module name, then served from memory.
+     *
+     * Regression test: base() queried the modules table on every activity created, although the id only
+     * depends on the module name, so generating a course paid one extra query per activity.
+     *
+     * @return void
+     */
+    public function test_module_id_is_queried_once_per_module_name(): void {
+        global $DB;
+
+        $property = new \ReflectionProperty(course_builder::class, 'moduleids');
+        $property->setAccessible(true);
+        $property->setValue(null, []);
+        $method = new \ReflectionMethod(course_builder::class, 'module_id');
+        $method->setAccessible(true);
+        $expected = (int) $DB->get_field('modules', 'id', ['name' => 'forum'], MUST_EXIST);
+
+        $before = $DB->perf_get_queries();
+        $first = $method->invoke(null, 'forum');
+        $second = $method->invoke(null, 'forum');
+        $third = $method->invoke(null, 'forum');
+        $queries = $DB->perf_get_queries() - $before;
+
+        $this->assertSame($expected, $first);
+        $this->assertSame($expected, $second);
+        $this->assertSame($expected, $third);
+        $this->assertSame(1, $queries);
+        $this->assertNotSame($expected, $method->invoke(null, 'label'));
+    }
+
+    /**
+     * Repeated activities of the same type each get the right module.
+     *
+     * @return void
+     */
+    public function test_repeated_activity_types_are_created_in_the_right_module(): void {
+        global $DB;
+
+        $one = course_builder::add_label($this->course, 1, '<p>one</p>');
+        $two = course_builder::add_label($this->course, 1, '<p>two</p>');
+        $forum = course_builder::add_forum($this->course, 1, 'Forum', '<p>x</p>');
+
+        $labelid = $DB->get_field('modules', 'id', ['name' => 'label'], MUST_EXIST);
+        $forumid = $DB->get_field('modules', 'id', ['name' => 'forum'], MUST_EXIST);
+        $this->assertEquals($labelid, $DB->get_field('course_modules', 'module', ['id' => $one->coursemodule]));
+        $this->assertEquals($labelid, $DB->get_field('course_modules', 'module', ['id' => $two->coursemodule]));
+        $this->assertEquals($forumid, $DB->get_field('course_modules', 'module', ['id' => $forum->coursemodule]));
+    }
 }
