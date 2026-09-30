@@ -185,7 +185,8 @@ class generate_course_task extends \core\task\adhoc_task {
      * @return void
      */
     private function add_activity(int $sectionnum, string $sectiontitle, array $activity, string $theme): void {
-        $type = $activity['type'];
+        // Unknown types are built as pages, so they are reported as pages too (there is no string for them).
+        $type = content_access::modules_for([$activity['type']])[0];
         $title = $activity['title'];
         $degraded = false;
         $chosenpreset = '';
@@ -215,6 +216,7 @@ class generate_course_task extends \core\task\adhoc_task {
                     if ($plandegraded) {
                         $this->warnings[] = $plantitle . ': ' . $this->course->fullname;
                     }
+                    $this->advance(get_string('progress_activity', 'local_studiolms', $plantitle));
                 }
                 $html = page_builder::render(
                     context_course::instance($this->course->id),
@@ -477,6 +479,9 @@ class generate_course_task extends \core\task\adhoc_task {
         $this->progress->createditems = json_encode($this->created);
         $this->progress->warnings = json_encode($this->warnings);
         $this->progress->reportjson = json_encode($this->report);
+        // The message column is varchar(255) and can carry a teacher-written title; overflowing it would
+        // make every update fail, including the one that records the failure.
+        $this->progress->message = \core_text::substr((string) $this->progress->message, 0, 255);
         $this->progress->timemodified = time();
         $DB->update_record('local_studiolms_progress', $this->progress);
     }
@@ -537,6 +542,9 @@ class generate_course_task extends \core\task\adhoc_task {
         }
         $this->progress->status = 'failed';
         $this->progress->errormsg = $message;
+        // The message column is varchar(255) and can carry a teacher-written title; overflowing it would
+        // make every update fail, including the one that records the failure.
+        $this->progress->message = \core_text::substr((string) $this->progress->message, 0, 255);
         $this->progress->timemodified = time();
         $DB->update_record('local_studiolms_progress', $this->progress);
 

@@ -25,6 +25,7 @@
 namespace local_studiolms\task;
 
 use local_studiolms\local\ai_resolver;
+use local_studiolms\local\preset_loader;
 
 /**
  * Integration tests for the generation pipeline and its events.
@@ -47,6 +48,7 @@ final class generate_course_task_test extends \advanced_testcase {
     #[\Override]
     protected function tearDown(): void {
         ai_resolver::set_provider_for_testing(null);
+        preset_loader::set_directory_for_testing(null);
         parent::tearDown();
     }
 
@@ -244,5 +246,230 @@ final class generate_course_task_test extends \advanced_testcase {
         $this->assertSame(0, $DB->count_records('forum', ['course' => $course->id, 'type' => 'general']));
         $this->assertSame(1, $DB->count_records('forum', ['course' => $course->id, 'type' => 'news']));
         $this->assertCount(1, get_fast_modinfo($course)->get_instances_of('label'));
+    }
+
+    /**
+     * Points the AI at a payload every builder accepts and the presets at an empty catalog.
+     *
+     * @return void
+     */
+    private function universal_ai(): void {
+        $empty = make_request_directory();
+        preset_loader::set_directory_for_testing($empty);
+        ai_resolver::set_provider_for_testing(static fn(string $system, string $user): string => json_encode([
+            'strategy'  => 'blocks',
+            'blocks'    => [['type' => 'callout', 'html' => '<p>Universal block</p>']],
+            'content'   => '<p>Universal body</p>',
+            'questions' => [['type' => 'truefalse', 'question' => 'PHP is a language.', 'answer' => true]],
+            'terms'     => [['term' => 'Variable', 'definition' => 'A named storage.']],
+        ]));
+    }
+
+    /**
+     * Returns the progress record.
+     *
+     * @param int $progressid The progress id.
+     * @return \stdClass
+     */
+    private function progress(int $progressid): \stdClass {
+        global $DB;
+        return $DB->get_record('local_studiolms_progress', ['id' => $progressid], '*', MUST_EXIST);
+    }
+
+    /**
+     * Regression guard for the first page: the course gets a plan page in section 0 built from the intro
+     * renderer, once, before the first content page.
+     *
+     * @return void
+     */
+    public function test_first_page_also_creates_the_course_plan_page(): void {
+        global $DB, $USER;
+        $this->setAdminUser();
+        $this->universal_ai();
+
+        [$course, $progressid] = $this->seed((int) $USER->id, [
+            'objectives' => [],
+            'sections' => [['title' => 'Basics', 'activities' => [
+                ['type' => 'page', 'title' => 'Intro'],
+                ['type' => 'page', 'title' => 'Second'],
+            ]]],
+        ]);
+        $this->run_task($progressid);
+
+        $progress = $this->progress($progressid);
+        $this->assertSame('completed', $progress->status);
+        $plantitle = get_string('courseplantitle', 'local_studiolms');
+        $this->assertSame(1, $DB->count_records('page', ['course' => $course->id, 'name' => $plantitle]));
+        $this->assertSame(3, $DB->count_records('page', ['course' => $course->id]));
+        $plancm = $DB->get_record_sql(
+            "SELECT cm.id, cs.section
+               FROM {course_modules} cm
+               JOIN {modules} m ON m.id = cm.module AND m.name = 'page'
+               JOIN {page} p ON p.id = cm.instance
+               JOIN {course_sections} cs ON cs.id = cm.section
+              WHERE cm.course = :courseid AND p.name = :name",
+            ['courseid' => $course->id, 'name' => $plantitle]
+        );
+        $this->assertEquals(0, $plancm->section);
+        $report = json_decode($progress->reportjson, true);
+        $this->assertSame('plan', $report[0]['preset']);
+        $this->assertSame($plantitle, $report[0]['title']);
+        $this->assertCount(3, $report);
+        $this->assertSame(4, (int) $progress->total);
+        $this->assertSame((int) $progress->total, (int) $progress->step);
+    }
+
+    /**
+     * Every activity type is built in its section, with a report entry each and no warnings when the AI works.
+     *
+     * @return void
+     */
+    public function test_every_activity_type_is_built_and_reported(): void {
+        global $DB, $USER;
+        $this->setAdminUser();
+        $this->universal_ai();
+        $types = ['page', 'label', 'forum', 'assign', 'glossary', 'quiz'];
+
+        [$course, $progressid] = $this->seed((int) $USER->id, [
+            'objectives' => ['Learn'],
+            'sections' => [['title' => 'All', 'activities' => array_map(
+                static fn(string $type): array => ['type' => $type, 'title' => 'Item ' . $type],
+                $types
+            )]],
+        ]);
+        $this->run_task($progressid);
+
+        $progress = $this->progress($progressid);
+        $this->assertSame('completed', $progress->status);
+        $this->assertSame([], json_decode($progress->warnings, true));
+        $modinfo = get_fast_modinfo($course);
+        foreach ($types as $type) {
+            $this->assertCount($type === 'page' ? 2 : 1, $modinfo->get_instances_of($type), $type);
+        }
+        $report = json_decode($progress->reportjson, true);
+        $this->assertSame($types, array_slice(array_column($report, 'type'), 1));
+        $this->assertNotContains(true, array_column($report, 'degraded'));
+        $glossary = $DB->get_record('glossary', ['course' => $course->id], '*', MUST_EXIST);
+        $this->assertCount(1, \local_studiolms\local\glossary_builder::get_terms((int) $glossary->id));
+    }
+
+    /**
+     * When the AI gives nothing usable the course is still built, and each simplified activity is a warning.
+     *
+     * @return void
+     */
+    public function test_degraded_activities_are_recorded_as_warnings(): void {
+        global $USER;
+        $this->setAdminUser();
+        preset_loader::set_directory_for_testing(make_request_directory());
+        ai_resolver::set_provider_for_testing(static fn(string $system, string $user): string => 'not json');
+
+        [, $progressid] = $this->seed((int) $USER->id, [
+            'objectives' => [],
+            'sections' => [['title' => 'Basics', 'activities' => [
+                ['type' => 'forum', 'title' => 'Discuss'],
+                ['type' => 'assign', 'title' => 'Essay'],
+                ['type' => 'glossary', 'title' => 'Terms'],
+                ['type' => 'quiz', 'title' => 'Check'],
+                ['type' => 'video', 'title' => 'Clip'],
+            ]]],
+        ]);
+        $this->run_task($progressid);
+
+        $progress = $this->progress($progressid);
+        $this->assertSame('completed', $progress->status);
+        $warnings = implode('|', json_decode($progress->warnings, true));
+        foreach (['Discuss', 'Essay', 'Terms', 'Check', 'Clip'] as $title) {
+            $this->assertStringContainsString($title, $warnings);
+        }
+        $this->assertContains('page', array_column(json_decode($progress->reportjson, true), 'type'));
+        $this->assertNotContains('video', array_column(json_decode($progress->reportjson, true), 'type'));
+        $this->assertNotContains(false, array_column(json_decode($progress->reportjson, true), 'degraded'));
+    }
+
+    /**
+     * A failure part-way through removes everything the run created, marks it failed and fires the event.
+     *
+     * The second section holds a malformed activity, which fails after the first section was fully built. The
+     * first page also creates the plan page in section 0, which only the per-module cleanup can remove.
+     *
+     * @return void
+     */
+    public function test_failure_rolls_back_everything_created(): void {
+        global $DB, $USER;
+        $this->setAdminUser();
+        $this->universal_ai();
+
+        [$course, $progressid] = $this->seed((int) $USER->id, [
+            'objectives' => [],
+            'sections' => [
+                ['title' => 'Built first', 'activities' => [
+                    ['type' => 'page', 'title' => 'Intro'],
+                    ['type' => 'label', 'title' => 'Divider'],
+                ]],
+                ['title' => 'Broken', 'activities' => ['not an activity']],
+            ],
+        ]);
+        $sectionsbefore = $DB->count_records('course_sections', ['course' => $course->id]);
+
+        $sink = $this->redirectEvents();
+        $this->run_task($progressid);
+        $events = $sink->get_events();
+        $sink->close();
+
+        $progress = $this->progress($progressid);
+        $this->assertSame('failed', $progress->status);
+        $this->assertNotSame('', (string) $progress->errormsg);
+        $this->assertSame(0, $DB->count_records('course_modules', ['course' => $course->id]));
+        $this->assertSame($sectionsbefore, $DB->count_records('course_sections', ['course' => $course->id]));
+        $failed = array_filter($events, static fn($e) => $e instanceof \local_studiolms\event\generation_failed);
+        $this->assertCount(1, $failed);
+        $this->assertSame(0, $DB->count_records('local_studiolms_generation_log', ['courseid' => $course->id]));
+    }
+
+    /**
+     * Regression test: a long section or activity title used to overflow the varchar(255) progress message,
+     * which made every progress update fail, including the one recording the failure, so the run crashed and
+     * stayed "running" forever.
+     *
+     * @return void
+     */
+    public function test_long_titles_do_not_break_progress_tracking(): void {
+        global $USER;
+        $this->setAdminUser();
+        $this->universal_ai();
+        $long = str_repeat('é', 400);
+
+        [, $progressid] = $this->seed((int) $USER->id, [
+            'objectives' => [],
+            'sections' => [['title' => $long, 'activities' => [['type' => 'label', 'title' => $long]]]],
+        ]);
+        $this->run_task($progressid);
+
+        $progress = $this->progress($progressid);
+        $this->assertSame('completed', $progress->status);
+        $this->assertLessThanOrEqual(255, \core_text::strlen($progress->message));
+    }
+
+    /**
+     * Even the failure path survives a long title: the run is marked failed instead of crashing.
+     *
+     * @return void
+     */
+    public function test_failure_with_a_long_message_is_still_recorded(): void {
+        global $USER;
+        $this->setAdminUser();
+        $this->universal_ai();
+        $long = str_repeat('x', 400);
+
+        [, $progressid] = $this->seed((int) $USER->id, [
+            'objectives' => [],
+            'sections' => [['title' => $long, 'activities' => ['not an activity']]],
+        ]);
+        $this->run_task($progressid);
+
+        $progress = $this->progress($progressid);
+        $this->assertSame('failed', $progress->status);
+        $this->assertLessThanOrEqual(255, \core_text::strlen($progress->message));
     }
 }
