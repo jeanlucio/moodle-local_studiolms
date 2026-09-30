@@ -80,4 +80,73 @@ final class glossary_builder_test extends \advanced_testcase {
 
         $this->assertSame([], glossary_builder::get_terms($result->instance));
     }
+
+    /**
+     * Malformed terms are skipped and markup in the ones kept is stripped.
+     *
+     * @return void
+     */
+    public function test_create_skips_malformed_terms_and_strips_markup(): void {
+        ai_resolver::set_provider_for_testing(static fn(string $s, string $u): string => json_encode([
+            'terms' => [
+                ['term' => '<b>Variable</b>', 'definition' => '<script>alert(1)</script>A named storage.'],
+                ['term' => 'No definition'],
+                ['definition' => 'No term'],
+                'not an item',
+                ['term' => '', 'definition' => 'Empty term'],
+            ],
+        ]));
+        $course = $this->getDataGenerator()->create_course();
+
+        $result = glossary_builder::create($course, 0, 'Glossary', 'Programming');
+
+        $terms = glossary_builder::get_terms($result->instance);
+        $this->assertCount(1, $terms);
+        $this->assertSame('Variable', $terms[0]['term']);
+        $this->assertStringNotContainsString('<script', $terms[0]['definition']);
+        $this->assertStringContainsString('A named storage.', $terms[0]['definition']);
+    }
+
+    /**
+     * A failing AI call still leaves a usable, empty glossary instead of an error.
+     *
+     * @return void
+     */
+    public function test_create_survives_an_ai_failure(): void {
+        ai_resolver::set_provider_for_testing(static function (string $s, string $u): string {
+            throw new \moodle_exception('noaiprovider', 'local_studiolms');
+        });
+        $course = $this->getDataGenerator()->create_course();
+
+        $result = glossary_builder::create($course, 0, 'Glossary', 'Programming');
+
+        $this->assertGreaterThan(0, $result->coursemodule);
+        $this->assertSame([], glossary_builder::get_terms($result->instance));
+    }
+
+    /**
+     * Terms are read in insertion order and definitions come back as plain text.
+     *
+     * @return void
+     */
+    public function test_get_terms_returns_plain_text_in_order(): void {
+        global $DB, $USER;
+
+        $course = $this->getDataGenerator()->create_course();
+        ai_resolver::set_provider_for_testing(static fn(string $s, string $u): string => '{"terms": []}');
+        $result = glossary_builder::create($course, 0, 'Glossary', 'Programming');
+        foreach (['Second' => '<p>Two <b>bold</b></p>', 'First' => '<p>One</p>'] as $concept => $definition) {
+            $DB->insert_record('glossary_entries', (object) [
+                'glossaryid' => $result->instance, 'userid' => $USER->id, 'concept' => $concept,
+                'definition' => $definition, 'definitionformat' => FORMAT_HTML, 'timecreated' => time(),
+                'timemodified' => time(), 'approved' => 1,
+            ]);
+        }
+
+        $terms = glossary_builder::get_terms($result->instance);
+
+        $this->assertSame(['Second', 'First'], array_column($terms, 'term'));
+        $this->assertStringNotContainsString('<', $terms[0]['definition']);
+        $this->assertStringContainsString('Two', $terms[0]['definition']);
+    }
 }

@@ -39,6 +39,7 @@ final class provider_test extends \advanced_testcase {
     protected function setUp(): void {
         parent::setUp();
         $this->resetAfterTest();
+        writer::reset();
     }
 
     /**
@@ -190,5 +191,102 @@ final class provider_test extends \advanced_testcase {
         provider::delete_data_for_all_users_in_context($context);
 
         $this->assertSame(0, $DB->count_records('local_studiolms_generation_log', ['courseid' => $course->id]));
+    }
+
+    /**
+     * Only course contexts hold this plugin's data: every other context is ignored by every entry point.
+     *
+     * @return void
+     */
+    public function test_non_course_contexts_are_ignored(): void {
+        global $DB;
+        $course = $this->getDataGenerator()->create_course();
+        $user = $this->getDataGenerator()->create_user();
+        $this->seed_records((int) $user->id, (int) $course->id);
+        $system = \context_system::instance();
+
+        $userlist = new userlist($system, 'local_studiolms');
+        provider::get_users_in_context($userlist);
+        $this->assertSame([], $userlist->get_userids());
+
+        provider::export_user_data(new approved_contextlist($user, 'local_studiolms', [$system->id]));
+        $this->assertFalse(writer::with_context($system)->has_any_data());
+
+        provider::delete_data_for_user(new approved_contextlist($user, 'local_studiolms', [$system->id]));
+        provider::delete_data_for_users(new approved_userlist($system, 'local_studiolms', [$user->id]));
+        provider::delete_data_for_all_users_in_context($system);
+
+        foreach (['local_studiolms_generation_log', 'local_studiolms_outline', 'local_studiolms_progress'] as $table) {
+            $this->assertSame(1, $DB->count_records($table, ['userid' => $user->id]), $table);
+        }
+    }
+
+    /**
+     * Deleting in one course leaves the same user's data in another course alone, and an empty user list is a no-op.
+     *
+     * @return void
+     */
+    public function test_deletion_is_scoped_to_the_course(): void {
+        global $DB;
+        $first = $this->getDataGenerator()->create_course();
+        $second = $this->getDataGenerator()->create_course();
+        $user = $this->getDataGenerator()->create_user();
+        $this->seed_records((int) $user->id, (int) $first->id);
+        $this->seed_records((int) $user->id, (int) $second->id);
+        $firstcontext = \context_course::instance($first->id);
+
+        provider::delete_data_for_users(new approved_userlist($firstcontext, 'local_studiolms', []));
+        $this->assertSame(2, $DB->count_records('local_studiolms_outline', ['userid' => $user->id]));
+
+        provider::delete_data_for_user(new approved_contextlist($user, 'local_studiolms', [$firstcontext->id]));
+
+        $this->assertSame(0, $DB->count_records('local_studiolms_outline', ['courseid' => $first->id]));
+        $this->assertSame(1, $DB->count_records('local_studiolms_outline', ['courseid' => $second->id]));
+    }
+
+    /**
+     * Exporting a user who has no data in a context writes nothing there.
+     *
+     * @return void
+     */
+    public function test_export_writes_nothing_for_a_context_without_data(): void {
+        $course = $this->getDataGenerator()->create_course();
+        $user = $this->getDataGenerator()->create_user();
+        $context = \context_course::instance($course->id);
+
+        provider::export_user_data(new approved_contextlist($user, 'local_studiolms', [$context->id]));
+
+        $this->assertFalse(writer::with_context($context)->has_any_data());
+    }
+
+    /**
+     * A context of another level whose instance id equals a course id must not be mistaken for that course.
+     *
+     * The tables are keyed by course id, so treating any context's instance id as a course id would let a
+     * deletion or export aimed at, say, a user context touch the data of the course with the same number.
+     *
+     * @return void
+     */
+    public function test_instance_id_of_another_context_level_is_not_a_course_id(): void {
+        global $DB;
+        $user = $this->getDataGenerator()->create_user();
+        $bystander = $this->getDataGenerator()->create_user();
+        $this->seed_records((int) $user->id, (int) $bystander->id);
+        $foreign = \context_user::instance($bystander->id);
+
+        $userlist = new userlist($foreign, 'local_studiolms');
+        provider::get_users_in_context($userlist);
+        $this->assertSame([], $userlist->get_userids());
+
+        provider::export_user_data(new approved_contextlist($user, 'local_studiolms', [$foreign->id]));
+        $this->assertFalse(writer::with_context($foreign)->has_any_data());
+
+        provider::delete_data_for_user(new approved_contextlist($user, 'local_studiolms', [$foreign->id]));
+        provider::delete_data_for_users(new approved_userlist($foreign, 'local_studiolms', [$user->id]));
+        provider::delete_data_for_all_users_in_context($foreign);
+
+        foreach (['local_studiolms_generation_log', 'local_studiolms_outline', 'local_studiolms_progress'] as $table) {
+            $this->assertSame(1, $DB->count_records($table, ['courseid' => $bystander->id]), $table);
+        }
     }
 }

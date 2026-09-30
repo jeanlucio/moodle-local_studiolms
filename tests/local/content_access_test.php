@@ -92,4 +92,33 @@ final class content_access_test extends \advanced_testcase {
         $this->assertNotEmpty($capability->riskbitmask & RISK_XSS);
         $this->assertNotEmpty($capability->riskbitmask & RISK_DATALOSS);
     }
+
+    /**
+     * require_can_create() lets a user with every core capability through and refuses one that lacks any.
+     *
+     * @return void
+     */
+    public function test_require_can_create_enforces_each_capability(): void {
+        global $DB;
+        $this->resetAfterTest();
+
+        $course = $this->getDataGenerator()->create_course();
+        $context = \context_course::instance($course->id);
+        $teacher = $this->getDataGenerator()->create_and_enrol($course, 'editingteacher');
+        $this->setUser($teacher);
+        content_access::require_can_create($context, ['page', 'quiz'], true);
+
+        $roleid = $DB->get_field('role', 'id', ['shortname' => 'editingteacher'], MUST_EXIST);
+        foreach (['mod/quiz:addinstance', 'moodle/course:update', 'moodle/course:manageactivities'] as $capability) {
+            assign_capability($capability, CAP_PREVENT, $roleid, $context->id, true);
+            accesslib_clear_all_caches_for_unit_testing();
+            try {
+                content_access::require_can_create($context, ['page', 'quiz'], true);
+                $this->fail($capability . ' must be required.');
+            } catch (\required_capability_exception $e) {
+                $this->assertSame(get_capability_string($capability), $e->a);
+            }
+            unassign_capability($capability, $roleid, $context->id);
+        }
+    }
 }

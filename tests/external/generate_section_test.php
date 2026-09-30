@@ -25,6 +25,7 @@
 namespace local_studiolms\external;
 
 use local_studiolms\local\ai_resolver;
+use local_studiolms\task\generate_section_task;
 
 /**
  * Unit tests for the section generation web service's permission checks.
@@ -160,5 +161,118 @@ final class generate_section_test extends \advanced_testcase {
      */
     private function queue(\stdClass $course, int $sectionnum, array $activities): array {
         return generate_section::execute($course->id, $sectionnum, 'Theme', json_encode($activities));
+    }
+
+    /**
+     * Queuing needs an AI source: without one the caller is told so, and nothing is stored or queued.
+     */
+    public function test_refuses_when_no_ai_is_available(): void {
+        global $DB;
+
+        ai_resolver::set_provider_for_testing(null);
+        $course = $this->getDataGenerator()->create_course(['numsections' => 1]);
+        $this->setUser($this->getDataGenerator()->create_and_enrol($course, 'editingteacher'));
+
+        try {
+            $this->queue($course, 1, [['type' => 'label', 'title' => 'New']]);
+            $this->fail('Queuing without AI must be refused.');
+        } catch (\moodle_exception $e) {
+            $this->assertSame('noaiprovider', $e->errorcode);
+            $this->assertSame(0, $DB->count_records('local_studiolms_progress'));
+            $this->assertSame([], \core\task\manager::get_adhoc_tasks(generate_section_task::class));
+        }
+    }
+
+    /**
+     * A plan that is not a non-empty JSON list is rejected before anything is stored or queued.
+     */
+    public function test_rejects_an_invalid_activity_list(): void {
+        global $DB;
+
+        $course = $this->getDataGenerator()->create_course(['numsections' => 1]);
+        $this->setUser($this->getDataGenerator()->create_and_enrol($course, 'editingteacher'));
+
+        foreach (['not json', '[]', '{}', '"text"'] as $json) {
+            try {
+                generate_section::execute($course->id, 1, 'Theme', $json);
+                $this->fail('Rejected input expected for ' . $json);
+            } catch (\coding_exception $e) {
+                $this->assertSame(0, $DB->count_records('local_studiolms_progress'), $json);
+            }
+        }
+        $this->assertSame([], \core\task\manager::get_adhoc_tasks(generate_section_task::class));
+    }
+
+    /**
+     * Regression guard for the section scope: a section that exists only in another course is refused.
+     */
+    public function test_section_of_another_course_is_refused(): void {
+        $this->getDataGenerator()->create_course(['numsections' => 4]);
+        $course = $this->getDataGenerator()->create_course(['numsections' => 1]);
+        $this->setUser($this->getDataGenerator()->create_and_enrol($course, 'editingteacher'));
+
+        $this->expectException(\dml_missing_record_exception::class);
+        $this->queue($course, 3, [['type' => 'label', 'title' => 'New']]);
+    }
+
+    /**
+     * The queued task carries the teacher, the progress record and every option the task needs.
+     */
+    public function test_queued_task_carries_the_request(): void {
+        global $DB;
+
+        $course = $this->getDataGenerator()->create_course(['numsections' => 1]);
+        $teacher = $this->getDataGenerator()->create_and_enrol($course, 'editingteacher');
+        $this->setUser($teacher);
+        $activities = [['type' => 'label', 'title' => 'New']];
+
+        $result = generate_section::execute(
+            $course->id,
+            1,
+            'Botany',
+            json_encode($activities),
+            'apply',
+            'Chapter three'
+        );
+
+        $progress = $DB->get_record('local_studiolms_progress', ['id' => $result['progressid']], '*', MUST_EXIST);
+        $this->assertEquals($teacher->id, $progress->userid);
+        $this->assertEquals($course->id, $progress->courseid);
+        $this->assertNull($progress->outlineid);
+        $tasks = \core\task\manager::get_adhoc_tasks(generate_section_task::class);
+        $this->assertCount(1, $tasks);
+        $task = reset($tasks);
+        $this->assertEquals($teacher->id, $task->get_userid());
+        $data = $task->get_custom_data();
+        $this->assertEquals($result['progressid'], $data->progressid);
+        $this->assertEquals($course->id, $data->courseid);
+        $this->assertEquals(1, $data->sectionnum);
+        $this->assertSame('Botany', $data->theme);
+        $this->assertSame('apply', $data->bloom);
+        $this->assertSame('Chapter three', $data->reference);
+        $this->assertFalse($data->wipe);
+        $this->assertSame(json_encode($activities), $data->activitiesjson);
+    }
+
+    /**
+     * The wipe choice reaches the queued task, which is what makes it delete the section's activities.
+     */
+    public function test_queued_task_carries_the_wipe_choice(): void {
+        $course = $this->getDataGenerator()->create_course(['numsections' => 1]);
+        $this->setUser($this->getDataGenerator()->create_and_enrol($course, 'editingteacher'));
+
+        generate_section::execute(
+            $course->id,
+            1,
+            'Botany',
+            json_encode([['type' => 'label', 'title' => 'New']]),
+            'general',
+            '',
+            true
+        );
+
+        $tasks = \core\task\manager::get_adhoc_tasks(generate_section_task::class);
+        $task = reset($tasks);
+        $this->assertTrue($task->get_custom_data()->wipe);
     }
 }
