@@ -418,7 +418,7 @@ class generate_course_task extends \core\task\adhoc_task {
                     continue;
                 }
             }
-            course_delete_module($cm->id);
+            course_builder::delete_module($this->course, (int) $cm->id);
         }
 
         $sections = $DB->get_records('course_sections', ['course' => $this->course->id], 'section DESC');
@@ -439,7 +439,7 @@ class generate_course_task extends \core\task\adhoc_task {
 
         foreach ($this->created['cmids'] as $cmid) {
             try {
-                course_delete_module($cmid);
+                course_builder::delete_module($this->course, (int) $cmid);
             } catch (\Throwable $e) {
                 continue;
             }

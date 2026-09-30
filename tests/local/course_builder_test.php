@@ -168,4 +168,48 @@ final class course_builder_test extends \advanced_testcase {
         $this->assertEquals($labelid, $DB->get_field('course_modules', 'module', ['id' => $two->coursemodule]));
         $this->assertEquals($forumid, $DB->get_field('course_modules', 'module', ['id' => $forum->coursemodule]));
     }
+
+    /**
+     * Regression test: names longer than the 255-character columns are truncated instead of failing.
+     *
+     * Moodle 4.5 rejects a longer section name (maximumchars) or activity name (a database error), which
+     * failed a whole generation over one long teacher-written title; newer versions truncate on their own.
+     *
+     * @return void
+     */
+    public function test_long_names_are_truncated_to_the_column_size(): void {
+        global $DB;
+
+        $long = str_repeat('é', 400);
+        $section = course_builder::create_section($this->course, $long);
+        $forum = course_builder::add_forum($this->course, (int) $section->section, $long, '<p>x</p>');
+        $page = course_builder::add_page($this->course, (int) $section->section, $long, '<p>x</p>');
+
+        $this->assertSame(255, \core_text::strlen($DB->get_field('course_sections', 'name', ['id' => $section->id])));
+        $this->assertSame(255, \core_text::strlen($DB->get_field('forum', 'name', ['id' => $forum->instance])));
+        $this->assertSame(255, \core_text::strlen($DB->get_field('page', 'name', ['id' => $page->instance])));
+        $this->assertSame('Short', $DB->get_field(
+            'forum',
+            'name',
+            ['id' => course_builder::add_forum($this->course, 0, 'Short', '<p>x</p>')->instance]
+        ));
+    }
+
+    /**
+     * Deleting a module removes it and its instance, through whichever API the running Moodle offers.
+     *
+     * @return void
+     */
+    public function test_delete_module_removes_the_activity(): void {
+        global $DB;
+
+        $keep = course_builder::add_label($this->course, 0, '<p>keep</p>');
+        $gone = course_builder::add_forum($this->course, 0, 'Gone', '<p>x</p>');
+
+        course_builder::delete_module($this->course, (int) $gone->coursemodule);
+
+        $this->assertFalse($DB->record_exists('course_modules', ['id' => $gone->coursemodule, 'deletioninprogress' => 0]));
+        $this->assertFalse($DB->record_exists('forum', ['id' => $gone->instance]));
+        $this->assertTrue($DB->record_exists('course_modules', ['id' => $keep->coursemodule]));
+    }
 }

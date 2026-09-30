@@ -145,7 +145,7 @@ class generate_section_task extends \core\task\adhoc_task {
                     ['cid' => $this->course->id, 'sid' => $secrecord->id]
                 );
                 foreach ($cmids as $cmid) {
-                    course_delete_module((int) $cmid);
+                    course_builder::delete_module($this->course, (int) $cmid);
                 }
             }
 
@@ -329,7 +329,7 @@ class generate_section_task extends \core\task\adhoc_task {
     private function rollback(): void {
         foreach ($this->createdcmids as $cmid) {
             try {
-                course_delete_module($cmid);
+                course_builder::delete_module($this->course, (int) $cmid);
             } catch (\Throwable $e) {
                 continue;
             }

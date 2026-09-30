@@ -36,6 +36,9 @@ require_once($GLOBALS['CFG']->libdir . '/completionlib.php');
  * Creates course sections and native Moodle activities through the standard course APIs.
  */
 class course_builder {
+    /** @var int Longest section or activity name: their columns are varchar(255), and Moodle 4.5 rejects more. */
+    private const MAX_NAME_LENGTH = 255;
+
     /** @var int[] Module ids by module name, looked up once per request (the modules table only changes on upgrade). */
     private static array $moduleids = [];
 
@@ -48,8 +51,27 @@ class course_builder {
      */
     public static function create_section(stdClass $course, string $name): stdClass {
         $section = course_create_section($course);
-        course_update_section($course, $section, ['name' => $name]);
+        course_update_section($course, $section, ['name' => \core_text::substr($name, 0, self::MAX_NAME_LENGTH)]);
         return $section;
+    }
+
+    /**
+     * Deletes an activity through the course format actions where they provide it.
+     *
+     * course_delete_module() is deprecated from Moodle 5.2, when the deletion moved to cmactions::delete(). That
+     * method does not exist on 4.5, so its presence decides which one to call.
+     *
+     * @param stdClass $course The course the activity belongs to.
+     * @param int $cmid The course module id.
+     * @return void
+     */
+    public static function delete_module(stdClass $course, int $cmid): void {
+        $actions = \core_courseformat\formatactions::cm($course);
+        if (method_exists($actions, 'delete')) {
+            $actions->delete($cmid);
+            return;
+        }
+        course_delete_module($cmid);
     }
 
     /**
@@ -191,6 +213,8 @@ class course_builder {
         $moduleinfo = self::base($course, 'quiz', $sectionnum, $name, $intro);
         $moduleinfo->timeopen = 0;
         $moduleinfo->timeclose = 0;
+        // Moodle 5.3 added a due date that its event code reads without checking; older versions ignore it.
+        $moduleinfo->duedate = 0;
         $moduleinfo->timelimit = 0;
         $moduleinfo->overduehandling = 'autosubmit';
         $moduleinfo->graceperiod = 0;
@@ -241,7 +265,7 @@ class course_builder {
         $moduleinfo->visible = 1;
         $moduleinfo->cmidnumber = '';
         if ($name !== '') {
-            $moduleinfo->name = $name;
+            $moduleinfo->name = \core_text::substr($name, 0, self::MAX_NAME_LENGTH);
         }
         $moduleinfo->introeditor = ['text' => $intro, 'format' => FORMAT_HTML, 'itemid' => 0];
 
