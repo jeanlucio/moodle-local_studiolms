@@ -32,6 +32,24 @@ namespace local_studiolms\local;
  * and canonical configs used by the editor.
  */
 class preset_loader {
+    /** @var string|null Preset catalog directory injected by tests, replacing the tiny_studiolms one. */
+    private static ?string $testingdir = null;
+
+    /**
+     * Injects a preset catalog directory for tests, so they do not depend on the installed editor's presets.
+     *
+     * Ignored outside PHPUnit and Behat.
+     *
+     * @param string|null $directory Directory holding one sub-directory per language, or null to reset.
+     * @return void
+     */
+    public static function set_directory_for_testing(?string $directory): void {
+        if (!defined('PHPUNIT_TEST') && !defined('BEHAT_SITE_RUNNING')) {
+            return;
+        }
+        self::$testingdir = $directory;
+    }
+
     /**
      * Returns all presets for the current (or given) language, with English fallback.
      *
@@ -47,7 +65,7 @@ class preset_loader {
             $lang = current_language();
         }
 
-        $basedir = $CFG->dirroot . '/lib/editor/tiny/plugins/studiolms/presets';
+        $basedir = self::$testingdir ?? $CFG->dirroot . '/lib/editor/tiny/plugins/studiolms/presets';
         $langdir = $basedir . '/' . $lang;
         if (!is_dir($langdir)) {
             $langdir = $basedir . '/en';

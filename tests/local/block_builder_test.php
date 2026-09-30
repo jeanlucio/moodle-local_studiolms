@@ -163,4 +163,169 @@ final class block_builder_test extends \advanced_testcase {
         $this->assertStringContainsString('data-slms-block-type="callout"', $html);
         $this->assertStringContainsString('data-slms-state="', $html);
     }
+
+    /**
+     * Skips the test when the editor's templates, which the rich rendering needs, are not installed.
+     *
+     * @return void
+     */
+    private function require_editor(): void {
+        if (\core_component::get_component_directory('tiny_studiolms') === null) {
+            $this->markTestSkipped('tiny_studiolms editor not installed in this environment.');
+        }
+    }
+
+    /**
+     * Decodes the data-slms-state chip of a rendered block back to its config.
+     *
+     * @param string $html Rendered block HTML.
+     * @return array The stored config.
+     */
+    private function chip(string $html): array {
+        $this->assertSame(1, preg_match('/data-slms-state="([^"]+)"/', $html, $matches));
+        return json_decode(rawurldecode(base64_decode($matches[1])), true);
+    }
+
+    /**
+     * Every infographic escapes teacher and AI text, so markup in a title, label or description is inert.
+     *
+     * Regression guard next to the stylizedHeading and callout blocks, which trust their caller instead.
+     *
+     * @return void
+     */
+    public function test_infographics_escape_user_text(): void {
+        $this->require_editor();
+        $evil = '<script>alert(1)</script>';
+        $blocks = [
+            'infographic' => ['title' => $evil, 'items' => [['value' => $evil, 'label' => $evil]]],
+            'infographicFeatures' => ['title' => $evil, 'items' => [['title' => $evil, 'description' => $evil]]],
+            'infographicSteps' => ['title' => $evil, 'items' => [['title' => $evil, 'description' => $evil]]],
+            'infographicTimeline' => ['title' => $evil, 'items' => [['date' => $evil, 'title' => $evil, 'description' => $evil]]],
+            'infographicComparison' => ['title' => $evil, 'col1' => $evil, 'col2' => $evil, 'items' => [['label' => $evil]]],
+        ];
+
+        foreach ($blocks as $type => $config) {
+            $html = block_builder::render($type, $config);
+            $this->assertStringNotContainsString('<script', $html, $type);
+            $this->assertStringContainsString('&lt;script&gt;', $html, $type);
+        }
+    }
+
+    /**
+     * The mind map escapes labels both in the SVG and in the accessible text alternative.
+     *
+     * @return void
+     */
+    public function test_mindmap_escapes_labels_and_caps_branches(): void {
+        $this->require_editor();
+        $branches = [['label' => 'Bad <script>x</script>', 'children' => ['Kid <b>k</b>']]];
+        for ($i = 2; $i <= 10; $i++) {
+            $branches[] = ['label' => 'Branch ' . $i];
+        }
+
+        $html = block_builder::render('mindmap', ['topic' => 'Topic', 'branches' => $branches]);
+
+        $this->assertStringNotContainsString('<script', $html);
+        $this->assertStringContainsString('&lt;script&gt;', $html);
+        $this->assertStringContainsString('Branch 8', $html);
+        $this->assertStringNotContainsString('Branch 9', $html);
+    }
+
+    /**
+     * A mind map without branches renders no diagram.
+     *
+     * @return void
+     */
+    public function test_mindmap_without_branches_has_no_svg(): void {
+        $this->require_editor();
+
+        $html = block_builder::render('mindmap', ['topic' => 'Topic', 'branches' => []]);
+
+        $this->assertStringNotContainsString('<svg', $html);
+    }
+
+    /**
+     * The state chip omits the keys the editor rebuilds from the live DOM, and keeps the rest.
+     *
+     * @return void
+     */
+    public function test_state_chip_excludes_dom_owned_keys(): void {
+        $this->require_editor();
+
+        $callout = $this->chip(block_builder::render('callout', ['icon' => '📌', 'contentHtml' => '<p>Note</p>']));
+        $accordion = $this->chip(block_builder::render('accordion', ['state' => 'open', 'title' => 'Q', 'content' => '<p>A</p>']));
+        $grid = $this->chip(block_builder::render('gridcards', [
+            'columns' => 2, 'containerTitle' => 'Grid', 'slots' => ['<p>one</p>'],
+        ]));
+        $table = $this->chip(block_builder::render('table', ['rows' => 2, 'cols' => 2, 'cellData' => [['H1', 'H2']]]));
+
+        $this->assertSame(['icon' => '📌'], $callout);
+        $this->assertSame(['state' => 'open'], $accordion);
+        $this->assertSame(['columns' => 2], $grid);
+        $this->assertSame(['rows' => 2, 'cols' => 2], $table);
+    }
+
+    /**
+     * Blocks are marked non-editable so the editor treats them as units, except tables, which stay editable.
+     *
+     * @return void
+     */
+    public function test_wrap_marks_blocks_non_editable_except_tables(): void {
+        $this->require_editor();
+
+        $heading = block_builder::render('stylizedHeading', ['text' => 'Intro', 'level' => 'h3']);
+        $table = block_builder::render('table', ['rows' => 2, 'cols' => 1, 'cellData' => [['H'], ['a']]]);
+
+        $this->assertStringContainsString('mceNonEditable', $heading);
+        $this->assertStringContainsString('data-slms-block-type="stylizedHeading"', $heading);
+        $this->assertStringNotContainsString('mceNonEditable', $table);
+        $this->assertStringContainsString('data-slms-block-type="table"', $table);
+    }
+
+    /**
+     * The layout blocks render their content: card media and button, open accordion, grid slots and table cells.
+     *
+     * @return void
+     */
+    public function test_rich_layout_blocks_render_their_content(): void {
+        $this->require_editor();
+
+        $card = block_builder::render('advancedCard', [
+            'content' => '<p>Body</p>', 'mediaType' => 'image', 'mediaUrl' => 'https://example.test/i.png',
+            'btnText' => 'Go', 'btnUrl' => 'https://example.test',
+        ]);
+        $this->assertStringContainsString('https://example.test/i.png', $card);
+        $this->assertStringContainsString('Body', $card);
+        $this->assertStringContainsString('Go', $card);
+
+        $open = block_builder::render('accordion', ['state' => 'open', 'title' => 'Q', 'content' => '<p>A</p>']);
+        $closed = block_builder::render('accordion', ['state' => 'closed', 'title' => 'Q', 'content' => '<p>A</p>']);
+        $this->assertStringNotContainsString('slms-closed', $open);
+        $this->assertStringContainsString('slms-closed', $closed);
+
+        $grid = block_builder::render('gridcards', [
+            'containerTitle' => 'Grid', 'columns' => 2, 'slots' => ['<p>one</p>', '<p>two</p>'],
+        ]);
+        $this->assertStringContainsString('slms-cols-2', $grid);
+        $this->assertSame(2, substr_count($grid, 'slms-grid-slot'));
+        $this->assertStringContainsString('one', $grid);
+        $this->assertStringContainsString('two', $grid);
+
+        $table = block_builder::render('table', ['rows' => 3, 'cols' => 2, 'cellData' => [['H1', 'H2'], ['a', 'b']]]);
+        $this->assertSame(2, substr_count($table, '<th scope="col"'));
+        $this->assertStringContainsString('table-striped', $table);
+        $this->assertStringContainsString('H1', $table);
+        $this->assertStringContainsString('b', $table);
+    }
+
+    /**
+     * A type the renderer does not know produces nothing.
+     *
+     * @return void
+     */
+    public function test_rich_unknown_type_renders_nothing(): void {
+        $this->require_editor();
+
+        $this->assertSame('', block_builder::render('doesNotExist', ['x' => 1]));
+    }
 }
