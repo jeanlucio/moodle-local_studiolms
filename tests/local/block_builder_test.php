@@ -319,6 +319,72 @@ final class block_builder_test extends \advanced_testcase {
     }
 
     /**
+     * The card carries the hover and sound classes of its design, for the card and for its button.
+     *
+     * Regression test: the context did not pass them, so the card template rendered empty class suffixes
+     * and a preset with a hover effect or a click sound never got either from the server.
+     *
+     * @return void
+     */
+    public function test_rich_card_carries_hover_and_sound_classes(): void {
+        $this->require_editor();
+
+        $card = block_builder::render('advancedCard', [
+            'btnText' => 'Go', 'hoverEffect' => 'lift', 'btnHoverEffect' => 'glow', 'btnClickSound' => 'pop',
+        ]);
+        $this->assertMatchesRegularExpression('/class="studiolms-card slms-hov-lift\b/', $card);
+        $this->assertMatchesRegularExpression('/class="studiolms-btn slms-hov-glow slms-snd-pop"/', $card);
+
+        $plain = block_builder::render('advancedCard', ['btnText' => 'Go']);
+        $this->assertStringContainsString('slms-hov-none', $plain);
+        $this->assertStringContainsString('slms-snd-none', $plain);
+        $this->assertStringNotContainsString('slms-hov- ', $plain);
+    }
+
+    /**
+     * Every card of a grid is rendered, even when there are more than the columns.
+     *
+     * Regression test: only as many slots as columns were drawn, and the AI puts all the cards of a list in
+     * one block, so the rest were dropped for good.
+     *
+     * @return void
+     */
+    public function test_rich_grid_keeps_every_card(): void {
+        $this->require_editor();
+
+        $slots = ['<p>1</p>', '<p>2</p>', '<p>3</p>', '<p>4</p>', '<p>5</p>', '<p>6</p>'];
+        $grid = block_builder::render('gridcards', ['columns' => '3', 'slots' => $slots]);
+        $this->assertSame(6, substr_count($grid, 'slms-grid-slot mceEditable'));
+
+        $empty = block_builder::render('gridcards', ['columns' => 2, 'slots' => ['<p>a</p>', '', '', '<p><br></p>']]);
+        $this->assertSame(2, substr_count($empty, 'slms-grid-slot mceEditable'));
+
+        $fresh = block_builder::render('gridcards', ['columns' => 3]);
+        $this->assertSame(3, substr_count($fresh, 'slms-grid-slot mceEditable'));
+    }
+
+    /**
+     * The grid spacing moves to the closest one that has a class, and the border thickness stays in range.
+     *
+     * Regression test: the value went into the class name as it came, and only some values have a rule.
+     *
+     * @return void
+     */
+    public function test_rich_grid_spacing_and_border_are_normalised(): void {
+        $this->require_editor();
+
+        foreach ([[10, 10], ['40', 40], [17, 16], [70, 60], ['wide', 20], [null, 20]] as [$given, $expected]) {
+            $grid = block_builder::render('gridcards', ['gap' => $given]);
+            $this->assertStringContainsString('slms-gap-' . $expected . '"', $grid, var_export($given, true));
+        }
+
+        $thick = block_builder::render('gridcards', ['borderWidth' => 99, 'borderColor' => '#ff0000']);
+        $this->assertStringContainsString('border: 4px solid #ff0000', $thick);
+        $none = block_builder::render('gridcards', ['borderWidth' => -3]);
+        $this->assertStringContainsString('border: none', $none);
+    }
+
+    /**
      * A type the renderer does not know produces nothing.
      *
      * @return void

@@ -277,6 +277,9 @@ class block_builder {
             'isAlignFull'  => $btnalign === 'full',
             'isBtnFullWidth' => $btnalign === 'full',
             'btnDisplayMode' => $btnalign === 'full' ? 'flex' : 'inline-flex',
+            'hoverEffect'    => $config['hoverEffect'] ?? 'none',
+            'btnHoverEffect' => $config['btnHoverEffect'] ?? 'none',
+            'btnClickSound'  => $config['btnClickSound'] ?? 'none',
         ];
     }
 
@@ -313,7 +316,7 @@ class block_builder {
             ? 'transparent'
             : ($config['background'] ?? 'transparent');
         $pad = $pdmap[$config['padding'] ?? 'none'] ?? '0px';
-        $bdw = (int) ($config['borderWidth'] ?? 0);
+        $bdw = min(4, max(0, (int) ($config['borderWidth'] ?? 0)));
         $bdcolor = $config['borderColor'] ?? '#e2e8f0';
         $borderstyle = $bdw > 0 ? "{$bdw}px solid {$bdcolor}" : 'none';
         $bradius = (int) ($config['borderRadius'] ?? 0);
@@ -321,10 +324,11 @@ class block_builder {
             . " padding: {$pad}; width: 100%; box-sizing: border-box; margin-bottom: 1.5rem;";
 
         $colcount = max(1, (int) ($config['columns'] ?? 2));
-        $slots = $config['slots'] ?? [];
+        $slots = is_array($config['slots'] ?? null) ? $config['slots'] : [];
         $slotshtml = '';
-        for ($i = 0; $i < $colcount; $i++) {
-            $content = !empty($slots[$i]) ? $slots[$i] : '<p><br></p>';
+        $total = self::grid_slot_count($colcount, $slots);
+        for ($i = 0; $i < $total; $i++) {
+            $content = !empty($slots[$i]) && is_string($slots[$i]) ? $slots[$i] : '<p><br></p>';
             $slotshtml .= '<div class="slms-grid-slot mceEditable"'
                 . ' style="min-width: 0; height: 100%;">' . $content . '</div>';
         }
@@ -335,9 +339,56 @@ class block_builder {
             'containerTitleSize' => $config['containerTitleSize'] ?? '24px',
             'titleColor'         => $config['titleColor'] ?? '#333333',
             'columns'            => (string) $colcount,
-            'gap'                => $config['gap'] ?? 20,
+            'gap'                => self::grid_gap($config['gap'] ?? 20),
             'slotsHtml'          => $slotshtml,
         ];
+    }
+
+    /**
+     * Returns how many slots the grid cards block draws.
+     *
+     * Mirrors slotCount() in tiny_studiolms blocks/grid_slots.js: never fewer than the columns, and never so
+     * few that a slot holding content is dropped, since a generated config puts every card in one block.
+     * Blank slots after the last one with content are not kept.
+     *
+     * @param int $columns Number of columns.
+     * @param array $slots Slot contents.
+     * @return int At least $columns.
+     */
+    private static function grid_slot_count(int $columns, array $slots): int {
+        $lastfilled = -1;
+        foreach (array_values($slots) as $index => $slot) {
+            $content = is_string($slot)
+                ? preg_replace('/<p>(\s|&nbsp;|<br\s*\/?>)*<\/p>/i', '', $slot)
+                : '';
+            if (trim((string) $content) !== '') {
+                $lastfilled = $index;
+            }
+        }
+        return max($columns, $lastfilled + 1);
+    }
+
+    /**
+     * Returns the grid spacing, in pixels, that has a slms-gap-N class in the stylesheet.
+     *
+     * Mirrors gridGap() in tiny_studiolms blocks/grid_slots.js: the closest allowed value, or 20 when the
+     * value is not a number.
+     *
+     * @param mixed $value The gap field of the block config.
+     * @return int One of the spacings with a class.
+     */
+    private static function grid_gap(mixed $value): int {
+        $steps = [0, 4, 5, 8, 10, 12, 15, 16, 20, 24, 25, 30, 32, 35, 40, 45, 50, 55, 60];
+        if (!is_numeric($value)) {
+            return 20;
+        }
+        $best = $steps[0];
+        foreach ($steps as $step) {
+            if (abs($step - (float) $value) < abs($best - (float) $value)) {
+                $best = $step;
+            }
+        }
+        return $best;
     }
 
     /**
