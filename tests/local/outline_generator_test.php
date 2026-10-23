@@ -247,4 +247,34 @@ final class outline_generator_test extends \advanced_testcase {
             $this->assertSame(3, $calls);
         }
     }
+
+    /**
+     * Fields of the wrong type are dropped instead of throwing or becoming the word "Array".
+     *
+     * Regression test: clean_param() throws on an array and the whole outline request failed.
+     */
+    public function test_normalise_survives_fields_of_the_wrong_type(): void {
+        $result = $this->normalise([
+            'objectives' => 'not a list',
+            'sections' => [
+                'a string instead of a section',
+                ['title' => ['x'], 'activities' => []],
+                ['title' => 'Real', 'activities' => 'not a list'],
+                ['title' => 'Mixed', 'activities' => [
+                    ['type' => ['video'], 'title' => 'Typed wrong'],
+                    ['type' => 'quiz', 'title' => ['x']],
+                    'a string instead of an activity',
+                    ['type' => 'forum', 'title' => 'Good'],
+                ]],
+            ],
+        ]);
+
+        $this->assertSame([], $result['objectives']);
+        $titles = array_column($result['sections'], 'title');
+        $this->assertContains('Real', $titles);
+        $mixed = $result['sections'][array_search('Mixed', $titles, true)];
+        $this->assertSame(['Typed wrong', 'Good'], array_column($mixed['activities'], 'title'));
+        $this->assertSame(['page', 'forum'], array_column($mixed['activities'], 'type'));
+        $this->assertStringNotContainsString('Array', json_encode($result));
+    }
 }

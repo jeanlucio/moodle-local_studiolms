@@ -116,13 +116,12 @@ class glossary_builder {
 
         $terms = [];
         foreach ($decoded['terms'] as $item) {
-            if (!is_array($item) || empty($item['term']) || empty($item['definition'])) {
+            $term = is_array($item) ? ai_json::text($item['term'] ?? null) : '';
+            $definition = is_array($item) ? ai_json::text($item['definition'] ?? null) : '';
+            if ($term === '' || $definition === '') {
                 continue;
             }
-            $terms[] = [
-                'term' => clean_param($item['term'], PARAM_TEXT),
-                'definition' => clean_param($item['definition'], PARAM_TEXT),
-            ];
+            $terms[] = ['term' => $term, 'definition' => $definition];
         }
         return $terms;
     }

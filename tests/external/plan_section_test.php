@@ -159,4 +159,20 @@ final class plan_section_test extends \advanced_testcase {
         $this->assertSame('page', $result['activities'][0]['type']);
         $this->assertSame(get_string('section_number', 'local_studiolms', 1), $result['activities'][0]['title']);
     }
+
+    /**
+     * A title that is not text drops the activity instead of becoming the word "Array".
+     */
+    public function test_titles_of_the_wrong_type_drop_the_activity(): void {
+        ai_resolver::set_provider_for_testing(static fn(string $system, string $user): string => json_encode([
+            ['type' => 'quiz', 'title' => ['x']],
+            ['type' => 'forum', 'title' => ['a' => 'b']],
+            ['type' => 'page', 'title' => 'Kept'],
+        ]));
+        $course = $this->course_with_teacher();
+
+        $result = plan_section::execute($course->id, 1, 'Loops');
+
+        $this->assertSame(['Kept'], array_column($result['activities'], 'title'));
+    }
 }

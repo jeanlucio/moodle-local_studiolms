@@ -310,7 +310,7 @@ class generate_section_task extends \core\task\adhoc_task {
             $decoded = \local_studiolms\local\ai_json::decode(
                 \local_studiolms\local\ai_resolver::generate_text($system, $user)
             );
-            $html    = is_array($decoded) ? trim((string) ($decoded['content'] ?? '')) : '';
+            $html    = is_array($decoded) ? trim(\local_studiolms\local\ai_json::html($decoded['content'] ?? null)) : '';
             if ($html === '' || trim(html_to_text($html)) === '') {
                 throw new \moodle_exception('invalidairesponse', 'local_studiolms');
             }

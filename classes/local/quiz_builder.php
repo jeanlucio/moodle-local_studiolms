@@ -69,7 +69,7 @@ class quiz_builder {
 
         $added = 0;
         foreach ($questions as $data) {
-            $form = self::build_form($data, (int) $category->id);
+            $form = is_array($data) ? self::build_form($data, (int) $category->id) : null;
             if ($form === null) {
                 continue;
             }
@@ -137,15 +137,16 @@ class quiz_builder {
      */
     private static function build_form(array $data, int $categoryid): ?stdClass {
         $type = $data['type'] ?? '';
-        if (!in_array($type, self::SUPPORTED, true) || empty($data['question'])) {
+        $question = is_scalar($data['question'] ?? null) ? trim((string) $data['question']) : '';
+        if (!in_array($type, self::SUPPORTED, true) || $question === '') {
             return null;
         }
 
         $form = new stdClass();
         $form->category = (string) $categoryid;
-        $form->questiontext = ['text' => clean_text($data['question'], FORMAT_HTML), 'format' => FORMAT_HTML];
-        $form->name = shorten_text(strip_tags($data['question']), 80);
-        $form->generalfeedback = ['text' => clean_text($data['generalfeedback'] ?? '', FORMAT_HTML), 'format' => FORMAT_HTML];
+        $form->questiontext = ['text' => clean_text($question, FORMAT_HTML), 'format' => FORMAT_HTML];
+        $form->name = shorten_text(strip_tags($question), 80);
+        $form->generalfeedback = ['text' => ai_json::html($data['generalfeedback'] ?? null), 'format' => FORMAT_HTML];
         $form->defaultmark = 1;
         $form->status = question_version_status::QUESTION_STATUS_READY;
 
@@ -170,7 +171,7 @@ class quiz_builder {
      */
     private static function build_truefalse(stdClass $form, array $data): stdClass {
         $form->penalty = 1;
-        $form->correctanswer = !empty($data['answer']) ? '1' : '0';
+        $form->correctanswer = ai_json::flag($data['answer'] ?? null) ? '1' : '0';
         $form->feedbacktrue = ['text' => '', 'format' => FORMAT_HTML];
         $form->feedbackfalse = ['text' => '', 'format' => FORMAT_HTML];
         return $form;
@@ -186,7 +187,7 @@ class quiz_builder {
     private static function build_shortanswer(stdClass $form, array $data): ?stdClass {
         $answers = array_values(array_filter(array_map(
             fn($answer) => is_string($answer) ? trim($answer) : '',
-            $data['answers'] ?? []
+            ai_json::items($data['answers'] ?? null)
         )));
         if (empty($answers)) {
             return null;
@@ -214,10 +215,10 @@ class quiz_builder {
      */
     private static function build_multichoice(stdClass $form, array $data): ?stdClass {
         $options = array_values(array_filter(
-            $data['options'] ?? [],
-            fn($option) => is_array($option) && !empty($option['text'])
+            ai_json::items($data['options'] ?? null),
+            fn($option) => is_array($option) && ai_json::html($option['text'] ?? null) !== ''
         ));
-        $correct = array_values(array_filter($options, fn($option) => !empty($option['correct'])));
+        $correct = array_values(array_filter($options, fn($option) => ai_json::flag($option['correct'] ?? null)));
         if (count($options) < 2 || empty($correct)) {
             return null;
         }
@@ -237,10 +238,10 @@ class quiz_builder {
         $form->fraction = [];
         $form->feedback = [];
         foreach ($options as $option) {
-            $iscorrect = !empty($option['correct']);
-            $form->answer[] = ['text' => clean_text($option['text'], FORMAT_HTML), 'format' => FORMAT_HTML];
+            $iscorrect = ai_json::flag($option['correct'] ?? null);
+            $form->answer[] = ['text' => ai_json::html($option['text']), 'format' => FORMAT_HTML];
             $form->fraction[] = $iscorrect ? (string) round(1 / $numcorrect, 7) : '0.0';
-            $form->feedback[] = ['text' => clean_text($option['feedback'] ?? '', FORMAT_HTML), 'format' => FORMAT_HTML];
+            $form->feedback[] = ['text' => ai_json::html($option['feedback'] ?? null), 'format' => FORMAT_HTML];
         }
         return $form;
     }

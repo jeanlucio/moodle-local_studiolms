@@ -243,7 +243,7 @@ class generate_activity extends external_api {
                 $user .= "\n\nReference material:\n" . mb_substr($reference, 0, 3000);
             }
             $decoded = ai_json::decode(ai_resolver::generate_text($system, $user));
-            $html = is_array($decoded) ? trim((string) ($decoded['content'] ?? '')) : '';
+            $html = is_array($decoded) ? trim(ai_json::html($decoded['content'] ?? null)) : '';
             if ($html === '' || trim(html_to_text($html)) === '') {
                 throw new \moodle_exception('invalidairesponse', 'local_studiolms');
             }

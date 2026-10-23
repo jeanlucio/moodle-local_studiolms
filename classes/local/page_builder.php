@@ -305,7 +305,7 @@ class page_builder {
         }
 
         if (($plan['strategy'] ?? '') === 'preset') {
-            $chosenpreset = (string) ($plan['preset_name'] ?? 'preset');
+            $chosenpreset = ai_json::text($plan['preset_name'] ?? null, 'preset');
             $html = self::build_from_preset($plan);
             if ($html !== '') {
                 return $html;
@@ -317,7 +317,8 @@ class page_builder {
             $chosenpreset = 'blocks';
             $html = '';
             foreach ($plan['blocks'] as $block) {
-                $html .= self::render_block($block);
+                // An entry that is not an object (a string, a number) is no block.
+                $html .= is_array($block) ? self::render_block($block) : '';
             }
             $html .= self::generate_mindmap_block($pagetitle, $context);
             return $html;
@@ -399,7 +400,7 @@ class page_builder {
      * @return string Rendered HTML, or empty string when the preset is not found.
      */
     private static function build_from_preset(array $plan): string {
-        $preset = preset_loader::find((string) ($plan['preset_name'] ?? ''));
+        $preset = preset_loader::find(ai_json::text($plan['preset_name'] ?? null));
         if ($preset === null) {
             return '';
         }
@@ -528,18 +529,20 @@ class page_builder {
     private static function render_block(array $block): string {
         switch ($block['type'] ?? '') {
             case 'heading':
-                if (empty($block['text'])) {
+                $text = ai_json::text($block['text'] ?? null);
+                if ($text === '') {
                     return '';
                 }
                 return block_builder::render('stylizedHeading', [
-                    'text' => clean_param($block['text'], PARAM_TEXT),
+                    'text' => $text,
                     'level' => 'h3',
                     'icon' => '',
                     'bgColor' => '#e3f2fd',
                     'textColor' => '#0d47a1',
                 ]);
             case 'callout':
-                if (empty($block['html'])) {
+                $calloutcontent = ai_json::html($block['html'] ?? null);
+                if ($calloutcontent === '') {
                     return '';
                 }
                 return block_builder::render('callout', [
@@ -550,10 +553,11 @@ class page_builder {
                     'hoverEffect' => 'none',
                     'icon' => '📌',
                     'textColor' => '#854d0e',
-                    'contentHtml' => clean_text($block['html'], FORMAT_HTML),
+                    'contentHtml' => $calloutcontent,
                 ]);
             case 'card':
-                if (empty($block['content'])) {
+                $cardcontent = ai_json::html($block['content'] ?? null);
+                if ($cardcontent === '') {
                     return '';
                 }
                 return block_builder::render('advancedCard', [
@@ -571,10 +575,11 @@ class page_builder {
                     'btnTextCol' => '#ffffff',
                     'btnAlign' => 'left',
                     'hoverEffect' => 'none',
-                    'content' => clean_text($block['content'], FORMAT_HTML),
+                    'content' => $cardcontent,
                 ]);
             case 'accordion':
-                if (empty($block['title'])) {
+                $accordiontitle = ai_json::text($block['title'] ?? null);
+                if ($accordiontitle === '') {
                     return '';
                 }
                 return block_builder::render('accordion', [
@@ -584,11 +589,11 @@ class page_builder {
                     'icon' => '▼ / ▲',
                     'openSound' => 'none',
                     'hoverEffect' => 'none',
-                    'title' => clean_param($block['title'], PARAM_TEXT),
-                    'content' => clean_text($block['content'] ?? '', FORMAT_HTML),
+                    'title' => $accordiontitle,
+                    'content' => ai_json::html($block['content'] ?? null),
                 ]);
             default:
-                return empty($block['html']) ? '' : clean_text($block['html'], FORMAT_HTML);
+                return ai_json::html($block['html'] ?? null);
         }
     }
 }

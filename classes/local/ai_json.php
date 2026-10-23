@@ -54,4 +54,56 @@ class ai_json {
         $decoded = json_decode($text, true);
         return is_array($decoded) ? $decoded : null;
     }
+
+    /**
+     * Returns a field of a decoded response as plain text, or $default when it is not a scalar.
+     *
+     * A model answers in whatever shape it likes: a field asked for as text may come back as an object or
+     * a list. clean_param() throws on an array and a (string) cast turns it into the word "Array", so
+     * anything that is not a string, number or boolean is treated as missing.
+     *
+     * @param mixed $value Field of the decoded response.
+     * @param string $default Returned when the value is not a scalar.
+     * @return string
+     */
+    public static function text(mixed $value, string $default = ''): string {
+        return is_scalar($value) ? clean_param((string) $value, PARAM_TEXT) : $default;
+    }
+
+    /**
+     * Returns a field of a decoded response as cleaned HTML, or '' when it is not a scalar.
+     *
+     * @param mixed $value Field of the decoded response.
+     * @return string
+     */
+    public static function html(mixed $value): string {
+        return is_scalar($value) ? clean_text((string) $value, FORMAT_HTML) : '';
+    }
+
+    /**
+     * Returns a field of a decoded response as a boolean.
+     *
+     * A truthiness test or a cast would make the string "false" true, which in a quiz marks a wrong
+     * answer as the right one. A value that cannot be read as a boolean is $default.
+     *
+     * @param mixed $value Field of the decoded response.
+     * @param bool $default Returned when the value is missing or not a boolean.
+     * @return bool
+     */
+    public static function flag(mixed $value, bool $default = false): bool {
+        if (!is_scalar($value)) {
+            return $default;
+        }
+        return filter_var($value, FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE) ?? $default;
+    }
+
+    /**
+     * Returns a field of a decoded response as a list, or an empty one when it is not an array.
+     *
+     * @param mixed $value Field of the decoded response.
+     * @return array
+     */
+    public static function items(mixed $value): array {
+        return is_array($value) ? $value : [];
+    }
 }

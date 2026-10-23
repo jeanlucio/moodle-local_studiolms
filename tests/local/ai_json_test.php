@@ -95,4 +95,55 @@ final class ai_json_test extends \advanced_testcase {
     public function test_decode_malformed_returns_null(): void {
         $this->assertNull(ai_json::decode('{"a": "unterminated'));
     }
+
+    /**
+     * Text from the model is cleaned, and anything that is not a scalar counts as missing.
+     *
+     * clean_param() throws on an array and a cast would turn it into the word "Array".
+     */
+    public function test_text_treats_non_scalars_as_missing(): void {
+        $this->assertSame('Hello', ai_json::text('<b>Hello</b>'));
+        $this->assertSame('5', ai_json::text(5));
+        $this->assertSame('', ai_json::text(['x']));
+        $this->assertSame('', ai_json::text(['text' => 'x']));
+        $this->assertSame('', ai_json::text(null));
+        $this->assertSame('fallback', ai_json::text(['x'], 'fallback'));
+        $this->assertSame('fallback', ai_json::text(null, 'fallback'));
+    }
+
+    /**
+     * HTML from the model is cleaned, and anything that is not a scalar is empty.
+     */
+    public function test_html_cleans_and_treats_non_scalars_as_empty(): void {
+        $this->assertSame('<p>ok</p>', ai_json::html('<p>ok</p><script>alert(1)</script>'));
+        $this->assertSame('', ai_json::html(['<p>x</p>']));
+        $this->assertSame('', ai_json::html(null));
+    }
+
+    /**
+     * A boolean written as text keeps its meaning: the string "false" is not true.
+     */
+    public function test_flag_reads_booleans_written_as_text(): void {
+        foreach ([true, 'true', 'TRUE', '1', 1, 'yes', 'on'] as $value) {
+            $this->assertTrue(ai_json::flag($value), var_export($value, true));
+        }
+        foreach ([false, 'false', 'False', '0', 0, 'no', 'off', ''] as $value) {
+            $this->assertFalse(ai_json::flag($value, true), var_export($value, true));
+        }
+        $this->assertTrue(ai_json::flag(null, true));
+        $this->assertFalse(ai_json::flag(null));
+        $this->assertTrue(ai_json::flag(['x'], true));
+        $this->assertFalse(ai_json::flag('maybe'));
+        $this->assertTrue(ai_json::flag('maybe', true));
+    }
+
+    /**
+     * A list field that is not an array is an empty list, so a loop over it never fails.
+     */
+    public function test_items_returns_an_empty_list_for_non_arrays(): void {
+        $this->assertSame([1, 2], ai_json::items([1, 2]));
+        $this->assertSame([], ai_json::items('text'));
+        $this->assertSame([], ai_json::items(null));
+        $this->assertSame([], ai_json::items(5));
+    }
 }

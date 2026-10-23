@@ -173,13 +173,14 @@ class plan_section extends external_api {
                 }
                 $activities = [];
                 foreach ($decoded as $item) {
-                    if (!isset($item['type'], $item['title'])) {
+                    $title = is_array($item) ? ai_json::text($item['title'] ?? null) : '';
+                    if ($title === '' || !isset($item['type'])) {
                         continue;
                     }
                     $type = in_array($item['type'], $allowed, true) ? $item['type'] : 'page';
                     $activities[] = [
                         'type'  => $type,
-                        'title' => mb_substr((string) $item['title'], 0, 80),
+                        'title' => mb_substr($title, 0, 80),
                     ];
                 }
                 if (!empty($activities)) {

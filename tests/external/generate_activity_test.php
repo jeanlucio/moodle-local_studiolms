@@ -265,4 +265,23 @@ final class generate_activity_test extends \advanced_testcase {
         $this->assertStringNotContainsString('<script', $intro);
         $this->assertStringNotContainsString('onerror', $intro);
     }
+
+    /**
+     * A body that is not text degrades the activity instead of publishing the word "Array".
+     */
+    public function test_a_body_of_the_wrong_type_degrades_the_activity(): void {
+        global $DB;
+
+        ai_resolver::set_provider_for_testing(
+            static fn(string $system, string $user): string => '{"content": ["<p>x</p>"]}'
+        );
+        $course = $this->course_with_teacher();
+
+        $result = generate_activity::execute($course->id, 1, 'forum', 'Discuss', 'Theme', 'general', '');
+
+        $this->assertTrue($result['degraded']);
+        $intro = $DB->get_field('forum', 'intro', ['course' => $course->id], MUST_EXIST);
+        $this->assertStringNotContainsString('Array', $intro);
+        $this->assertStringContainsString('Discuss', $intro);
+    }
 }

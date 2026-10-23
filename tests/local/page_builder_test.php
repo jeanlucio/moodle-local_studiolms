@@ -442,4 +442,34 @@ final class page_builder_test extends \advanced_testcase {
 
         $this->assertSame('[A] x &amp; y 3 ' . $long . ' [D]', $filled['blocks'][0]['config']['contentHtml']);
     }
+
+    /**
+     * Blocks and block fields of the wrong type are skipped instead of throwing or printing "Array".
+     *
+     * Regression test: an entry that is not an object failed render_block()'s array signature, and an
+     * array in a text field failed clean_param() or clean_text().
+     */
+    public function test_custom_blocks_survive_fields_of_the_wrong_type(): void {
+        $plan = json_encode(['strategy' => 'blocks', 'blocks' => [
+            'a string instead of a block',
+            ['type' => 'heading', 'text' => ['x']],
+            ['type' => 'callout', 'html' => ['<p>x</p>']],
+            ['type' => 'card', 'content' => ['x']],
+            ['type' => 'accordion', 'title' => ['x'], 'content' => 'Lost with its title'],
+            ['type' => 'accordion', 'title' => 'Kept title', 'content' => ['x']],
+            ['type' => 'mystery', 'html' => ['x']],
+            ['type' => 'heading', 'text' => 'Survivor'],
+        ]]);
+        ai_resolver::set_provider_for_testing(fn(string $system, string $user): string => $plan);
+        $degraded = false;
+        $chosen = '';
+
+        $html = $this->render_with([], $degraded, $chosen);
+
+        $this->assertSame('blocks', $chosen);
+        $this->assertStringContainsString('Survivor', $html);
+        $this->assertStringContainsString('Kept title', $html);
+        $this->assertStringNotContainsString('Lost with its title', $html);
+        $this->assertStringNotContainsString('Array', $html);
+    }
 }

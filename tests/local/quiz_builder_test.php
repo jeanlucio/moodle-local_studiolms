@@ -148,4 +148,67 @@ final class quiz_builder_test extends \advanced_testcase {
         $this->expectException(\moodle_exception::class);
         quiz_builder::create($quiz->coursemodule, $quiz->instance, 'Geo', 'Test', 3);
     }
+
+    /**
+     * True/false and multiple choice answers written as text keep their meaning.
+     *
+     * Regression test: the strings "false" and "0" are truthy in PHP, so a question whose answer the
+     * AI wrote as "false" was stored with true as the right answer.
+     */
+    public function test_answers_written_as_text_are_not_inverted(): void {
+        global $DB;
+
+        ai_resolver::set_provider_for_testing(static fn(string $s, string $u): string => json_encode([
+            'questions' => [
+                ['type' => 'truefalse', 'question' => 'Is it false?', 'answer' => 'false'],
+                ['type' => 'truefalse', 'question' => 'Is it true?', 'answer' => 'true'],
+                ['type' => 'multichoice', 'question' => 'Pick the right one', 'options' => [
+                    ['text' => 'wrong', 'correct' => 'false'],
+                    ['text' => 'right', 'correct' => 'true'],
+                    ['text' => 'also wrong', 'correct' => '0'],
+                ]],
+            ],
+        ]));
+        $course = $this->getDataGenerator()->create_course();
+        $quiz = course_builder::add_quiz($course, 0, 'Test', '<p>i</p>');
+
+        $added = quiz_builder::create($quiz->coursemodule, $quiz->instance, 'Geo', 'Test', 3);
+
+        $this->assertSame(3, $added);
+        $isfalse = $DB->get_record('question', ['name' => 'Is it false?'], '*', MUST_EXIST);
+        $istrue = $DB->get_record('question', ['name' => 'Is it true?'], '*', MUST_EXIST);
+        $answers = fn(int $id) => $DB->get_records('question_answers', ['question' => $id], 'id ASC', 'answer, fraction');
+        $this->assertSame(1.0, (float) $answers($istrue->id)['True']->fraction);
+        $this->assertSame(0.0, (float) $answers($isfalse->id)['True']->fraction);
+        $this->assertSame(1.0, (float) $answers($isfalse->id)['False']->fraction);
+        $multi = $DB->get_record('question', ['name' => 'Pick the right one'], '*', MUST_EXIST);
+        $fractions = array_map(fn($a) => (float) $a->fraction, $answers((int) $multi->id));
+        $this->assertSame(1.0, $fractions['<p>right</p>'] ?? $fractions['right']);
+        $this->assertSame(0.0, $fractions['<p>wrong</p>'] ?? $fractions['wrong']);
+    }
+
+    /**
+     * Questions and fields of the wrong type are skipped instead of failing the whole quiz.
+     */
+    public function test_questions_with_fields_of_the_wrong_type_are_skipped(): void {
+        ai_resolver::set_provider_for_testing(static fn(string $s, string $u): string => json_encode([
+            'questions' => [
+                'a string instead of a question',
+                ['type' => 'truefalse', 'question' => ['x'], 'answer' => true],
+                ['type' => ['truefalse'], 'question' => 'Type as a list'],
+                ['type' => 'shortanswer', 'question' => 'Answers as text', 'answers' => 'Paris'],
+                ['type' => 'multichoice', 'question' => 'Options as text', 'options' => 'a,b'],
+                ['type' => 'multichoice', 'question' => 'Option text as a list', 'options' => [
+                    ['text' => ['a'], 'correct' => true], ['text' => ['b'], 'correct' => true],
+                ]],
+                ['type' => 'truefalse', 'question' => 'Feedback as a list', 'answer' => true, 'generalfeedback' => ['x']],
+            ],
+        ]));
+        $course = $this->getDataGenerator()->create_course();
+        $quiz = course_builder::add_quiz($course, 0, 'Test', '<p>i</p>');
+
+        $added = quiz_builder::create($quiz->coursemodule, $quiz->instance, 'Geo', 'Test', 7);
+
+        $this->assertSame(1, $added);
+    }
 }

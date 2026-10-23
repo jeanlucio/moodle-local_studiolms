@@ -173,33 +173,35 @@ class outline_generator {
      */
     private static function normalise(array $decoded): array {
         $objectives = [];
-        foreach ($decoded['objectives'] ?? [] as $objective) {
+        foreach (ai_json::items($decoded['objectives'] ?? null) as $objective) {
             if (is_string($objective) && trim($objective) !== '') {
                 $objectives[] = clean_param($objective, PARAM_TEXT);
             }
         }
 
         $sections = [];
-        foreach ($decoded['sections'] ?? [] as $section) {
-            if (!is_array($section) || empty($section['title'])) {
+        foreach (ai_json::items($decoded['sections'] ?? null) as $section) {
+            $sectiontitle = is_array($section) ? ai_json::text($section['title'] ?? null) : '';
+            if ($sectiontitle === '') {
                 continue;
             }
             $activities = [];
-            foreach ($section['activities'] ?? [] as $activity) {
-                if (!is_array($activity) || empty($activity['title'])) {
+            foreach (ai_json::items($section['activities'] ?? null) as $activity) {
+                $activitytitle = is_array($activity) ? ai_json::text($activity['title'] ?? null) : '';
+                if ($activitytitle === '') {
                     continue;
                 }
-                $type = clean_param($activity['type'] ?? 'page', PARAM_ALPHA);
+                $type = is_string($activity['type'] ?? null) ? clean_param($activity['type'], PARAM_ALPHA) : 'page';
                 if (!in_array($type, self::ALLOWED_TYPES, true)) {
                     $type = 'page';
                 }
                 $activities[] = [
                     'type' => $type,
-                    'title' => clean_param($activity['title'], PARAM_TEXT),
+                    'title' => $activitytitle,
                 ];
             }
             $sections[] = [
-                'title' => clean_param($section['title'], PARAM_TEXT),
+                'title' => $sectiontitle,
                 'activities' => $activities,
             ];
         }

@@ -149,4 +149,24 @@ final class glossary_builder_test extends \advanced_testcase {
         $this->assertStringNotContainsString('<', $terms[0]['definition']);
         $this->assertStringContainsString('Two', $terms[0]['definition']);
     }
+
+    /**
+     * A term or a definition that is not text drops the entry instead of failing the glossary.
+     */
+    public function test_create_skips_terms_with_fields_of_the_wrong_type(): void {
+        ai_resolver::set_provider_for_testing(static fn(string $s, string $u): string => json_encode([
+            'terms' => [
+                ['term' => ['x'], 'definition' => 'List as term'],
+                ['term' => 'List as definition', 'definition' => ['x']],
+                ['term' => ['a' => 'b'], 'definition' => ['c' => 'd']],
+                'a string instead of an entry',
+                ['term' => 'Kept', 'definition' => 'Only this one.'],
+            ],
+        ]));
+        $course = $this->getDataGenerator()->create_course();
+
+        $result = glossary_builder::create($course, 0, 'Glossary', 'Programming');
+
+        $this->assertSame(['Kept'], array_column(glossary_builder::get_terms($result->instance), 'term'));
+    }
 }
