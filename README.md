@@ -154,7 +154,7 @@ There are **no dates** in any step — the teacher edits them through the standa
 * `require_sesskey()` on every state-changing call; all services declared in `db/services.php`.
 * Generated HTML passes through `format_text()`; AI JSON is schema-validated before processing — a validation failure ends generation with a clear error and triggers the surgical rollback.
 * The course is **never** deleted — only the items StudioLMS created are rolled back on failure.
-* Pasted reference material is validated server-side (`PARAM_TEXT`, max length) and **never persisted** — used only to compose the prompt and discarded.
+* Pasted reference material is validated server-side (`PARAM_TEXT`, max length). It is kept with the draft outline (`local_studiolms_outline.briefingjson`) until the course is deleted or the user's data is erased through the Privacy API; the theme is also kept in the generation log (`local_studiolms_generation_log.prompt`).
 * Privacy-aware: full GDPR/LGPD data export and deletion via the Privacy API.
 
 ---
@@ -163,7 +163,7 @@ There are **no dates** in any step — the teacher edits them through the standa
 
 StudioLMS generates course content using AI. AI is **existential** to the plugin (a course cannot be generated without it), but it relies entirely on AI that the site already provides — StudioLMS ships **no API key and no key widget of its own**.
 
-The teacher's prompt and any pasted reference material are transmitted to the resolved provider (the `local_aihub` broker or Moodle's `core_ai`) for processing. External services operate under their own terms of service and privacy policies. StudioLMS does not store prompts or raw AI responses; only the generated course content the teacher confirms is saved into the course.
+The teacher's prompt and any pasted reference material are transmitted to the resolved provider (the `local_aihub` broker or Moodle's `core_ai`) for processing. External services operate under their own terms of service and privacy policies. StudioLMS does not store raw AI responses. It does store what the teacher typed in the wizard — the theme and any pasted reference material — in its own tables (draft outline and generation log), with no automatic expiry; they are exported and erased by the Privacy API and removed when the course is deleted. Do not paste personal data into the reference field.
 
 No external communication occurs unless a generation is explicitly started.
 
@@ -317,7 +317,7 @@ O visual rico não é cosmético — cada tipo de bloco tem base em ciência da 
 * `require_sesskey()` em toda chamada que altera estado; todos os serviços declarados em `db/services.php`.
 * O HTML gerado passa por `format_text()`; o JSON da IA é validado por schema antes de processar — uma falha de validação encerra a geração com erro claro e dispara o rollback cirúrgico.
 * O curso **nunca** é apagado — apenas os itens que o StudioLMS criou sofrem rollback em caso de falha.
-* O material de referência colado é validado no servidor (`PARAM_TEXT`, tamanho máximo) e **nunca persistido** — usado apenas para compor o prompt e descartado.
+* O material de referência colado é validado no servidor (`PARAM_TEXT`, tamanho máximo). Ele fica guardado junto do rascunho do roteiro (`local_studiolms_outline.briefingjson`) até o curso ser apagado ou os dados do usuário serem excluídos pela Privacy API; o tema também fica no log de gerações (`local_studiolms_generation_log.prompt`).
 * Privacidade: exportação e exclusão completa de dados via Privacy API (LGPD/GDPR).
 
 ---
@@ -326,7 +326,7 @@ O visual rico não é cosmético — cada tipo de bloco tem base em ciência da 
 
 O StudioLMS gera conteúdo de curso usando IA. A IA é **existencial** ao plugin (não há como gerar um curso sem ela), mas o plugin depende inteiramente da IA que o site já fornece — o StudioLMS **não traz nenhuma chave de API nem widget de chave próprio**.
 
-O prompt do professor e qualquer material de referência colado são enviados ao provedor resolvido (o intermediário `local_aihub` ou o `core_ai` do Moodle) para processamento. Os serviços externos seguem seus próprios termos de uso e políticas de privacidade. O StudioLMS não armazena prompts nem respostas brutas da IA; apenas o conteúdo de curso gerado que o professor confirma é salvo no curso.
+O prompt do professor e qualquer material de referência colado são enviados ao provedor resolvido (o intermediário `local_aihub` ou o `core_ai` do Moodle) para processamento. Os serviços externos seguem seus próprios termos de uso e políticas de privacidade. O StudioLMS não armazena respostas brutas da IA. Ele armazena o que o professor digita no assistente — o tema e o material de referência colado — nas próprias tabelas (rascunho do roteiro e log de gerações), sem expiração automática; esses dados são exportados e apagados pela Privacy API e removidos quando o curso é excluído. Não cole dados pessoais no campo de referência.
 
 Nenhuma comunicação externa ocorre sem que uma geração seja explicitamente iniciada.
 
