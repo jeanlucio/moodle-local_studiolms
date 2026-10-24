@@ -35,12 +35,4 @@ $capabilities = [
             'manager' => CAP_ALLOW,
         ],
     ],
-
-    'local/studiolms:viewlog' => [
-        'captype' => 'read',
-        'contextlevel' => CONTEXT_COURSE,
-        'archetypes' => [
-            'manager' => CAP_ALLOW,
-        ],
-    ],
 ];

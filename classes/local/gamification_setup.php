@@ -129,6 +129,10 @@ class gamification_setup {
             $setup->setup_social_forum_collectible();
         }
 
+        // The drop shortcodes were written into the activities' intro fields directly; without this the cached
+        // course structure keeps serving the intro as it was.
+        rebuild_course_cache($course->id, true);
+
         return $setup->warnings;
     }
 
@@ -235,23 +239,43 @@ class gamification_setup {
      * @return void
      */
     private function setup_trades(): void {
-        global $DB;
-
         $count = 0;
         try {
             $suggestions = \block_playerhud\game::build_trade_suggestions($this->instanceid);
-            if (!empty($suggestions)) {
-                $transaction = $DB->start_delegated_transaction();
+            $this->in_transaction(function () use ($suggestions, &$count): void {
                 foreach ($suggestions as $sug) {
                     \block_playerhud\game::create_trade_from_suggestion($this->instanceid, $sug);
                     $count++;
                 }
-                $transaction->allow_commit();
-            }
+            });
         } catch (\Throwable $e) {
+            $count = 0;
             $this->warnings[] = get_string('progress_trades', 'local_studiolms', 0);
         }
         ($this->advance)(get_string('progress_trades', 'local_studiolms', $count));
+    }
+
+    /**
+     * Runs the work in one transaction, rolled back and rethrown when it fails.
+     *
+     * Callers that turn a failure into a warning must go through here: a delegated transaction left open by a
+     * swallowed exception would absorb everything the task does afterwards, and the cron would then fail the task
+     * ("Task left transaction open") and run the whole course generation again.
+     *
+     * @param callable $work The writes to run atomically.
+     * @return void
+     */
+    private function in_transaction(callable $work): void {
+        global $DB;
+
+        $transaction = $DB->start_delegated_transaction();
+        try {
+            $work();
+        } catch (\Throwable $e) {
+            // Rolls back and rethrows the exception it is given.
+            $transaction->rollback($e);
+        }
+        $transaction->allow_commit();
     }
 
     /**

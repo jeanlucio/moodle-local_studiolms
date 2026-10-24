@@ -75,6 +75,24 @@ final class course_builder_test extends \advanced_testcase {
     }
 
     /**
+     * A user without moodle/course:update leaves the course setting alone: the activity is created without a
+     * completion rule instead of the builder switching completion on for the course.
+     *
+     * @return void
+     */
+    public function test_add_page_does_not_enable_completion_without_course_update(): void {
+        global $DB;
+        $teacher = $this->getDataGenerator()->create_and_enrol($this->course, 'teacher');
+        $this->setUser($teacher);
+
+        $result = course_builder::add_page($this->course, 0, 'Lesson', '<p>Body</p>');
+
+        $this->assertEquals(0, $DB->get_field('course', 'enablecompletion', ['id' => $this->course->id]));
+        $cm = $DB->get_record('course_modules', ['id' => $result->coursemodule], '*', MUST_EXIST);
+        $this->assertEquals(COMPLETION_TRACKING_NONE, $cm->completion);
+    }
+
+    /**
      * A label carries no completion tracking (it is a visual separator).
      *
      * @return void

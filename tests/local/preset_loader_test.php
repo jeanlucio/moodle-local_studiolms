@@ -156,4 +156,22 @@ final class preset_loader_test extends \advanced_testcase {
         $this->assertStringNotContainsString('No type', $html);
         $this->assertSame('', preset_loader::render([]));
     }
+
+    /**
+     * A preset is found by its file whatever its display name, using the English catalog for a language without one.
+     */
+    public function test_find_by_file_ignores_the_display_name_and_falls_back_to_english(): void {
+        $this->catalog([
+            'en/course_syllabus.json' => $this->preset('Course Syllabus'),
+            'pt_br/plano_de_disciplina.json' => $this->preset('Plano de Disciplina'),
+            'en/broken.json' => '{"name": "No blocks"}',
+        ]);
+
+        $this->assertSame('Plano de Disciplina', preset_loader::find_by_file('plano_de_disciplina', 'pt_br')['name']);
+        $this->assertSame('Course Syllabus', preset_loader::find_by_file('course_syllabus', 'en')['name']);
+        $this->assertSame('Course Syllabus', preset_loader::find_by_file('course_syllabus', 'fr')['name']);
+        $this->assertNull(preset_loader::find_by_file('plano_de_disciplina', 'en'));
+        $this->assertNull(preset_loader::find_by_file('broken', 'en'));
+        $this->assertNull(preset_loader::find_by_file('../en/course_syllabus', 'en'));
+    }
 }

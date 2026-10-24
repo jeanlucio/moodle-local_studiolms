@@ -59,6 +59,48 @@ class preset_loader {
      * @return array Preset definitions, sorted by file name.
      */
     public static function get_all(string $lang = ''): array {
+        $langdir = self::language_directory($lang);
+        if ($langdir === null) {
+            return [];
+        }
+
+        $files = glob($langdir . '/*.json') ?: [];
+        sort($files);
+
+        $presets = [];
+        foreach ($files as $file) {
+            $data = self::read_file($file);
+            if ($data !== null) {
+                $presets[] = $data;
+            }
+        }
+
+        return $presets;
+    }
+
+    /**
+     * Finds a preset by the base name of its catalog file, which unlike the display name does not change per language.
+     *
+     * @param string $stem File name without the .json extension (for example "course_syllabus").
+     * @param string $lang Language code. Defaults to current_language(); falls back to English like get_all().
+     * @return array|null The preset definition, or null if the file is missing or not a valid preset.
+     */
+    public static function find_by_file(string $stem, string $lang = ''): ?array {
+        $langdir = self::language_directory($lang);
+        if ($langdir === null || !preg_match('/^[a-z0-9_]+$/', $stem)) {
+            return null;
+        }
+        $file = $langdir . '/' . $stem . '.json';
+        return is_file($file) ? self::read_file($file) : null;
+    }
+
+    /**
+     * Returns the catalog directory for a language, falling back to English when it has none.
+     *
+     * @param string $lang Language code, or '' for current_language().
+     * @return string|null The directory, or null when the catalog is not available.
+     */
+    private static function language_directory(string $lang): ?string {
         global $CFG;
 
         if ($lang === '') {
@@ -70,30 +112,25 @@ class preset_loader {
         if (!is_dir($langdir)) {
             $langdir = $basedir . '/en';
         }
-        if (!is_dir($langdir)) {
-            return [];
+        return is_dir($langdir) ? $langdir : null;
+    }
+
+    /**
+     * Reads one preset file, accepting only a named preset that has blocks.
+     *
+     * @param string $file Absolute path of the JSON file.
+     * @return array|null The preset definition, or null when the file is unreadable or not a valid preset.
+     */
+    private static function read_file(string $file): ?array {
+        $raw = file_get_contents($file);
+        if ($raw === false) {
+            return null;
         }
-
-        $files = glob($langdir . '/*.json') ?: [];
-        sort($files);
-
-        $presets = [];
-        foreach ($files as $file) {
-            $raw = file_get_contents($file);
-            if ($raw === false) {
-                continue;
-            }
-            $data = json_decode($raw, true);
-            if (!is_array($data) || empty($data['name'])) {
-                continue;
-            }
-            if (empty($data['blocks'])) {
-                continue;
-            }
-            $presets[] = $data;
+        $data = json_decode($raw, true);
+        if (!is_array($data) || empty($data['name']) || empty($data['blocks'])) {
+            return null;
         }
-
-        return $presets;
+        return $data;
     }
 
     /**

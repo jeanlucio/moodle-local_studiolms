@@ -40,31 +40,36 @@ class glossary_builder {
      * @return stdClass The add_moduleinfo result (coursemodule and instance).
      */
     public static function create(stdClass $course, int $sectionnum, string $name, string $theme): stdClass {
-        global $DB, $USER;
+        global $CFG, $DB;
+        require_once($CFG->dirroot . '/mod/glossary/lib.php');
 
         $intro = get_string('glossary_intro', 'local_studiolms');
         $result = course_builder::add_glossary($course, $sectionnum, $name, $intro);
 
-        $now = time();
-        foreach (self::generate_terms($theme) as $term) {
-            $entry = (object) [
-                'glossaryid' => $result->instance,
-                'userid' => $USER->id,
+        $terms = self::generate_terms($theme);
+        if (empty($terms)) {
+            return $result;
+        }
+
+        // The core API (not a plain insert) fires entry_created, updates completion and resets the concept cache
+        // that the autolink filter reads, so the new terms are linked straight away.
+        $cm = get_coursemodule_from_id('glossary', $result->coursemodule, $course->id, false, MUST_EXIST);
+        $glossary = $DB->get_record('glossary', ['id' => $result->instance], '*', MUST_EXIST);
+        $context = \context_module::instance($cm->id);
+        foreach ($terms as $term) {
+            glossary_edit_entry((object) [
+                'id' => null,
                 'concept' => $term['term'],
-                'definition' => $term['definition'],
-                'definitionformat' => FORMAT_HTML,
-                'definitiontrust' => 0,
-                'attachment' => '',
-                'timecreated' => $now,
-                'timemodified' => $now,
-                'teacherentry' => 1,
-                'sourceglossaryid' => 0,
+                'definition_editor' => [
+                    'text' => $term['definition'],
+                    'format' => FORMAT_HTML,
+                    'itemid' => file_get_unused_draft_itemid(),
+                ],
+                'aliases' => '',
                 'usedynalink' => 1,
                 'casesensitive' => 0,
                 'fullmatch' => 1,
-                'approved' => 1,
-            ];
-            $DB->insert_record('glossary_entries', $entry);
+            ], $course, $cm, $glossary, $context);
         }
 
         return $result;

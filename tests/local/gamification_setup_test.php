@@ -145,6 +145,53 @@ final class gamification_setup_test extends \advanced_testcase {
     }
 
     /**
+     * A failing write rolls the transaction back and closes it before the exception reaches the caller.
+     *
+     * Regression test: a transaction left open by a swallowed failure makes the cron fail the task and run it again.
+     *
+     * @return void
+     */
+    public function test_in_transaction_rolls_back_and_closes_on_failure(): void {
+        global $DB;
+        $this->preventResetByRollback();
+        $this->resetAfterTest();
+        $setup = $this->setup_for(gamification_setup::PROFILE_CONQUEST);
+        $record = (object) ['plugin' => 'local_studiolms', 'name' => 'txprobe', 'value' => '1'];
+
+        try {
+            $this->call($setup, 'in_transaction', static function () use ($DB, $record): void {
+                $DB->insert_record('config_plugins', $record);
+                throw new \RuntimeException('write failed');
+            });
+            $this->fail('The failure must reach the caller.');
+        } catch (\RuntimeException $e) {
+            $this->assertSame('write failed', $e->getMessage());
+        }
+
+        $this->assertFalse($DB->is_transaction_started());
+        $this->assertFalse($DB->record_exists('config_plugins', ['plugin' => 'local_studiolms', 'name' => 'txprobe']));
+    }
+
+    /**
+     * The writes of a successful transaction are kept and the transaction is closed.
+     *
+     * @return void
+     */
+    public function test_in_transaction_commits_on_success(): void {
+        global $DB;
+        $this->preventResetByRollback();
+        $this->resetAfterTest();
+        $setup = $this->setup_for(gamification_setup::PROFILE_CONQUEST);
+
+        $this->call($setup, 'in_transaction', static function () use ($DB): void {
+            $DB->insert_record('config_plugins', (object) ['plugin' => 'local_studiolms', 'name' => 'txprobe', 'value' => '1']);
+        });
+
+        $this->assertFalse($DB->is_transaction_started());
+        $this->assertTrue($DB->record_exists('config_plugins', ['plugin' => 'local_studiolms', 'name' => 'txprobe']));
+    }
+
+    /**
      * The block instance is inserted in the course's side region, after the blocks already there, with the
      * profile config, and the step is reported.
      *

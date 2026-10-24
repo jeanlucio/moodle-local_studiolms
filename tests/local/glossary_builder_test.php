@@ -68,6 +68,37 @@ final class glossary_builder_test extends \advanced_testcase {
     }
 
     /**
+     * Entries are created through the glossary API: one entry_created event each, approved, with the autolink on.
+     *
+     * @return void
+     */
+    public function test_create_goes_through_the_glossary_api(): void {
+        global $DB;
+        ai_resolver::set_provider_for_testing(static fn(string $s, string $u): string => json_encode([
+            'terms' => [
+                ['term' => 'Variable', 'definition' => 'A named storage.'],
+                ['term' => 'Loop', 'definition' => 'A repeated block.'],
+            ],
+        ]));
+        $course = $this->getDataGenerator()->create_course();
+        $sink = $this->redirectEvents();
+
+        $result = glossary_builder::create($course, 0, 'Glossary', 'Programming');
+
+        $events = array_filter(
+            $sink->get_events(),
+            static fn($event) => $event instanceof \mod_glossary\event\entry_created
+        );
+        $this->assertCount(2, $events);
+        $entries = $DB->get_records('glossary_entries', ['glossaryid' => $result->instance]);
+        foreach ($entries as $entry) {
+            $this->assertEquals(1, $entry->approved);
+            $this->assertEquals(1, $entry->usedynalink);
+            $this->assertEquals(1, $entry->teacherentry);
+        }
+    }
+
+    /**
      * When the AI yields no terms, the glossary is still created but empty.
      *
      * @return void

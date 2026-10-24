@@ -196,12 +196,14 @@ class generate_course_task extends \core\task\adhoc_task {
                 if (!$this->firstpagecreated) {
                     $this->firstpagecreated = true;
                     $plandegraded = false;
+                    $planapplied = false;
                     $planhtml = page_builder::render_course_intro(
                         context_course::instance($this->course->id),
                         $theme,
                         $this->course->fullname,
                         [],
-                        $plandegraded
+                        $plandegraded,
+                        $planapplied
                     );
                     $plantitle = get_string('courseplantitle', 'local_studiolms');
                     $planresult = course_builder::add_page($this->course, 0, $plantitle, $planhtml);
@@ -210,7 +212,7 @@ class generate_course_task extends \core\task\adhoc_task {
                     $this->report[] = [
                         'title' => $plantitle,
                         'type' => 'page',
-                        'preset' => 'plan',
+                        'preset' => $planapplied ? 'plan' : 'blocks',
                         'degraded' => $plandegraded,
                     ];
                     if ($plandegraded) {

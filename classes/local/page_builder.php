@@ -36,6 +36,35 @@ class page_builder {
     /** @var int Maximum number of glossary terms shown in the pre-training block. */
     private const PRETRAINING_TERMS = 6;
 
+    /** @var string[] Block config keys the block templates print as HTML (triple mustache). */
+    private const MARKUP_KEYS = ['containerTitle', 'content', 'contentHtml', 'cellData', 'slots', 'text'];
+
+    /**
+     * @var array Course plan preset files of the tiny_studiolms catalog, by file name. Every language has its own
+     * display name and placeholders for the same preset, so it is found by file and not by name. 'name' is the
+     * placeholder of the course name; 'ai' holds those the AI fills (the rest, such as dates, is for the teacher).
+     */
+    private const COURSE_PLAN_PRESETS = [
+        'course_syllabus' => [
+            'name' => '[Course Name]',
+            'ai' => [
+                '[Topic 1]', '[Topic 2]', '[Topic 3]', '[Topic 4]', '[Topic 5]', '[Topic 6]',
+                '[describe the general objective of the course]', '[expected result]',
+                '[Specific objective 1]', '[Specific objective 2]', '[Specific objective 3]',
+                '[Specific objective 4]', '[Specific objective 5]', '[Specific objective 6]',
+            ],
+        ],
+        'plano_de_disciplina' => [
+            'name' => '[Nome da Disciplina]',
+            'ai' => [
+                '[Tópico 1]', '[Tópico 2]', '[Tópico 3]', '[Tópico 4]', '[Tópico 5]', '[Tópico 6]',
+                '[descreva o objetivo geral da disciplina]', '[resultado esperado]',
+                '[Objetivo específico 1]', '[Objetivo específico 2]', '[Objetivo específico 3]',
+                '[Objetivo específico 4]', '[Objetivo específico 5]', '[Objetivo específico 6]',
+            ],
+        ],
+    ];
+
     /**
      * Renders the full HTML for a course page.
      *
@@ -91,7 +120,7 @@ class page_builder {
     }
 
     /**
-     * Renders the first page of a course using the "Plano de Disciplina" preset.
+     * Renders the first page of a course using the course plan preset ("Plano de Disciplina" / "Course Syllabus").
      *
      * Forces the preset regardless of AI planning — the AI only generates the fill
      * values for content placeholders (topics, objectives). Structural placeholders
@@ -102,6 +131,7 @@ class page_builder {
      * @param string $pagetitle The page title (used as the course name).
      * @param array $glossaryterms Glossary terms for the pre-training block.
      * @param bool $degraded Set to true when the AI body could not be generated.
+     * @param bool $planapplied Set to true when the course plan preset was used, false for the blocks fallback.
      * @return string The page HTML.
      */
     public static function render_course_intro(
@@ -109,13 +139,14 @@ class page_builder {
         string $theme,
         string $pagetitle,
         array $glossaryterms,
-        bool &$degraded = false
+        bool &$degraded = false,
+        bool &$planapplied = false
     ): string {
         $html = '';
         if (!empty($glossaryterms)) {
             $html .= self::pretraining($glossaryterms);
         }
-        $body = self::build_course_plan($context, $theme, $pagetitle);
+        $body = self::build_course_plan($context, $theme, $pagetitle, $planapplied);
         if ($body === '') {
             $degraded = true;
         }
@@ -207,35 +238,53 @@ class page_builder {
     }
 
     /**
-     * Loads and renders the "Plano de Disciplina" preset with AI-generated fill values.
+     * Finds the course plan preset of the current language together with its placeholders.
      *
-     * Uses the course name and fixed structural values as a base fill, then enriches
-     * with AI-generated topics and objectives. Falls back gracefully when the preset
-     * is unavailable or the AI cannot be reached.
+     * @return array|null [preset definition, placeholders] or null when the catalog has no course plan.
+     */
+    private static function find_course_plan(): ?array {
+        foreach (self::COURSE_PLAN_PRESETS as $stem => $placeholders) {
+            $preset = preset_loader::find_by_file($stem);
+            if ($preset !== null) {
+                return [$preset, $placeholders];
+            }
+        }
+        return null;
+    }
+
+    /**
+     * Builds the course plan page: the catalog preset with the AI-filled topics and objectives.
      *
      * @param \context $context Course context the page is generated for.
      * @param string $theme Course theme.
      * @param string $pagetitle Page title (used as the course name placeholder).
+     * @param bool $planapplied Set to true when the preset was used, false when the blocks fallback was.
      * @return string Rendered preset HTML, or empty string on failure.
      */
-    private static function build_course_plan(\context $context, string $theme, string $pagetitle): string {
+    private static function build_course_plan(
+        \context $context,
+        string $theme,
+        string $pagetitle,
+        bool &$planapplied
+    ): string {
+        $planapplied = false;
         try {
-            $lang   = current_language();
-            $preset = preset_loader::find('Plano de Disciplina', $lang);
-            if ($preset === null) {
+            $found = self::find_course_plan();
+            if ($found === null) {
                 // No preset catalog (e.g. tiny_studiolms not installed): fall back to
                 // AI-generated custom blocks so the intro page still has content.
                 $discard = '';
                 return self::generate_body($context, $theme, $pagetitle, $pagetitle, '', 'general', [], $discard);
             }
+            [$preset, $placeholders] = $found;
             $fill = [
-                '[Nome da Disciplina]' => $pagetitle,
-                '[N]'                  => '4',
-                '[X]'                  => '10',
-                '[Y]'                  => '60',
+                $placeholders['name'] => $pagetitle,
+                '[N]'                 => '4',
+                '[X]'                 => '10',
+                '[Y]'                 => '60',
             ];
             try {
-                $aifill = self::ai_fill_for_course_plan($theme, $pagetitle);
+                $aifill = self::ai_fill_for_course_plan($theme, $pagetitle, $placeholders['ai']);
                 if (!empty($aifill)) {
                     $fill = array_merge($fill, $aifill);
                 }
@@ -243,6 +292,7 @@ class page_builder {
                 debugging('StudioLMS: course plan fill skipped — ' . $e->getMessage(), DEBUG_DEVELOPER);
             }
             $preset = self::fill_preset($preset, $fill);
+            $planapplied = true;
             return self::render_preset($preset);
         } catch (\Throwable $e) {
             return '';
@@ -257,14 +307,12 @@ class page_builder {
      *
      * @param string $theme Course theme.
      * @param string $pagetitle Page title.
+     * @param array $placeholders The placeholders of the preset the AI fills.
      * @return array Map of placeholder string => replacement text.
      */
-    private static function ai_fill_for_course_plan(string $theme, string $pagetitle): array {
+    private static function ai_fill_for_course_plan(string $theme, string $pagetitle, array $placeholders): array {
         $lang = current_language();
-        $keys = '[Tópico 1], [Tópico 2], [Tópico 3], [Tópico 4], [Tópico 5], [Tópico 6],'
-            . ' [descreva o objetivo geral da disciplina], [resultado esperado],'
-            . ' [Objetivo específico 1], [Objetivo específico 2], [Objetivo específico 3],'
-            . ' [Objetivo específico 4], [Objetivo específico 5], [Objetivo específico 6]';
+        $keys = implode(', ', $placeholders);
         $system = 'You are a course syllabus generator. Given a course theme and title,'
             . ' generate short fill values for a course plan template.'
             . ' Return ONLY a valid JSON object mapping each key (with square brackets)'
@@ -414,17 +462,37 @@ class page_builder {
     }
 
     /**
-     * Renders a filled preset to HTML, sanitizing the result as defense in depth.
+     * Renders a filled preset to HTML, sanitizing the fields that hold markup first.
      *
-     * The preset's own static markup is authored by the plugin, but by the time this is
-     * called it has been through fill_preset() with AI-generated values. clean_text() is a
-     * second, independent safety net on top of the sanitization already done there.
+     * The preset's own static markup is authored by the tiny_studiolms catalog, but by the time this is called
+     * it has been through fill_preset() with AI-generated values. The markup fields are cleaned as a second,
+     * independent safety net on top of that. The rendered HTML itself must not be cleaned: it carries the
+     * data-slms-* contract and the SVG the editor needs to reopen the blocks, and the HTML purifier drops both.
      *
      * @param array $preset Filled preset definition.
      * @return string Sanitized HTML.
      */
     private static function render_preset(array $preset): string {
-        return clean_text(preset_loader::render($preset), FORMAT_HTML);
+        return preset_loader::render(self::clean_markup_fields($preset));
+    }
+
+    /**
+     * Cleans every string stored under a config key that holds HTML, at any depth.
+     *
+     * @param array $data Preset definition, or a part of it.
+     * @param bool $markup True when the data sits under a key that holds HTML.
+     * @return array The same structure with the markup strings cleaned.
+     */
+    private static function clean_markup_fields(array $data, bool $markup = false): array {
+        foreach ($data as $key => $value) {
+            $ismarkup = $markup || in_array($key, self::MARKUP_KEYS, true);
+            if (is_array($value)) {
+                $data[$key] = self::clean_markup_fields($value, $ismarkup);
+            } else if ($ismarkup && is_string($value)) {
+                $data[$key] = clean_text($value, FORMAT_HTML);
+            }
+        }
+        return $data;
     }
 
     /**

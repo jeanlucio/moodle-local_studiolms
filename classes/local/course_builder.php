@@ -302,7 +302,9 @@ class course_builder {
      * Enables completion tracking on the course when the site allows it.
      *
      * Idempotent: updates the course only once, then flips the in-memory flag so
-     * repeated calls during a single generation are no-ops.
+     * repeated calls during a single generation are no-ops. update_course() checks no capability, and
+     * generating an activity does not require moodle/course:update, so a user without it leaves the
+     * course setting alone and the activity is created without a completion rule.
      *
      * @param stdClass $course The target course (updated in place).
      * @return void
@@ -311,6 +313,9 @@ class course_builder {
         global $CFG;
 
         if (empty($CFG->enablecompletion) || !empty($course->enablecompletion)) {
+            return;
+        }
+        if (!has_capability('moodle/course:update', \context_course::instance($course->id))) {
             return;
         }
 

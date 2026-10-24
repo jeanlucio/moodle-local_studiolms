@@ -312,11 +312,39 @@ final class generate_course_task_test extends \advanced_testcase {
         );
         $this->assertEquals(0, $plancm->section);
         $report = json_decode($progress->reportjson, true);
-        $this->assertSame('plan', $report[0]['preset']);
+        // The catalog is empty here, so the plan page is the blocks fallback and must not be reported as the preset.
+        $this->assertSame('blocks', $report[0]['preset']);
         $this->assertSame($plantitle, $report[0]['title']);
         $this->assertCount(3, $report);
         $this->assertSame(4, (int) $progress->total);
         $this->assertSame((int) $progress->total, (int) $progress->step);
+    }
+
+    /**
+     * With the course plan preset in the catalog the plan page is reported as the preset.
+     *
+     * @return void
+     */
+    public function test_course_plan_page_is_reported_as_the_preset_when_it_is_applied(): void {
+        global $USER;
+        $this->setAdminUser();
+        $this->universal_ai();
+        $base = make_request_directory();
+        mkdir($base . '/en');
+        file_put_contents($base . '/en/course_syllabus.json', json_encode([
+            'name' => 'Course Syllabus',
+            'blocks' => [['type' => 'callout', 'config' => ['icon' => '', 'contentHtml' => '<p>[Topic 1]</p>']]],
+        ]));
+        preset_loader::set_directory_for_testing($base);
+
+        [, $progressid] = $this->seed((int) $USER->id, [
+            'objectives' => [],
+            'sections' => [['title' => 'Basics', 'activities' => [['type' => 'page', 'title' => 'Intro']]]],
+        ]);
+        $this->run_task($progressid);
+
+        $report = json_decode($this->progress($progressid)->reportjson, true);
+        $this->assertSame('plan', $report[0]['preset']);
     }
 
     /**
