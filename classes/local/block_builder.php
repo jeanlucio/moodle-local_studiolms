@@ -242,13 +242,14 @@ class block_builder {
      * @return array Mustache context.
      */
     private static function card_context(array $config): array {
-        $shadowmap = [
-            'none' => 'none',
-            'sm'   => '0 1px 3px rgba(0, 0, 0, 0.1)',
-            'md'   => '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
-            'lg'   => '0 10px 15px -3px rgba(0, 0, 0, 0.1)',
+        // A class, not an inline box-shadow: HTMLPurifier drops that property from stored content.
+        $shadowclasses = [
+            'none' => '',
+            'sm' => 'slms-shadow-sm',
+            'md' => 'slms-shadow-md',
+            'lg' => 'slms-shadow-lg',
         ];
-        $shadow   = $config['shadow'] ?? 'md';
+        $shadow = $config['shadow'] ?? 'md';
         $mediatype = $config['mediaType'] ?? 'none';
         $mediaurl  = trim((string) ($config['mediaUrl'] ?? ''));
         $layout    = $config['layout'] ?? 'vertical';
@@ -260,7 +261,7 @@ class block_builder {
             'text'         => $config['text'] ?? '#212529',
             'border'       => $config['border'] ?? '#0d47a1',
             'radius'       => $config['radius'] ?? 8,
-            'shadowCss'    => $shadowmap[$shadow] ?? $shadowmap['md'],
+            'shadowClass'  => $shadowclasses[$shadow] ?? $shadowclasses['md'],
             'hasMedia'     => $mediatype !== 'none' && $mediaurl !== '',
             'isImage'      => $mediatype === 'image',
             'mediaUrl'     => $mediaurl,

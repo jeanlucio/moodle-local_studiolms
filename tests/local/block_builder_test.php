@@ -342,6 +342,24 @@ final class block_builder_test extends \advanced_testcase {
     }
 
     /**
+     * The card shadow reaches the markup as a class, because the purifier strips an inline box-shadow.
+     *
+     * Regression test: the shadow was computed and never printed, so the Shadow setting changed nothing.
+     *
+     * @return void
+     */
+    public function test_rich_card_carries_shadow_class(): void {
+        $this->require_editor();
+
+        foreach (['sm', 'md', 'lg'] as $size) {
+            $card = block_builder::render('advancedCard', ['shadow' => $size]);
+            $this->assertStringContainsString("slms-shadow-{$size}", $card);
+        }
+        $this->assertStringNotContainsString('slms-shadow-', block_builder::render('advancedCard', ['shadow' => 'none']));
+        $this->assertStringContainsString('slms-shadow-md', block_builder::render('advancedCard', ['shadow' => 'bogus']));
+    }
+
+    /**
      * Every card of a grid is rendered, even when there are more than the columns.
      *
      * Regression test: only as many slots as columns were drawn, and the AI puts all the cards of a list in
