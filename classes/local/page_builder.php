@@ -654,7 +654,7 @@ class page_builder {
                     'state' => 'closed',
                     'bg' => '#ffffff',
                     'color' => '#3b82f6',
-                    'icon' => '▼ / ▲',
+                    'icon' => '❯ / ❯',
                     'openSound' => 'none',
                     'hoverEffect' => 'none',
                     'title' => $accordiontitle,

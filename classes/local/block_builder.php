@@ -308,7 +308,13 @@ class block_builder {
      * @return array Mustache context.
      */
     private static function accordion_context(array $config): array {
-        $icons = explode(' / ', $config['icon'] ?? '▼ / ▲');
+        // The arrows pair (down, up) was shown as the triangles pair (right, down) in the pages, since the first icon was
+        // turned a quarter when closed, so a block that has it keeps looking the way it did. A pair of one icon
+        // twice (the chevron) is a single icon that turns a quarter when the accordion opens.
+        $pair = $config['icon'] ?? '❯ / ❯';
+        $icons = explode(' / ', $pair === '▼ / ▲' ? '▶ / ▼' : $pair);
+        $first = self::text_glyph($icons[0]);
+        $second = self::text_glyph($icons[1] ?? $icons[0]);
         return [
             'state'       => $config['state'] ?? 'closed',
             'isOpen'      => ($config['state'] ?? 'closed') === 'open',
@@ -319,8 +325,9 @@ class block_builder {
             'openSound'   => $config['openSound'] ?? 'none',
             'hoverEffect' => $config['hoverEffect'] ?? 'none',
             'headerBg'    => $config['headerBg'] ?? '',
-            'iconFirst'   => self::text_glyph($icons[0]),
-            'iconSecond'  => self::text_glyph($icons[1] ?? $icons[0]),
+            'iconFirst'   => $first,
+            'iconSecond'  => $second,
+            'iconTurns'   => $first === $second,
         ];
     }
 

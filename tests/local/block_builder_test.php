@@ -392,6 +392,33 @@ final class block_builder_test extends \advanced_testcase {
     }
 
     /**
+     * The chevron is one icon that turns, the arrows pair keeps the look it had, and the content has a body.
+     *
+     * Regression test for the animation of the accordion: a pair of one icon twice is drawn once with the class the
+     * stylesheet turns, the arrows pair (down, up) that was dropped from the options is drawn as the triangles it
+     * looked like in the pages, and the content sits in a body whose height the stylesheet animates.
+     *
+     * @return void
+     */
+    public function test_rich_accordion_chevron_turns_and_the_dropped_arrows_pair_keeps_its_look(): void {
+        $this->require_editor();
+
+        $chevron = block_builder::render('accordion', ['icon' => "\u{276F} / \u{276F}"]);
+        $this->assertStringContainsString('slms-acc-icon slms-acc-icon-turns', $chevron);
+        $this->assertSame(1, substr_count($chevron, "\u{276F}"));
+        $this->assertStringNotContainsString('slms-acc-icon-open', $chevron);
+        $this->assertStringContainsString('studiolms-accordion-body', $chevron);
+
+        $default = block_builder::render('accordion', []);
+        $this->assertStringContainsString('slms-acc-icon-turns', $default);
+
+        $arrows = block_builder::render('accordion', ['icon' => "\u{25BC} / \u{25B2}"]);
+        $this->assertStringContainsString("slms-acc-icon-closed\">\u{25B6}\u{FE0E}<", $arrows);
+        $this->assertStringContainsString("slms-acc-icon-open\">\u{25BC}<", $arrows);
+        $this->assertStringNotContainsString("\u{25B2}", $arrows);
+    }
+
+    /**
      * The right-pointing triangle of the "Triangles" pair is asked to be text, like the down one.
      *
      * Regression test: it was drawn as a coloured emoji box while the accordion was closed and as a plain triangle
@@ -444,10 +471,8 @@ final class block_builder_test extends \advanced_testcase {
         $this->assertStringContainsString('slms-acc-icon-open">📂<', $html);
         $this->assertStringContainsString('background-color: #e3f2fd', $html);
 
-        $old = block_builder::render('accordion', []);
-        $this->assertStringContainsString('slms-acc-icon-closed">▼<', $old);
-        $this->assertStringContainsString('slms-acc-icon-open">▲<', $old);
-        $this->assertDoesNotMatchRegularExpression('/studiolms-accordion-header" style="[^"]*background-color/', $old);
+        $plain = block_builder::render('accordion', []);
+        $this->assertDoesNotMatchRegularExpression('/studiolms-accordion-header" style="[^"]*background-color/', $plain);
     }
 
     /**
