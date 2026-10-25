@@ -236,6 +236,41 @@ class block_builder {
     }
 
     /**
+     * Writes a colour on every heading of the text of a block, over the one it already has.
+     *
+     * The title of a card is only the first heading of its free text, so its colour is written on the headings
+     * themselves, in a style attribute the purifier keeps, by the same rules as the editor plugin (title_color.js).
+     * Only a hexadecimal colour is taken, since it is written into markup.
+     *
+     * @param string $html The text of the block.
+     * @param string $colour A colour written as hexadecimal, or empty to leave the headings as they are.
+     * @return string The text, with the headings coloured.
+     */
+    private static function apply_title_color(string $html, string $colour): string {
+        if (!preg_match('/^#[0-9a-f]{3,8}$/i', $colour)) {
+            return $html;
+        }
+        return preg_replace_callback('/<(h[1-6])(\s[^>]*)?>/i', function (array $match) use ($colour): string {
+            $name = $match[1];
+            $attributes = $match[2] ?? '';
+            $style = '/\sstyle\s*=\s*(?:"([^"]*)"|\'([^\']*)\')/i';
+            if (!preg_match($style, $attributes, $found)) {
+                return "<{$name}{$attributes} style=\"color: {$colour};\">";
+            }
+            $declarations = explode(';', $found[1] !== '' ? $found[1] : ($found[2] ?? ''));
+            $declarations = array_filter(array_map('trim', $declarations), function (string $declaration): bool {
+                return $declaration !== '' && !preg_match('/^color\s*:/i', $declaration);
+            });
+            $declaration = implode('; ', array_merge($declarations, ["color: {$colour}"])) . ';';
+            // A callback, so that nothing in the style is read as a pattern of the replacement.
+            $attributes = preg_replace_callback($style, function (array $m) use ($declaration): string {
+                return ' style="' . $declaration . '"';
+            }, $attributes, 1);
+            return "<{$name}{$attributes}>";
+        }, $html);
+    }
+
+    /**
      * Builds the view model for block_card.
      *
      * @param array $config Canonical block config.
@@ -269,7 +304,7 @@ class block_builder {
             'isHorizontal' => in_array($layout, ['horizontal', 'horizontal_end'], true),
             'mediaEnd'     => in_array($layout, ['horizontal_end', 'vertical_end'], true),
             'accent'       => filter_var($config['accent'] ?? true, FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE) ?? true,
-            'content'      => $config['content'] ?? '',
+            'content'      => self::apply_title_color((string) ($config['content'] ?? ''), (string) ($config['titleColor'] ?? '')),
             'hasButton'    => $btntext !== '',
             'btnText'      => $btntext,
             'btnUrl'       => $config['btnUrl'] ?? '#',

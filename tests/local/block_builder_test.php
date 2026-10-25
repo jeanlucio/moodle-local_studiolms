@@ -419,6 +419,49 @@ final class block_builder_test extends \advanced_testcase {
     }
 
     /**
+     * The card writes its title colour on the headings of its text, over the one they have, and only a hex colour.
+     *
+     * Regression test for the title colour of the card: the title is only the first heading of the free text, so the
+     * colour goes on the headings in a style attribute. A card without it, or with a colour that is not hexadecimal,
+     * keeps its text as it was, since the colour is written into markup.
+     *
+     * @return void
+     */
+    public function test_rich_card_colours_the_headings_of_its_text(): void {
+        $this->require_editor();
+
+        $content = '<h4 style="margin-top: 0; color: inherit; font-weight: bold;">Title</h4><p>Text</p>';
+        $html = block_builder::render('advancedCard', ['content' => $content, 'titleColor' => '#123456']);
+        $this->assertStringContainsString(
+            '<h4 style="margin-top: 0; font-weight: bold; color: #123456;">Title</h4>',
+            $html
+        );
+        $this->assertStringContainsString('<p>Text</p>', $html);
+
+        $plain = block_builder::render('advancedCard', ['content' => $content]);
+        $this->assertStringContainsString($content, $plain);
+
+        foreach (['red', '#12', '#fff"><script>', 'rgb(1,2,3)'] as $notcolour) {
+            $this->assertStringContainsString(
+                $content,
+                block_builder::render('advancedCard', ['content' => $content, 'titleColor' => $notcolour])
+            );
+        }
+
+        $bare = block_builder::render('advancedCard', ['content' => '<H2>One</H2>', 'titleColor' => '#abc']);
+        $this->assertStringContainsString('<H2 style="color: #abc;">One</H2>', $bare);
+
+        $background = '<h4 style="background-color: #eee; color: blue">T</h4>';
+        $kept = block_builder::render('advancedCard', ['content' => $background, 'titleColor' => '#abc']);
+        $this->assertStringContainsString('<h4 style="background-color: #eee; color: #abc;">T</h4>', $kept);
+
+        $pattern = block_builder::render('advancedCard', [
+            'content' => '<h4 style="content: \'$0\'">T</h4>', 'titleColor' => '#abc',
+        ]);
+        $this->assertStringContainsString("content: '\$0'; color: #abc;", $pattern);
+    }
+
+    /**
      * The accordion animates unless told not to, and carries the text colour of its content when it has one.
      *
      * Regression test for the animation option and the text colour of the content: a block saved before them has
