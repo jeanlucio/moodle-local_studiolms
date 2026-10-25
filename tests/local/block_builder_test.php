@@ -419,6 +419,31 @@ final class block_builder_test extends \advanced_testcase {
     }
 
     /**
+     * The accordion animates unless told not to, and carries the text colour of its content when it has one.
+     *
+     * Regression test for the animation option and the text colour of the content: a block saved before them has
+     * neither key and must come out animated and with the page's own text colour, and the flag can arrive as text.
+     *
+     * @return void
+     */
+    public function test_rich_accordion_animates_by_default_and_carries_the_content_colour(): void {
+        $this->require_editor();
+
+        $plain = block_builder::render('accordion', []);
+        $this->assertStringNotContainsString('slms-static', $plain);
+        $this->assertDoesNotMatchRegularExpression('/studiolms-accordion-content"[^>]*style=/', $plain);
+
+        foreach ([false, 0, '0', 'false'] as $off) {
+            $static = block_builder::render('accordion', ['animate' => $off]);
+            $this->assertStringContainsString('slms-static', $static);
+        }
+        $this->assertStringNotContainsString('slms-static', block_builder::render('accordion', ['animate' => true]));
+
+        $coloured = block_builder::render('accordion', ['contentColor' => '#112233']);
+        $this->assertMatchesRegularExpression('/studiolms-accordion-content"[^>]*style="color: #112233;"/', $coloured);
+    }
+
+    /**
      * The right-pointing triangle of the "Triangles" pair is asked to be text, like the down one.
      *
      * Regression test: it was drawn as a coloured emoji box while the accordion was closed and as a plain triangle

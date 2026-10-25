@@ -325,6 +325,8 @@ class block_builder {
             'openSound'   => $config['openSound'] ?? 'none',
             'hoverEffect' => $config['hoverEffect'] ?? 'none',
             'headerBg'    => $config['headerBg'] ?? '',
+            'contentColor' => $config['contentColor'] ?? '',
+            'animate'     => filter_var($config['animate'] ?? true, FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE) ?? true,
             'iconFirst'   => $first,
             'iconSecond'  => $second,
             'iconTurns'   => $first === $second,
