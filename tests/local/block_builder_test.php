@@ -392,6 +392,24 @@ final class block_builder_test extends \advanced_testcase {
     }
 
     /**
+     * A card whose media is a video draws no media box, since only an image is drawn here.
+     *
+     * Regression test: the media box was drawn for any type but none, and a video left it empty.
+     *
+     * @return void
+     */
+    public function test_rich_card_draws_no_empty_media_box_for_a_video(): void {
+        $this->require_editor();
+
+        $video = block_builder::render('advancedCard', ['mediaType' => 'video', 'mediaUrl' => 'https://youtu.be/abc']);
+        $this->assertStringNotContainsString('studiolms-card-media', $video);
+
+        $image = block_builder::render('advancedCard', ['mediaType' => 'image', 'mediaUrl' => 'https://example.com/a.png']);
+        $this->assertStringContainsString('studiolms-card-media', $image);
+        $this->assertStringContainsString('https://example.com/a.png', $image);
+    }
+
+    /**
      * The accordion carries both icons of its pair and the background of its title bar.
      *
      * Regression test: only the first icon was passed, turned a quarter by the stylesheet when closed, so a

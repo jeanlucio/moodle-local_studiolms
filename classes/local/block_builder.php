@@ -262,7 +262,8 @@ class block_builder {
             'border'       => $config['border'] ?? '#0d47a1',
             'radius'       => $config['radius'] ?? 8,
             'shadowClass'  => $shadowclasses[$shadow] ?? $shadowclasses['md'],
-            'hasMedia'     => $mediatype !== 'none' && $mediaurl !== '',
+            // Only an image is drawn here: a video needs its address turned into an embed, which the editor does.
+            'hasMedia'     => $mediatype === 'image' && $mediaurl !== '',
             'isImage'      => $mediatype === 'image',
             'mediaUrl'     => $mediaurl,
             'isHorizontal' => in_array($layout, ['horizontal', 'horizontal_end'], true),
