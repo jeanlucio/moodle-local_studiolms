@@ -360,6 +360,38 @@ final class block_builder_test extends \advanced_testcase {
     }
 
     /**
+     * The card says where its media goes and whether the side accent shows, by class.
+     *
+     * Regression test for the card layout options: a card saved before them has neither key and must come out
+     * as it always did, and the value of the accent can arrive as a string from a stored configuration.
+     *
+     * @return void
+     */
+    public function test_rich_card_carries_media_position_and_accent_classes(): void {
+        $this->require_editor();
+
+        $old = block_builder::render('advancedCard', ['layout' => 'horizontal']);
+        $this->assertStringContainsString('slms-horizontal', $old);
+        $this->assertStringNotContainsString('slms-media-end', $old);
+        $this->assertStringNotContainsString('slms-no-accent', $old);
+        $this->assertStringContainsString('border-left-color', $old);
+
+        $right = block_builder::render('advancedCard', ['layout' => 'horizontal_end']);
+        $this->assertStringContainsString('slms-horizontal slms-media-end', $right);
+
+        $bottom = block_builder::render('advancedCard', ['layout' => 'vertical_end']);
+        $this->assertStringContainsString('slms-media-end', $bottom);
+        $this->assertStringNotContainsString('slms-horizontal', $bottom);
+
+        foreach ([false, 0, '0', 'false'] as $off) {
+            $plain = block_builder::render('advancedCard', ['accent' => $off]);
+            $this->assertStringContainsString('slms-no-accent', $plain);
+            $this->assertStringNotContainsString('border-left-color', $plain);
+        }
+        $this->assertStringNotContainsString('slms-no-accent', block_builder::render('advancedCard', ['accent' => true]));
+    }
+
+    /**
      * Every card of a grid is rendered, even when there are more than the columns.
      *
      * Regression test: only as many slots as columns were drawn, and the AI puts all the cards of a list in
