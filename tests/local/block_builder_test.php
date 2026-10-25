@@ -392,6 +392,25 @@ final class block_builder_test extends \advanced_testcase {
     }
 
     /**
+     * The right-pointing triangle of the "Triangles" pair is asked to be text, like the down one.
+     *
+     * Regression test: it was drawn as a coloured emoji box while the accordion was closed and as a plain triangle
+     * while open, since many fonts draw U+25B6 as an emoji unless told otherwise.
+     *
+     * @return void
+     */
+    public function test_rich_accordion_triangle_is_text_not_emoji(): void {
+        $this->require_editor();
+
+        $html = block_builder::render('accordion', ['icon' => "\u{25B6} / \u{25BC}"]);
+        $this->assertStringContainsString("slms-acc-icon-closed\">\u{25B6}\u{FE0E}<", $html);
+        $this->assertStringContainsString("slms-acc-icon-open\">\u{25BC}<", $html);
+
+        $written = block_builder::render('accordion', ['icon' => "\u{25B6}\u{FE0F} / \u{25BC}"]);
+        $this->assertStringContainsString("slms-acc-icon-closed\">\u{25B6}\u{FE0F}<", $written);
+    }
+
+    /**
      * A card whose media is a video draws no media box, since only an image is drawn here.
      *
      * Regression test: the media box was drawn for any type but none, and a video left it empty.

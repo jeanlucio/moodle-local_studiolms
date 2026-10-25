@@ -288,6 +288,20 @@ class block_builder {
     }
 
     /**
+     * Keeps the right-pointing triangle of an icon pair a plain glyph, like the other triangles.
+     *
+     * Many fonts draw U+25B6 as a coloured emoji unless it is followed by the text selector, while the down and up
+     * triangles never are, so the "Triangles" pair came out half emoji and half text. A triangle that already
+     * carries a selector is left as it was written.
+     *
+     * @param string $icon One icon of a pair.
+     * @return string The icon, with its right-pointing triangles asked to be text.
+     */
+    private static function text_glyph(string $icon): string {
+        return preg_replace('/\x{25B6}(?![\x{FE0E}\x{FE0F}])/u', "\u{25B6}\u{FE0E}", $icon);
+    }
+
+    /**
      * Builds the view model for block_accordion.
      *
      * @param array $config Canonical block config.
@@ -305,8 +319,8 @@ class block_builder {
             'openSound'   => $config['openSound'] ?? 'none',
             'hoverEffect' => $config['hoverEffect'] ?? 'none',
             'headerBg'    => $config['headerBg'] ?? '',
-            'iconFirst'   => $icons[0],
-            'iconSecond'  => $icons[1] ?? $icons[0],
+            'iconFirst'   => self::text_glyph($icons[0]),
+            'iconSecond'  => self::text_glyph($icons[1] ?? $icons[0]),
         ];
     }
 
