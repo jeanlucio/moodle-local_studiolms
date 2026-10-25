@@ -462,6 +462,28 @@ final class block_builder_test extends \advanced_testcase {
     }
 
     /**
+     * Every block the server draws carries the hover effect its author chose, on its root.
+     *
+     * Regression test for the hover parity: only some blocks had the effect, the rest had no class for it. A block
+     * saved without the key has no effect and keeps its look.
+     *
+     * @return void
+     */
+    public function test_rich_blocks_carry_the_hover_effect_on_their_root(): void {
+        $this->require_editor();
+
+        $types = ['stylizedHeading', 'gridcards', 'table', 'infographic', 'infographicFeatures', 'infographicSteps',
+            'infographicTimeline', 'infographicComparison', 'mindmap'];
+        foreach ($types as $type) {
+            $html = block_builder::render($type, ['hoverEffect' => 'lift']);
+            $this->assertMatchesRegularExpression('/^\s*<div class="[^"]*\bslms-hov-lift\b/', $html, $type);
+
+            $plain = block_builder::render($type, []);
+            $this->assertMatchesRegularExpression('/^\s*<div class="[^"]*\bslms-hov-none\b/', $plain, $type);
+        }
+    }
+
+    /**
      * The accordion animates unless told not to, and carries the text colour of its content when it has one.
      *
      * Regression test for the animation option and the text colour of the content: a block saved before them has

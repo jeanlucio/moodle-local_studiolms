@@ -206,6 +206,7 @@ class block_builder {
     private static function heading_context(array $config): array {
         $level = $config['level'] ?? 'h3';
         return [
+            'hoverEffect' => $config['hoverEffect'] ?? 'none',
             'isH3' => $level === 'h3',
             'isH4' => $level === 'h4',
             'bgColor' => $config['bgColor'] ?? '#e3f2fd',
@@ -398,6 +399,7 @@ class block_builder {
         }
 
         return [
+            'hoverEffect' => $config['hoverEffect'] ?? 'none',
             'containerStyle'     => $style,
             'containerTitle'     => $config['containerTitle'] ?? '',
             'containerTitleSize' => $config['containerTitleSize'] ?? '24px',
@@ -485,6 +487,7 @@ class block_builder {
         }
 
         return [
+            'hoverEffect' => $config['hoverEffect'] ?? 'none',
             'isStriped'   => ($config['style'] ?? 'striped') === 'striped',
             'headerCells' => $headercells,
             'bodyRows'    => $bodyrows,
@@ -528,7 +531,12 @@ class block_builder {
         }
         $parts[] = '</div>';
 
-        return ['layout' => $config['layout'] ?? 'stats', 'theme' => $theme, 'content' => implode('', $parts)];
+        return [
+            'layout' => $config['layout'] ?? 'stats',
+            'theme' => $theme,
+            'content' => implode('', $parts),
+            'hoverEffect' => $config['hoverEffect'] ?? 'none',
+        ];
     }
 
     /**
@@ -571,7 +579,12 @@ class block_builder {
         }
         $parts[] = '</div>';
 
-        return ['theme' => $theme, 'columns' => $cols, 'content' => implode('', $parts)];
+        return [
+            'theme' => $theme,
+            'columns' => $cols,
+            'content' => implode('', $parts),
+            'hoverEffect' => $config['hoverEffect'] ?? 'none',
+        ];
     }
 
     /**
@@ -622,7 +635,12 @@ class block_builder {
         }
         $parts[] = '</div>';
 
-        return ['theme' => $theme, 'layout' => $layout, 'content' => implode('', $parts)];
+        return [
+            'theme' => $theme,
+            'layout' => $layout,
+            'content' => implode('', $parts),
+            'hoverEffect' => $config['hoverEffect'] ?? 'none',
+        ];
     }
 
     /**
@@ -675,7 +693,11 @@ class block_builder {
         }
         $parts[] = '</div>';
 
-        return ['theme' => $theme, 'content' => implode('', $parts)];
+        return [
+            'theme' => $theme,
+            'content' => implode('', $parts),
+            'hoverEffect' => $config['hoverEffect'] ?? 'none',
+        ];
     }
 
     /**
@@ -733,7 +755,11 @@ class block_builder {
         }
         $parts[] = '</div>';
 
-        return ['theme' => $theme, 'content' => implode('', $parts)];
+        return [
+            'theme' => $theme,
+            'content' => implode('', $parts),
+            'hoverEffect' => $config['hoverEffect'] ?? 'none',
+        ];
     }
 
     // -------------------------------------------------------------------------
@@ -1199,7 +1225,7 @@ class block_builder {
         }
         $textalt = !empty($branchparts) ? $topic . ': ' . implode('; ', $branchparts) : $topic;
 
-        return ['svgContent' => $svgcontent, 'textAlt' => $textalt];
+        return ['svgContent' => $svgcontent, 'textAlt' => $textalt, 'hoverEffect' => $config['hoverEffect'] ?? 'none'];
     }
 
     /**
