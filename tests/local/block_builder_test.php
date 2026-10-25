@@ -541,6 +541,9 @@ final class block_builder_test extends \advanced_testcase {
 
         $plain = block_builder::render('accordion', []);
         $this->assertDoesNotMatchRegularExpression('/studiolms-accordion-header" style="[^"]*background-color/', $plain);
+        // The title colour a block starts with reads on white; the blue it had before was 3.7 to 1.
+        $this->assertStringContainsString('color: #0d47a1;', $plain);
+        $this->assertStringNotContainsString('#3b82f6', $plain);
     }
 
     /**

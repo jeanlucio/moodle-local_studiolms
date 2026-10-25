@@ -354,7 +354,7 @@ class block_builder {
             'state'       => $config['state'] ?? 'closed',
             'isOpen'      => ($config['state'] ?? 'closed') === 'open',
             'bg'          => $config['bg'] ?? '#ffffff',
-            'color'       => $config['color'] ?? '#3b82f6',
+            'color'       => $config['color'] ?? '#0d47a1',
             'title'       => $config['title'] ?? '',
             'content'     => $config['content'] ?? '',
             'openSound'   => $config['openSound'] ?? 'none',

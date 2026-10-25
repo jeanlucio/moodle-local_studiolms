@@ -653,7 +653,7 @@ class page_builder {
                 return block_builder::render('accordion', [
                     'state' => 'closed',
                     'bg' => '#ffffff',
-                    'color' => '#3b82f6',
+                    'color' => '#0d47a1',
                     'icon' => '❯ / ❯',
                     'openSound' => 'none',
                     'hoverEffect' => 'none',
