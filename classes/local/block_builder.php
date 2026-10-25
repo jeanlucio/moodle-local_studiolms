@@ -293,7 +293,7 @@ class block_builder {
      * @return array Mustache context.
      */
     private static function accordion_context(array $config): array {
-        $icon = $config['icon'] ?? '▼ / ▲';
+        $icons = explode(' / ', $config['icon'] ?? '▼ / ▲');
         return [
             'state'       => $config['state'] ?? 'closed',
             'isOpen'      => ($config['state'] ?? 'closed') === 'open',
@@ -303,7 +303,9 @@ class block_builder {
             'content'     => $config['content'] ?? '',
             'openSound'   => $config['openSound'] ?? 'none',
             'hoverEffect' => $config['hoverEffect'] ?? 'none',
-            'iconFirst'   => explode(' / ', $icon)[0],
+            'headerBg'    => $config['headerBg'] ?? '',
+            'iconFirst'   => $icons[0],
+            'iconSecond'  => $icons[1] ?? $icons[0],
         ];
     }
 

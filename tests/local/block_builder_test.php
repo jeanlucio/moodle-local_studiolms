@@ -392,6 +392,28 @@ final class block_builder_test extends \advanced_testcase {
     }
 
     /**
+     * The accordion carries both icons of its pair and the background of its title bar.
+     *
+     * Regression test: only the first icon was passed, turned a quarter by the stylesheet when closed, so a
+     * folder lay on its side. An accordion saved before the title bar had a background of its own has none.
+     *
+     * @return void
+     */
+    public function test_rich_accordion_carries_both_icons_and_the_header_background(): void {
+        $this->require_editor();
+
+        $html = block_builder::render('accordion', ['icon' => '📁 / 📂', 'headerBg' => '#e3f2fd']);
+        $this->assertStringContainsString('slms-acc-icon-closed">📁<', $html);
+        $this->assertStringContainsString('slms-acc-icon-open">📂<', $html);
+        $this->assertStringContainsString('background-color: #e3f2fd', $html);
+
+        $old = block_builder::render('accordion', []);
+        $this->assertStringContainsString('slms-acc-icon-closed">▼<', $old);
+        $this->assertStringContainsString('slms-acc-icon-open">▲<', $old);
+        $this->assertDoesNotMatchRegularExpression('/studiolms-accordion-header" style="[^"]*background-color/', $old);
+    }
+
+    /**
      * Every card of a grid is rendered, even when there are more than the columns.
      *
      * Regression test: only as many slots as columns were drawn, and the AI puts all the cards of a list in
