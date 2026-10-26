@@ -126,21 +126,6 @@ final class block_builder_test extends \advanced_testcase {
     }
 
     /**
-     * The plain mind map renders a nested list of branches and children.
-     *
-     * @return void
-     */
-    public function test_plain_mindmap_nested_list(): void {
-        $html = $this->render_plain('mindmap', [
-            'topic' => 'Root',
-            'branches' => [['label' => 'B1', 'children' => ['c1', 'c2']]],
-        ]);
-        $this->assertStringContainsString('Root', $html);
-        $this->assertStringContainsString('<ul>', $html);
-        $this->assertStringContainsString('c1', $html);
-    }
-
-    /**
      * An unsupported type renders to an empty string in plain mode.
      *
      * @return void
@@ -209,39 +194,6 @@ final class block_builder_test extends \advanced_testcase {
             $this->assertStringNotContainsString('<script', $html, $type);
             $this->assertStringContainsString('&lt;script&gt;', $html, $type);
         }
-    }
-
-    /**
-     * The mind map escapes labels both in the SVG and in the accessible text alternative.
-     *
-     * @return void
-     */
-    public function test_mindmap_escapes_labels_and_caps_branches(): void {
-        $this->require_editor();
-        $branches = [['label' => 'Bad <script>x</script>', 'children' => ['Kid <b>k</b>']]];
-        for ($i = 2; $i <= 10; $i++) {
-            $branches[] = ['label' => 'Branch ' . $i];
-        }
-
-        $html = block_builder::render('mindmap', ['topic' => 'Topic', 'branches' => $branches]);
-
-        $this->assertStringNotContainsString('<script', $html);
-        $this->assertStringContainsString('&lt;script&gt;', $html);
-        $this->assertStringContainsString('Branch 8', $html);
-        $this->assertStringNotContainsString('Branch 9', $html);
-    }
-
-    /**
-     * A mind map without branches renders no diagram.
-     *
-     * @return void
-     */
-    public function test_mindmap_without_branches_has_no_svg(): void {
-        $this->require_editor();
-
-        $html = block_builder::render('mindmap', ['topic' => 'Topic', 'branches' => []]);
-
-        $this->assertStringNotContainsString('<svg', $html);
     }
 
     /**
@@ -473,7 +425,7 @@ final class block_builder_test extends \advanced_testcase {
         $this->require_editor();
 
         $types = ['stylizedHeading', 'gridcards', 'table', 'infographic', 'infographicFeatures', 'infographicSteps',
-            'infographicTimeline', 'infographicComparison', 'mindmap'];
+            'infographicTimeline', 'infographicComparison'];
         foreach ($types as $type) {
             $html = block_builder::render($type, ['hoverEffect' => 'lift']);
             $this->assertMatchesRegularExpression('/^\s*<div class="[^"]*\bslms-hov-lift\b/', $html, $type);

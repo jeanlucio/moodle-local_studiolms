@@ -25,11 +25,9 @@
 namespace local_studiolms\local;
 
 /**
- * Unit tests for the course page builder's closing mind map.
+ * Unit tests for the course page builder.
  *
- * The page plan comes from the resolver's test seam; the mind map goes through the real
- * tiny_studiolms generator, whose only AI source here is a stubbed local_aihub client, so no
- * test reaches a real provider.
+ * The page plan comes from the resolver's test seam, so no test reaches a real provider.
  */
 #[\PHPUnit\Framework\Attributes\CoversClass(page_builder::class)]
 final class page_builder_test extends \advanced_testcase {
@@ -75,57 +73,12 @@ final class page_builder_test extends \advanced_testcase {
     }
 
     /**
-     * A blocks page ends with the editor's mind map, generated through the hub.
-     *
-     * Regression test: the editor's generator is called across plugins and inside a catch-all, so a
-     * mismatched call (e.g. a missing context argument) would silently drop the mind map from every page.
-     */
-    public function test_blocks_page_ends_with_mind_map(): void {
-        if (!class_exists(\local_aihub\ai::class)) {
-            $this->markTestSkipped('local_aihub is not installed.');
-        }
-        set_config('gemini_key', 'stub-key', 'local_aihub');
-        $mindmap = '{"topic":"Photosynthesis","branches":[{"label":"Light reactions","children":["Chlorophyll"]}]}';
-        $client = new class ($mindmap) extends \local_aihub\local\client {
-            /** @var int Number of generation requests received. */
-            public int $calls = 0;
-
-            /**
-             * Constructor.
-             *
-             * @param string $data Text returned by every call.
-             */
-            public function __construct(
-                /** @var string Text returned by every call. */
-                private string $data
-            ) {
-            }
-
-            #[\Override]
-            public function generate_text(string $system, string $user, bool $jsonmode = false, ?int $userid = null): array {
-                $this->calls++;
-                $attempt = ['success' => true, 'provider' => 'Gemini', 'model' => 'stub', 'keysource' => 'site', 'message' => ''];
-                return $attempt + ['data' => $this->data, 'attempts' => [$attempt]];
-            }
-        };
-        \local_aihub\ai::set_client_for_testing($client);
-
-        $html = $this->render_page();
-
-        $this->assertSame(1, $client->calls);
-        $this->assertStringContainsString('Photosynthesis basics', $html);
-        $this->assertStringContainsString('data-slms-block-type="mindmap"', $html);
-        $this->assertStringContainsString('Light reactions', $html);
-    }
-
-    /**
-     * Without any AI source for the editor, the page keeps its blocks and just has no mind map.
+     * Without any AI source for the editor, the page keeps its blocks.
      */
     public function test_page_without_editor_ai_degrades_to_blocks_only(): void {
         $html = $this->render_page();
 
         $this->assertStringContainsString('Photosynthesis basics', $html);
-        $this->assertStringNotContainsString('data-slms-block-type="mindmap"', $html);
     }
 
     /**

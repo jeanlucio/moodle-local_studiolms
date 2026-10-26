@@ -63,7 +63,7 @@ StudioLMS runs standalone on Moodle 4.5+ alone. Every integration is **soft** (`
 
 | Plugin | Role when present |
 |---|---|
-| `tiny_studiolms` | Rich visual templates for generated pages (and the mind map generator, which uses the same hub → core_ai chain); without it, pages fall back to clean semantic HTML |
+| `tiny_studiolms` | Rich visual templates for generated pages; without it, pages fall back to clean semantic HTML |
 | `block_playerhud` | Enables the gamified mode |
 | `local_aihub` | AI Hub — BYOK API keys (personal → site) |
 | `local_aiassess` | AI rubrics for assignments/forums (planned) |
@@ -104,11 +104,11 @@ The rich visual output is not cosmetic — each block type is grounded in establ
 
 **Cognitive Load Theory — John Sweller (1988):** organised visual blocks (cards, grids, steps) reduce *extraneous* load and free capacity for *germane* load. A single course glossary means students always know where to find definitions.
 
-**Dual Coding Theory — Allan Paivio (1971):** infographics, charts, gauges and mind maps engage the visual channel while text complements through the verbal channel.
+**Dual Coding Theory — Allan Paivio (1971):** infographics, charts and gauges engage the visual channel while text complements through the verbal channel.
 
 **Universal Design for Learning — CAST (2002):** the same concept can be presented as text, visual, table or diagram, expanding accessibility across learning styles.
 
-**Information Mapping — Robert Horn (1970s):** each information type maps to an optimal block (procedure → steps, chronological process → timeline, comparison → comparison, quantitative facts → stats/chart/gauge, hierarchy → mind map, related items → grid cards, critical info → callout).
+**Information Mapping — Robert Horn (1970s):** each information type maps to an optimal block (procedure → steps, chronological process → timeline, comparison → comparison, quantitative facts → stats/chart/gauge, hierarchy → accordion, related items → grid cards, critical info → callout).
 
 ---
 
@@ -226,7 +226,7 @@ O StudioLMS funciona de forma autônoma apenas com o Moodle 4.5+. Toda integraç
 
 | Plugin | Papel quando presente |
 |---|---|
-| `tiny_studiolms` | Templates visuais ricos nas páginas geradas (e o gerador de mapa mental, que usa a mesma cadeia hub → core_ai); sem ele, as páginas caem em HTML semântico limpo |
+| `tiny_studiolms` | Templates visuais ricos nas páginas geradas; sem ele, as páginas caem em HTML semântico limpo |
 | `block_playerhud` | Habilita o modo gamificado |
 | `local_aihub` | Central de IA — chaves de API BYOK (pessoal → site) |
 | `local_aiassess` | Rubricas por IA em tarefas/fóruns (planejado) |
@@ -271,7 +271,7 @@ O visual rico não é cosmético — cada tipo de bloco tem base em ciência da 
 
 **Universal Design for Learning — CAST (2002):** o mesmo conceito pode ser apresentado como texto, visual, tabela ou diagrama, ampliando a acessibilidade para diferentes estilos de aprendizagem.
 
-**Information Mapping — Robert Horn (décadas de 1970):** cada tipo de informação mapeia para um bloco ideal (procedimento → passos, processo cronológico → linha do tempo, comparação → comparação, fatos quantitativos → stats/gráfico/gauge, hierarquia → mapa mental, itens relacionados → grid de cards, informação crítica → callout).
+**Information Mapping — Robert Horn (décadas de 1970):** cada tipo de informação mapeia para um bloco ideal (procedimento → passos, processo cronológico → linha do tempo, comparação → comparação, fatos quantitativos → stats/gráfico/gauge, hierarquia → accordion, itens relacionados → grid de cards, informação crítica → callout).
 
 ---
 

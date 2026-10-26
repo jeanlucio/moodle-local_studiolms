@@ -368,7 +368,6 @@ class page_builder {
                 // An entry that is not an object (a string, a number) is no block.
                 $html .= is_array($block) ? self::render_block($block) : '';
             }
-            $html .= self::generate_mindmap_block($pagetitle, $context);
             return $html;
         }
 
@@ -544,44 +543,6 @@ class page_builder {
             }
         }
         return $data;
-    }
-
-    // -----------------------------------------------------------------------
-    // Rich visual blocks.
-    // ------------------------------------------------------------------------.
-
-    /**
-     * Generates a mind map block as a visual summary for a content page.
-     *
-     * Calls the tiny_studiolms AI generator directly for the mind map structure
-     * (topic + branches); the editor routes it through local_aihub then core_ai in
-     * the given context. Silently returns empty string on AI failure so the page
-     * degrades gracefully without losing the text blocks. The mind map is skipped
-     * entirely when the tiny_studiolms editor is not installed, since its structured
-     * generator lives there.
-     *
-     * @param string $topic Page topic used as the mind map central node and prompt.
-     * @param \context $context Course context the page is generated for.
-     * @return string Rendered mindmap block HTML, or empty string on failure.
-     */
-    private static function generate_mindmap_block(string $topic, \context $context): string {
-        if (!class_exists('\tiny_studiolms\ai\generator')) {
-            return '';
-        }
-        try {
-            $data     = \tiny_studiolms\ai\generator::generate_mindmap($topic, $context);
-            $branches = json_decode((string)($data['branches'] ?? '[]'), true);
-            if (!is_array($branches) || empty($branches)) {
-                return '';
-            }
-            return block_builder::render('mindmap', [
-                'topic'    => $data['topic'] ?? $topic,
-                'theme'    => 'blue',
-                'branches' => $branches,
-            ]);
-        } catch (\Throwable $e) {
-            return '';
-        }
     }
 
     // -----------------------------------------------------------------------
