@@ -564,6 +564,71 @@ final class block_builder_test extends \advanced_testcase {
     }
 
     /**
+     * The page title level is drawn as an h2, in the rich block and in the plain fallback.
+     *
+     * Regression test: the heading template gained an h2 level and a block built here with it drew nothing, because
+     * the view model only knew h3 and h4.
+     *
+     * @return void
+     */
+    public function test_heading_draws_the_page_title_level(): void {
+        $this->require_editor();
+
+        $rich = block_builder::render('stylizedHeading', ['level' => 'h2', 'text' => 'Title', 'icon' => '']);
+        $this->assertStringContainsString('<h2 class="studiolms-heading-h2"', $rich);
+        $this->assertStringContainsString('Title', $rich);
+
+        $plain = $this->render_plain('stylizedHeading', ['level' => 'h2', 'text' => 'Title', 'icon' => '']);
+        $this->assertStringContainsString('<h2>', $plain);
+    }
+
+    /**
+     * Each block carries the class of its alignment and of its width, and an unknown value falls back.
+     *
+     * Regression test: the editor templates gained an alignment and a width class that this renderer did not pass,
+     * so a page built here had classes with no value in them.
+     *
+     * @return void
+     */
+    public function test_blocks_carry_the_alignment_and_width_classes(): void {
+        $this->require_editor();
+
+        $heading = block_builder::render('stylizedHeading', ['text' => 'T', 'align' => 'center', 'width' => 'reduced']);
+        $this->assertStringContainsString('slms-align-center', $heading);
+        $this->assertStringContainsString('slms-width-reduced', $heading);
+
+        // The defaults of each block are what the editor gives a new one.
+        $this->assertStringContainsString('slms-width-full', block_builder::render('callout', ['contentHtml' => '<p>x</p>']));
+        $this->assertStringContainsString('slms-width-reduced', block_builder::render('advancedCard', ['content' => '<p>x</p>']));
+        $this->assertStringContainsString('slms-width-full', block_builder::render('table', []));
+
+        // A value that is not a known one never becomes part of a class name.
+        $evil = block_builder::render('stylizedHeading', ['text' => 'T', 'align' => '"><b>', 'width' => 'x y']);
+        $this->assertStringContainsString('slms-align-left', $evil);
+        $this->assertStringContainsString('slms-width-full', $evil);
+        $this->assertStringNotContainsString('<b>', $evil);
+    }
+
+    /**
+     * A card with a round picture and a grid with a description draw what the editor draws.
+     *
+     * @return void
+     */
+    public function test_rich_card_round_picture_and_grid_description(): void {
+        $this->require_editor();
+
+        $card = block_builder::render('advancedCard', [
+            'mediaType' => 'image', 'mediaUrl' => 'https://example.com/a.png', 'mediaShape' => 'circle',
+            'content' => '<p>x</p>',
+        ]);
+        $this->assertStringContainsString('slms-media-circle', $card);
+
+        $grid = block_builder::render('gridcards', ['containerDesc' => 'A line under the title', 'columns' => 2]);
+        $this->assertStringContainsString('slms-grid-desc', $grid);
+        $this->assertStringContainsString('A line under the title', $grid);
+    }
+
+    /**
      * A type the renderer does not know produces nothing.
      *
      * @return void

@@ -194,6 +194,32 @@ class block_builder {
     // -------------------------------------------------------------------------.
 
     /**
+     * Returns the alignment to draw: the stored one when it is a known value, the block's own default otherwise.
+     *
+     * @param array $config Canonical block config.
+     * @param string $fallback What the block does with no stored value.
+     * @return string One of left, center or right.
+     */
+    private static function align(array $config, string $fallback): string {
+        $align = $config['align'] ?? null;
+        return in_array($align, ['left', 'center', 'right'], true) ? $align : $fallback;
+    }
+
+    /**
+     * Returns the width to draw: the stored one when it is a known value, the block's own default otherwise.
+     *
+     * Reduced caps the block and full takes the whole column; the tiny_studiolms stylesheet reads it as a class.
+     *
+     * @param array $config Canonical block config.
+     * @param string $fallback What the block does with no stored value (the editor's default for that block).
+     * @return string Either reduced or full.
+     */
+    private static function width(array $config, string $fallback): string {
+        $width = $config['width'] ?? null;
+        return in_array($width, ['reduced', 'full'], true) ? $width : $fallback;
+    }
+
+    /**
      * Builds the view model for block_heading.
      *
      * @param array $config Canonical block config.
@@ -203,6 +229,10 @@ class block_builder {
         $level = $config['level'] ?? 'h3';
         return [
             'hoverEffect' => $config['hoverEffect'] ?? 'none',
+            'isH2' => ($config['level'] ?? 'h3') === 'h2',
+            'align' => self::align($config, 'left'),
+            'alignLeft' => self::align($config, 'left') === 'left',
+            'width' => self::width($config, 'full'),
             'isH3' => $level === 'h3',
             'isH4' => $level === 'h4',
             'bgColor' => $config['bgColor'] ?? '#e3f2fd',
@@ -225,6 +255,7 @@ class block_builder {
             'borderColor' => $config['borderColor'] ?? '#eab308',
             'borderRadius' => $config['borderRadius'] ?? 6,
             'hoverEffect' => $config['hoverEffect'] ?? 'none',
+            'width' => self::width($config, 'full'),
             'hasIcon' => !empty($config['icon']),
             'icon' => $config['icon'] ?? '',
             'textColor' => $config['textColor'] ?? '#854d0e',
@@ -314,6 +345,9 @@ class block_builder {
             'isBtnFullWidth' => $btnalign === 'full',
             'btnDisplayMode' => $btnalign === 'full' ? 'flex' : 'inline-flex',
             'hoverEffect'    => $config['hoverEffect'] ?? 'none',
+            'align' => self::align($config, 'left'),
+            'width' => self::width($config, 'reduced'),
+            'mediaCircle' => ($config['mediaShape'] ?? 'rect') === 'circle' && ($config['mediaType'] ?? 'none') === 'image',
             'btnHoverEffect' => $config['btnHoverEffect'] ?? 'none',
             'btnClickSound'  => $config['btnClickSound'] ?? 'none',
         ];
@@ -356,6 +390,7 @@ class block_builder {
             'content'     => $config['content'] ?? '',
             'openSound'   => $config['openSound'] ?? 'none',
             'hoverEffect' => $config['hoverEffect'] ?? 'none',
+            'width' => self::width($config, 'full'),
             'headerBg'    => $config['headerBg'] ?? '',
             'contentColor' => $config['contentColor'] ?? '',
             'animate'     => filter_var($config['animate'] ?? true, FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE) ?? true,
@@ -396,8 +431,12 @@ class block_builder {
 
         return [
             'hoverEffect' => $config['hoverEffect'] ?? 'none',
+            'width' => self::width($config, 'full'),
             'containerStyle'     => $style,
             'containerTitle'     => $config['containerTitle'] ?? '',
+            'containerDesc'      => is_string($config['containerDesc'] ?? null) ? trim($config['containerDesc']) : '',
+            'hasHead'            => trim((string) ($config['containerTitle'] ?? '')) !== ''
+                || (is_string($config['containerDesc'] ?? null) && trim($config['containerDesc']) !== ''),
             'containerTitleSize' => $config['containerTitleSize'] ?? '24px',
             'titleColor'         => $config['titleColor'] ?? '#333333',
             'columns'            => (string) $colcount,
@@ -484,6 +523,7 @@ class block_builder {
 
         return [
             'hoverEffect' => $config['hoverEffect'] ?? 'none',
+            'width' => self::width($config, 'full'),
             'isStriped'   => ($config['style'] ?? 'striped') === 'striped',
             'headerCells' => $headercells,
             'bodyRows'    => $bodyrows,
@@ -532,6 +572,7 @@ class block_builder {
             'theme' => $theme,
             'content' => implode('', $parts),
             'hoverEffect' => $config['hoverEffect'] ?? 'none',
+            'align' => self::align($config, 'center'),
         ];
     }
 
@@ -580,6 +621,7 @@ class block_builder {
             'columns' => $cols,
             'content' => implode('', $parts),
             'hoverEffect' => $config['hoverEffect'] ?? 'none',
+            'width' => self::width($config, 'full'),
         ];
     }
 
@@ -636,6 +678,8 @@ class block_builder {
             'layout' => $layout,
             'content' => implode('', $parts),
             'hoverEffect' => $config['hoverEffect'] ?? 'none',
+            'align' => self::align($config, 'center'),
+            'width' => self::width($config, 'reduced'),
         ];
     }
 
@@ -693,6 +737,8 @@ class block_builder {
             'theme' => $theme,
             'content' => implode('', $parts),
             'hoverEffect' => $config['hoverEffect'] ?? 'none',
+            'align' => self::align($config, 'center'),
+            'width' => self::width($config, 'reduced'),
         ];
     }
 
@@ -755,6 +801,8 @@ class block_builder {
             'theme' => $theme,
             'content' => implode('', $parts),
             'hoverEffect' => $config['hoverEffect'] ?? 'none',
+            'align' => self::align($config, 'center'),
+            'width' => self::width($config, 'reduced'),
         ];
     }
 
@@ -855,7 +903,7 @@ class block_builder {
      * @return string HTML.
      */
     private static function plain_heading(array $config): string {
-        $level = ($config['level'] ?? 'h3') === 'h4' ? 'h4' : 'h3';
+        $level = in_array($config['level'] ?? 'h3', ['h2', 'h4'], true) ? $config['level'] : 'h3';
         $icon = trim((string) ($config['icon'] ?? ''));
         $text = trim((string) ($config['text'] ?? ''));
         $label = ($icon !== '' ? $icon . ' ' : '') . $text;
