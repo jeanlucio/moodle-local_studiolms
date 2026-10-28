@@ -40,7 +40,9 @@ final class restyle_service_test extends \advanced_testcase {
      * @return void
      */
     private function ai_answers_a_callout(): void {
-        ai_resolver::set_provider_for_testing(fn(string $system, string $user): string => '{"blocks":[{"id":2,"type":"callout"}]}');
+        ai_resolver::set_provider_for_testing(
+            fn(string $system, string $user): string => '{"blocks":[{"type":"callout","lines":[2]}]}'
+        );
     }
 
     /**

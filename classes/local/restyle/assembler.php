@@ -29,81 +29,144 @@ use local_studiolms\local\block_builder;
 /**
  * Puts the original pieces back together, giving the planned ones a Studio block.
  *
- * Headings become Studio headings unless the plan folds the text after them in an accordion. Whatever the plan does
- * not mention, and every fixed piece, is written back exactly as it was; the text of a block is always the original.
+ * Headings become Studio headings, and so do the lines the plan names as titles. Whatever the plan does not mention,
+ * and every fixed piece, is written back as it was: the lines of one paragraph are joined again with their line
+ * breaks. The words of a block are always the original ones.
  */
 class assembler {
     /**
      * Builds the HTML.
      *
      * @param array[] $segments The pieces, from segmenter::split().
-     * @param array $plan Block type by piece id, from planner::plan().
+     * @param array $plan The blocks by the id of their first line, from planner::plan().
      * @return string The restyled HTML.
      */
     public static function build(array $segments, array $plan): string {
+        return self::range($segments, $plan, 0, count($segments));
+    }
+
+    /**
+     * Builds the HTML of a range of pieces.
+     *
+     * @param array[] $segments The pieces.
+     * @param array $plan The blocks of the plan.
+     * @param int $from The first piece.
+     * @param int $to The position after the last piece.
+     * @return string The HTML.
+     */
+    private static function range(array $segments, array $plan, int $from, int $to): string {
         $html = '';
-        $count = count($segments);
-        for ($i = 0; $i < $count; $i++) {
+        $i = $from;
+        while ($i < $to) {
             $segment = $segments[$i];
-            switch ($segment['kind']) {
-                case segmenter::KIND_HEADING:
-                    $end = self::accordion_end($segments, $i);
-                    $folded = ($plan[$segment['id']] ?? '') === planner::BLOCK_ACCORDION && $end > $i + 1;
-                    if ($folded) {
-                        $html .= self::accordion($segment, array_slice($segments, $i + 1, $end - $i - 1));
-                        $i = $end - 1;
-                    } else {
-                        $html .= self::heading($segment);
-                    }
-                    break;
-                case segmenter::KIND_TEXT:
-                    $html .= self::text_block($segment, $plan[$segment['id']] ?? '');
-                    break;
-                default:
-                    $html .= $segment['html'];
+            $block = $plan[$i] ?? null;
+            if ($block !== null && end($block['ids']) < $to) {
+                [$out, $i] = self::block($segments, $plan, $block, $to);
+                $html .= $out;
+                continue;
+            }
+            if ($segment['kind'] === segmenter::KIND_HEADING) {
+                $html .= self::heading($segment['text'], $segment['level'] <= 2 ? 2 : ($segment['level'] === 3 ? 3 : 4));
+                $i++;
+            } else if ($segment['kind'] === segmenter::KIND_TEXT && $segment['line']) {
+                $end = $i + 1;
+                while ($end < $to && self::continues_paragraph($segments, $plan, $end, $segment['group'])) {
+                    $end++;
+                }
+                $html .= '<p>' . implode('<br>', array_column(array_slice($segments, $i, $end - $i), 'inner')) . '</p>';
+                $i = $end;
+            } else {
+                $html .= $segment['html'];
+                $i++;
             }
         }
         return $html;
     }
 
     /**
-     * Finds where the content folded under a heading ends.
-     *
-     * It runs up to the next heading or the next piece that holds a Studio block, which is never nested in another.
+     * Tells whether a piece is one more line of the paragraph that is being written back as it was.
      *
      * @param array[] $segments The pieces.
-     * @param int $position The position of the heading.
-     * @return int The position of the first piece that is not folded.
+     * @param array $plan The blocks of the plan.
+     * @param int $position The piece.
+     * @param int $group The paragraph.
+     * @return bool
      */
-    private static function accordion_end(array $segments, int $position): int {
-        $count = count($segments);
-        for ($i = $position + 1; $i < $count; $i++) {
-            $isheading = $segments[$i]['kind'] === segmenter::KIND_HEADING;
-            $isblock = $segments[$i]['kind'] === segmenter::KIND_FIXED
-                && strpos($segments[$i]['html'], 'data-slms-block-type') !== false;
-            if ($isheading || $isblock) {
-                return $i;
-            }
-        }
-        return $count;
+    private static function continues_paragraph(array $segments, array $plan, int $position, int $group): bool {
+        return $segments[$position]['line'] && $segments[$position]['group'] === $group && !isset($plan[$position]);
     }
 
     /**
-     * Builds the Studio heading of a heading piece.
+     * Builds the block of the plan that starts at a piece.
      *
-     * @param array $segment The heading piece.
+     * @param array[] $segments The pieces.
+     * @param array $plan The blocks of the plan.
+     * @param array $block The block.
+     * @param int $to The position after the last piece of the range being built.
+     * @return array The HTML and the position of the piece after the block.
+     */
+    private static function block(array $segments, array $plan, array $block, int $to): array {
+        $first = $block['ids'][0];
+        $next = end($block['ids']) + 1;
+        switch ($block['type']) {
+            case planner::BLOCK_HEADING:
+                return [self::heading($segments[$first]['text'], $block['level']), $next];
+            case planner::BLOCK_LIST:
+                return [self::list_block($segments, $block['ids']), $next];
+            case planner::BLOCK_CALLOUT:
+                return [self::callout(self::paragraphs($segments, $block['ids'])), $next];
+            case planner::BLOCK_CARD:
+                return [self::card(self::paragraphs($segments, $block['ids'])), $next];
+            case planner::BLOCK_GRID:
+                return [self::grid($segments, $block['items']), $next];
+            case planner::BLOCK_STEPS:
+                return [self::steps($segments, $block['items']), $next];
+            default:
+                $end = self::accordion_end($segments, $plan, $first, $to);
+                if ($end === $first + 1) {
+                    return [self::heading($segments[$first]['text'], 3), $end];
+                }
+                $content = self::range($segments, $plan, $first + 1, $end);
+                return [self::accordion($segments[$first]['text'], $content), $end];
+        }
+    }
+
+    /**
+     * Finds where the content folded under a heading ends.
+     *
+     * It runs up to the next heading (of the page or of the plan), the next accordion, or the next piece that holds
+     * a Studio block, which is never nested in another.
+     *
+     * @param array[] $segments The pieces.
+     * @param array $plan The blocks of the plan.
+     * @param int $position The position of the heading.
+     * @param int $to The position after the last piece of the range being built.
+     * @return int The position of the first piece that is not folded.
+     */
+    private static function accordion_end(array $segments, array $plan, int $position, int $to): int {
+        for ($i = $position + 1; $i < $to; $i++) {
+            $isheading = $segments[$i]['kind'] === segmenter::KIND_HEADING;
+            $planned = isset($plan[$i]) && in_array($plan[$i]['type'], [planner::BLOCK_HEADING, planner::BLOCK_ACCORDION], true);
+            $isblock = $segments[$i]['kind'] === segmenter::KIND_FIXED
+                && strpos($segments[$i]['html'], 'data-slms-block-type') !== false;
+            if ($isheading || $planned || $isblock) {
+                return $i;
+            }
+        }
+        return $to;
+    }
+
+    /**
+     * Builds a Studio heading.
+     *
+     * @param string $text The plain text of the heading.
+     * @param int $level 2, 3 or 4.
      * @return string The block HTML.
      */
-    private static function heading(array $segment): string {
-        $level = 'h4';
-        if ($segment['level'] <= 2) {
-            $level = 'h2';
-        } else if ($segment['level'] === 3) {
-            $level = 'h3';
-        }
+    private static function heading(string $text, int $level): string {
         return block_builder::render('stylizedHeading', [
-            'text' => s($segment['text']),
-            'level' => $level,
+            'text' => s($text),
+            'level' => 'h' . $level,
             'icon' => '',
             'bgColor' => '#e3f2fd',
             'textColor' => '#0d47a1',
@@ -111,60 +174,139 @@ class assembler {
     }
 
     /**
-     * Builds the block of a piece of text, or writes the piece back as it was.
+     * Writes the pieces as paragraphs, each as it was.
      *
-     * @param array $segment The text piece.
-     * @param string $type The block type of the plan, or '' for none.
+     * @param array[] $segments The pieces.
+     * @param int[] $ids The pieces.
      * @return string The HTML.
      */
-    private static function text_block(array $segment, string $type): string {
-        $content = clean_text($segment['html'], FORMAT_HTML);
-        if ($type === planner::BLOCK_CALLOUT) {
-            return block_builder::render('callout', [
-                'backgroundColor' => '#eff6ff',
-                'borderLeftWidth' => 4,
-                'borderColor' => '#3b82f6',
-                'borderRadius' => 6,
-                'hoverEffect' => 'none',
-                'icon' => '💡',
-                'textColor' => '#1e3a8a',
-                'contentHtml' => $content,
-            ]);
+    private static function paragraphs(array $segments, array $ids): string {
+        $html = '';
+        foreach ($ids as $id) {
+            $html .= $segments[$id]['line'] ? '<p>' . $segments[$id]['inner'] . '</p>' : $segments[$id]['html'];
         }
-        if ($type === planner::BLOCK_CARD) {
-            return block_builder::render('advancedCard', [
-                'bg' => '#ffffff',
-                'text' => '#212529',
-                'border' => '#0d47a1',
-                'radius' => 8,
-                'shadow' => 'sm',
-                'mediaType' => 'none',
-                'mediaUrl' => '',
-                'layout' => 'vertical',
-                'btnText' => '',
-                'btnUrl' => '#',
-                'btnBg' => '#0d47a1',
-                'btnTextCol' => '#ffffff',
-                'btnAlign' => 'left',
-                'hoverEffect' => 'none',
-                'content' => $content,
-            ]);
-        }
-        return $segment['html'];
+        return clean_text($html, FORMAT_HTML);
     }
 
     /**
-     * Builds an accordion: the heading is its title and the pieces after it are its content, unchanged.
+     * Builds a list from consecutive lines, each as one item.
      *
-     * @param array $heading The heading piece.
-     * @param array[] $pieces The pieces folded under it.
+     * A bullet typed at the start of a line is the marker the list now draws, so it is not kept.
+     *
+     * @param array[] $segments The pieces.
+     * @param int[] $ids The lines.
+     * @return string The HTML.
+     */
+    private static function list_block(array $segments, array $ids): string {
+        $items = '';
+        foreach ($ids as $id) {
+            $inner = preg_replace('/^[\s\x{00A0}•·▪●◦\-–—*]+/u', '', $segments[$id]['inner']);
+            $items .= '<li>' . $inner . '</li>';
+        }
+        return clean_text('<ul>' . $items . '</ul>', FORMAT_HTML);
+    }
+
+    /**
+     * Builds a callout.
+     *
+     * @param string $content The content.
      * @return string The block HTML.
      */
-    private static function accordion(array $heading, array $pieces): string {
-        $content = '';
-        foreach ($pieces as $piece) {
-            $content .= $piece['html'];
+    private static function callout(string $content): string {
+        return block_builder::render('callout', [
+            'backgroundColor' => '#eff6ff',
+            'borderLeftWidth' => 4,
+            'borderColor' => '#3b82f6',
+            'borderRadius' => 6,
+            'hoverEffect' => 'none',
+            'icon' => '💡',
+            'textColor' => '#1e3a8a',
+            'contentHtml' => $content,
+        ]);
+    }
+
+    /**
+     * Builds a card.
+     *
+     * @param string $content The content.
+     * @return string The block HTML.
+     */
+    private static function card(string $content): string {
+        return block_builder::render('advancedCard', [
+            'bg' => '#ffffff',
+            'text' => '#212529',
+            'border' => '#0d47a1',
+            'radius' => 8,
+            'shadow' => 'sm',
+            'mediaType' => 'none',
+            'mediaUrl' => '',
+            'layout' => 'vertical',
+            'btnText' => '',
+            'btnUrl' => '#',
+            'btnBg' => '#0d47a1',
+            'btnTextCol' => '#ffffff',
+            'btnAlign' => 'left',
+            'hoverEffect' => 'none',
+            'content' => $content,
+        ]);
+    }
+
+    /**
+     * Builds a grid with one card for each item: its title and its text.
+     *
+     * @param array[] $segments The pieces.
+     * @param array[] $items The items, each with the id of its title and the ids of its text.
+     * @return string The block HTML.
+     */
+    private static function grid(array $segments, array $items): string {
+        $slots = [];
+        foreach ($items as $item) {
+            $slots[] = self::card(
+                \html_writer::tag('h4', s($segments[$item['title']]['text']))
+                . self::paragraphs($segments, $item['text'])
+            );
         }
+        $count = count($items);
+        return block_builder::render('gridcards', [
+            'columns' => $count === 3 || $count > 4 ? 3 : 2,
+            'gap' => 20,
+            'slots' => $slots,
+        ]);
+    }
+
+    /**
+     * Builds a sequence of steps, each with its title and its text.
+     *
+     * @param array[] $segments The pieces.
+     * @param array[] $items The items, each with the id of its title and the ids of its text.
+     * @return string The block HTML.
+     */
+    private static function steps(array $segments, array $items): string {
+        $steps = [];
+        foreach ($items as $item) {
+            $text = [];
+            foreach ($item['text'] as $id) {
+                $text[] = $segments[$id]['text'];
+            }
+            $steps[] = ['icon' => '', 'title' => $segments[$item['title']]['text'], 'description' => implode(' ', $text)];
+        }
+        return block_builder::render('infographicSteps', [
+            'title' => '',
+            'theme' => 'blue',
+            'layout' => 'vertical',
+            'current' => 0,
+            'items' => $steps,
+        ]);
+    }
+
+    /**
+     * Builds an accordion: the heading is its title and the content is what was folded under it.
+     *
+     * @param string $title The plain text of the heading.
+     * @param string $content The HTML of the content.
+     * @return string The block HTML.
+     */
+    private static function accordion(string $title, string $content): string {
         return block_builder::render('accordion', [
             'state' => 'closed',
             'bg' => '#ffffff',
@@ -172,8 +314,8 @@ class assembler {
             'icon' => '❯ / ❯',
             'openSound' => 'none',
             'hoverEffect' => 'none',
-            'title' => s($heading['text']),
-            'content' => clean_text($content, FORMAT_HTML),
+            'title' => s($title),
+            'content' => $content,
         ]);
     }
 }
