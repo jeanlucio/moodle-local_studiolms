@@ -122,6 +122,12 @@ final class generate_section_task_test extends \advanced_testcase {
                 'strategy'  => 'blocks',
                 'blocks'    => [['type' => 'callout', 'html' => '<p>Universal block</p>']],
                 'content'   => '<p>Universal body</p>',
+            'intro'        => 'Universal intro',
+            'question'     => 'Universal question?',
+            'steps'        => [['title' => 'First step', 'description' => 'Do it']],
+            'tip'          => 'Universal tip',
+            'deliverables' => ['A file'],
+            'criteria'     => [['criterion' => 'Clarity', 'expectation' => 'Clear text']],
                 'questions' => [['type' => 'truefalse', 'question' => 'PHP is a language.', 'answer' => true]],
                 'terms'     => [['term' => 'Variable', 'definition' => 'A named storage.']],
             ]);

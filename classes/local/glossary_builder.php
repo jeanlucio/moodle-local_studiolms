@@ -43,7 +43,7 @@ class glossary_builder {
         global $CFG, $DB;
         require_once($CFG->dirroot . '/mod/glossary/lib.php');
 
-        $intro = get_string('glossary_intro', 'local_studiolms');
+        $intro = activity_content::glossary_intro($name);
         $result = course_builder::add_glossary($course, $sectionnum, $name, $intro);
 
         $terms = self::generate_terms($theme);

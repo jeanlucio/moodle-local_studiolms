@@ -115,6 +115,12 @@ final class generate_activity_test extends \advanced_testcase {
             'strategy'  => 'blocks',
             'blocks'    => [['type' => 'callout', 'html' => '<p>Universal block</p>']],
             'content'   => '<p>Universal body</p>',
+            'intro'        => 'Universal intro',
+            'question'     => 'Universal question?',
+            'steps'        => [['title' => 'First step', 'description' => 'Do it']],
+            'tip'          => 'Universal tip',
+            'deliverables' => ['A file'],
+            'criteria'     => [['criterion' => 'Clarity', 'expectation' => 'Clear text']],
             'questions' => [
                 ['type' => 'truefalse', 'question' => 'PHP is a language.', 'answer' => true],
             ],
@@ -166,8 +172,13 @@ final class generate_activity_test extends \advanced_testcase {
         $this->assertFalse($assign['degraded']);
         $forumcm = get_coursemodule_from_id('forum', $forum['cmid'], $course->id, false, MUST_EXIST);
         $assigncm = get_coursemodule_from_id('assign', $assign['cmid'], $course->id, false, MUST_EXIST);
-        $this->assertStringContainsString('Universal body', $DB->get_field('forum', 'intro', ['id' => $forumcm->instance]));
-        $this->assertStringContainsString('Universal body', $DB->get_field('assign', 'intro', ['id' => $assigncm->instance]));
+        $forumintro = $DB->get_field('forum', 'intro', ['id' => $forumcm->instance]);
+        $assignintro = $DB->get_field('assign', 'intro', ['id' => $assigncm->instance]);
+        $this->assertStringContainsString('Universal intro', $forumintro);
+        $this->assertStringContainsString('Universal question?', $forumintro);
+        $this->assertStringContainsString('data-slms-block-type="infographicSteps"', $forumintro);
+        $this->assertStringContainsString('Universal intro', $assignintro);
+        $this->assertStringContainsString('data-slms-block-type="table"', $assignintro);
     }
 
     /**
@@ -253,7 +264,7 @@ final class generate_activity_test extends \advanced_testcase {
         global $DB;
 
         ai_resolver::set_provider_for_testing(static fn(string $system, string $user): string => json_encode([
-            'content' => '<p>Safe text</p><script>alert(1)</script><img src="x" onerror="alert(2)">',
+            'intro' => 'Safe text<script>alert(1)</script><img src="x" onerror="alert(2)">',
         ]));
         $course = $this->course_with_teacher();
 
@@ -263,6 +274,7 @@ final class generate_activity_test extends \advanced_testcase {
         $intro = $DB->get_field('forum', 'intro', ['id' => $cm->instance]);
         $this->assertStringContainsString('Safe text', $intro);
         $this->assertStringNotContainsString('<script', $intro);
+        $this->assertStringNotContainsString('<img', $intro);
         $this->assertStringNotContainsString('onerror', $intro);
     }
 

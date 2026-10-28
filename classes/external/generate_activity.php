@@ -29,6 +29,7 @@ use core_external\external_api;
 use core_external\external_function_parameters;
 use core_external\external_single_structure;
 use core_external\external_value;
+use local_studiolms\local\activity_content;
 use local_studiolms\local\ai_json;
 use local_studiolms\local\ai_resolver;
 use local_studiolms\local\content_access;
@@ -143,20 +144,16 @@ class generate_activity extends external_api {
                 break;
 
             case 'label':
-                $result = course_builder::add_label(
-                    $course,
-                    $sectionnum,
-                    \html_writer::tag('h4', s($title))
-                );
+                $result = course_builder::add_label($course, $sectionnum, activity_content::label($title));
                 break;
 
             case 'forum':
-                $intro = self::generate_html('forum', $theme, $title, $reference, $bloom, $degraded);
+                $intro = activity_content::forum_intro($theme, $theme, $title, $reference, $bloom, $degraded);
                 $result = course_builder::add_forum($course, $sectionnum, $title, $intro);
                 break;
 
             case 'assign':
-                $intro = self::generate_html('assign', $theme, $title, $reference, $bloom, $degraded);
+                $intro = activity_content::assign_intro($theme, $theme, $title, $reference, $bloom, $degraded);
                 $result = course_builder::add_assign($course, $sectionnum, $title, $intro);
                 break;
 
@@ -177,6 +174,7 @@ class generate_activity extends external_api {
                         5
                     );
                     $degraded = $created === 0;
+                    activity_content::write_quiz_intro($result, (int) $course->id, $title, $created);
                 } catch (\Throwable $e) {
                     debugging('StudioLMS quiz questions failed: ' . $e->getMessage(), DEBUG_DEVELOPER);
                     $degraded = true;

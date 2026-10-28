@@ -25,6 +25,7 @@
 namespace local_studiolms\task;
 
 use context_course;
+use local_studiolms\local\activity_content;
 use local_studiolms\local\ai_json;
 use local_studiolms\local\ai_resolver;
 use local_studiolms\local\content_access;
@@ -170,7 +171,7 @@ class generate_course_task extends \core\task\adhoc_task {
             $this->advance(get_string('progress_section', 'local_studiolms', $title));
 
             foreach ($section['activities'] ?? [] as $activity) {
-                $this->add_activity($record->section, $title, $activity, $theme);
+                $this->add_activity($record->section, $title, $activity, $theme, $section['activities'] ?? []);
             }
         }
     }
@@ -182,9 +183,16 @@ class generate_course_task extends \core\task\adhoc_task {
      * @param string $sectiontitle The section title.
      * @param array $activity The activity definition (type, title).
      * @param string $theme The course theme.
+     * @param array $sectionactivities The activity definitions of the same section, for the label.
      * @return void
      */
-    private function add_activity(int $sectionnum, string $sectiontitle, array $activity, string $theme): void {
+    private function add_activity(
+        int $sectionnum,
+        string $sectiontitle,
+        array $activity,
+        string $theme,
+        array $sectionactivities = []
+    ): void {
         // Unknown types are built as pages, so they are reported as pages too (there is no string for them).
         $type = content_access::modules_for([$activity['type']])[0];
         $title = $activity['title'];
@@ -235,11 +243,14 @@ class generate_course_task extends \core\task\adhoc_task {
                 $result = course_builder::add_page($this->course, $sectionnum, $title, $html);
                 break;
             case 'label':
-                $result = course_builder::add_label($this->course, $sectionnum, \html_writer::tag('h4', s($title)));
+                $result = course_builder::add_label(
+                    $this->course,
+                    $sectionnum,
+                    activity_content::label($title, array_column($sectionactivities, 'title'))
+                );
                 break;
             case 'forum':
-                $intro = $this->generate_html(
-                    'forum',
+                $intro = activity_content::forum_intro(
                     $theme,
                     $sectiontitle,
                     $title,
@@ -250,8 +261,7 @@ class generate_course_task extends \core\task\adhoc_task {
                 $result = course_builder::add_forum($this->course, $sectionnum, $title, $intro);
                 break;
             case 'assign':
-                $intro = $this->generate_html(
-                    'assign',
+                $intro = activity_content::assign_intro(
                     $theme,
                     $sectiontitle,
                     $title,
@@ -270,7 +280,9 @@ class generate_course_task extends \core\task\adhoc_task {
                 $intro = \html_writer::tag('p', s($title));
                 $result = course_builder::add_quiz($this->course, $sectionnum, $title, $intro);
                 try {
-                    $degraded = quiz_builder::create($result->coursemodule, $result->instance, $theme, $title, 5) === 0;
+                    $created = quiz_builder::create($result->coursemodule, $result->instance, $theme, $title, 5);
+                    $degraded = $created === 0;
+                    activity_content::write_quiz_intro($result, (int) $this->course->id, $title, $created);
                 } catch (\Throwable $e) {
                     debugging('StudioLMS quiz questions failed: ' . $e->getMessage(), DEBUG_DEVELOPER);
                     $degraded = true;
