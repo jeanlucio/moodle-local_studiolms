@@ -145,6 +145,9 @@ echo $OUTPUT->render_from_template('local_studiolms/wizard_landing', [
     'cancelurl'      => $cancelurl,
     'logourl'        => $OUTPUT->image_url('logo', 'local_studiolms')->out(false),
     'landingheading' => get_string('landing_heading', 'local_studiolms', $USER->firstname),
+    'restyleurl'     => has_all_capabilities(['local/studiolms:restyle', 'moodle/course:manageactivities'], $context)
+        ? (new moodle_url('/local/studiolms/restyle.php', ['courseid' => $course->id]))->out(false)
+        : '',
 ]);
 echo $OUTPUT->render_from_template('local_studiolms/wizard_step1', $step1context);
 echo $OUTPUT->render_from_template('local_studiolms/wizard_activity', [

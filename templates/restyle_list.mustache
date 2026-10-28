@@ -1,0 +1,86 @@
+{{!
+    This file is part of Moodle - https://moodle.org/
+
+    Moodle is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    Moodle is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with Moodle.  If not, see <https://www.gnu.org/licenses/>.
+}}
+{{!
+    @template local_studiolms/restyle_list
+
+    The pages and labels of a course that can be restyled into a hidden copy, by section.
+
+    Example context (json):
+    {
+        "heading": "Restyle existing activities",
+        "intro": "Choose a page or label.",
+        "notice": "The text is sent to the AI provider only to plan the blocks.",
+        "none": "This course has no pages or labels to restyle.",
+        "hassections": true,
+        "backurl": "https://example.com/course/view.php?id=5",
+        "sections": [
+            {
+                "name": "Week 1",
+                "activities": [
+                    {
+                        "cmid": 12,
+                        "name": "The cell",
+                        "buttonlabel": "Restyle The cell",
+                        "type": "Page",
+                        "icon": "https://example.com/theme/image.php/boost/page/1/monologo",
+                        "hidden": false,
+                        "highlight": true
+                    }
+                ]
+            }
+        ]
+    }
+}}
+<div class="local-studiolms-restyle" id="local-studiolms-restyle">
+    <h2 class="h3">{{heading}}</h2>
+    <p>{{intro}}</p>
+    <div class="alert alert-info" role="note">{{notice}}</div>
+
+    {{#hassections}}
+        {{#sections}}
+            <h3 class="h5 mt-4">{{name}}</h3>
+            <ul class="list-group mb-3">
+                {{#activities}}
+                    <li class="list-group-item {{#highlight}}border border-primary{{/highlight}}"
+                        data-region="restyle-row" data-cmid="{{cmid}}">
+                        <div class="d-flex flex-wrap align-items-center justify-content-between">
+                            <div class="d-flex align-items-center">
+                                <img src="{{icon}}" alt="" class="me-2" width="24" height="24">
+                                <span class="fw-bold me-2">{{name}}</span>
+                                <span class="badge bg-light text-dark border me-2">{{type}}</span>
+                                {{#hidden}}
+                                    <span class="badge bg-dark text-white">{{#str}}restyle_hidden, local_studiolms{{/str}}</span>
+                                {{/hidden}}
+                            </div>
+                            <button type="button" class="btn btn-primary btn-sm"
+                                    data-action="restyle" data-cmid="{{cmid}}"
+                                    aria-label="{{buttonlabel}}">
+                                {{#str}}restyle_button, local_studiolms{{/str}}
+                            </button>
+                        </div>
+                        <div class="mt-2" data-region="restyle-result" role="status" aria-live="polite"></div>
+                    </li>
+                {{/activities}}
+            </ul>
+        {{/sections}}
+    {{/hassections}}
+    {{^hassections}}
+        <p class="text-muted">{{none}}</p>
+    {{/hassections}}
+
+    <a class="btn btn-secondary" href="{{backurl}}">{{#str}}back_to_course, local_studiolms{{/str}}</a>
+</div>

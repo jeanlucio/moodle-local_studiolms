@@ -26,7 +26,8 @@
     {
         "cancelurl": "https://example.com/course/view.php?id=5",
         "logourl": "https://example.com/pluginfile.php/1/local_studiolms/pix/logo.svg",
-        "landingheading": "Hello Jane, what would you like to do today?"
+        "landingheading": "Hello Jane, what would you like to do today?",
+        "restyleurl": "https://example.com/local/studiolms/restyle.php?courseid=5"
     }
 }}
 <div class="local-studiolms-wizard" id="local-studiolms-landing">
@@ -40,7 +41,7 @@
     </div>
 
     <div class="row mb-4">
-        <div class="col-12 col-md-4 mb-3">
+        <div class="col-12 col-md-6 col-xl mb-3">
             <div class="card h-100 shadow-sm border-primary">
                 <div class="card-body d-flex flex-column">
                     <div class="mb-3 text-primary" aria-hidden="true">
@@ -58,7 +59,7 @@
             </div>
         </div>
 
-        <div class="col-12 col-md-4 mb-3">
+        <div class="col-12 col-md-6 col-xl mb-3">
             <div class="card h-100 shadow-sm border-primary">
                 <div class="card-body d-flex flex-column">
                     <div class="mb-3 text-primary" aria-hidden="true">
@@ -76,7 +77,7 @@
             </div>
         </div>
 
-        <div class="col-12 col-md-4 mb-3">
+        <div class="col-12 col-md-6 col-xl mb-3">
             <div class="card h-100 shadow-sm border-primary">
                 <div class="card-body d-flex flex-column">
                     <div class="mb-3 text-primary" aria-hidden="true">
@@ -93,6 +94,25 @@
                 </div>
             </div>
         </div>
+
+        {{#restyleurl}}
+        <div class="col-12 col-md-6 col-xl mb-3">
+            <div class="card h-100 shadow-sm border-primary">
+                <div class="card-body d-flex flex-column">
+                    <div class="mb-3 text-primary" aria-hidden="true">
+                        <i class="fa fa-paint-brush fa-2x"></i>
+                    </div>
+                    <h5 class="card-title">{{#str}}landing_restyle_title, local_studiolms{{/str}}</h5>
+                    <p class="card-text text-muted flex-grow-1">
+                        {{#str}}landing_restyle_desc, local_studiolms{{/str}}
+                    </p>
+                    <a class="btn btn-primary mt-3" href="{{restyleurl}}">
+                        {{#str}}landing_restyle_title, local_studiolms{{/str}}
+                    </a>
+                </div>
+            </div>
+        </div>
+        {{/restyleurl}}
     </div>
 
     <a class="btn btn-secondary" href="{{cancelurl}}">

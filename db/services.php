@@ -82,4 +82,13 @@ $functions = [
         'ajax' => true,
         'capabilities' => 'local/studiolms:generate',
     ],
+
+    'local_studiolms_restyle_activity' => [
+        'classname' => 'local_studiolms\external\restyle_activity',
+        'methodname' => 'execute',
+        'description' => 'Restyles a page or label into a hidden copy, leaving the original untouched.',
+        'type' => 'write',
+        'ajax' => true,
+        'capabilities' => 'local/studiolms:restyle',
+    ],
 ];

@@ -48,3 +48,35 @@ function local_studiolms_extend_navigation_course(
         new pix_icon('icon', '', 'local_studiolms')
     );
 }
+
+/**
+ * Adds the "Restyle with StudioLMS" entry to the settings of a page.
+ *
+ * @param settings_navigation $settingsnav The settings navigation.
+ * @param context $context The context of the page being viewed.
+ * @return void
+ */
+function local_studiolms_extend_settings_navigation(settings_navigation $settingsnav, context $context): void {
+    global $PAGE;
+
+    // The page object exposes cm only through __get(), so empty() and isset() cannot be used: compare with null.
+    $cm = $PAGE->cm;
+    if ($context->contextlevel !== CONTEXT_MODULE || $cm === null || $cm->modname !== 'page') {
+        return;
+    }
+    if (!has_all_capabilities(['local/studiolms:restyle', 'moodle/course:manageactivities'], $context)) {
+        return;
+    }
+    $modulesettings = $settingsnav->find('modulesettings', navigation_node::TYPE_SETTING);
+    if (!$modulesettings) {
+        return;
+    }
+    $modulesettings->add(
+        get_string('restyle_menu', 'local_studiolms'),
+        new moodle_url('/local/studiolms/restyle.php', ['cmid' => $cm->id]),
+        navigation_node::TYPE_SETTING,
+        null,
+        'local_studiolms_restyle',
+        new pix_icon('icon', '', 'local_studiolms')
+    );
+}

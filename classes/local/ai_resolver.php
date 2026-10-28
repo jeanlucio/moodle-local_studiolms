@@ -88,10 +88,12 @@ class ai_resolver {
      *
      * @param string $systemprompt System instruction text.
      * @param string $userprompt User prompt text.
+     * @param \context|null $context Where the text is for. When core_ai is the source, the course's own switch for
+     *                               AI tools is respected there; null stands for the whole site.
      * @return string The generated content as returned by the provider.
      * @throws \moodle_exception When no AI provider is available.
      */
-    public static function generate_text(string $systemprompt, string $userprompt): string {
+    public static function generate_text(string $systemprompt, string $userprompt, ?\context $context = null): string {
         // Test seam: a deterministic provider injected by PHPUnit/Behat wins.
         if (
             self::$testingprovider !== null
@@ -117,7 +119,7 @@ class ai_resolver {
 
         // Fallback: Moodle core_ai directly when the hub is absent or has failed.
         if (self::has_core_ai_provider()) {
-            return self::call_core_ai($systemprompt, $userprompt);
+            return self::call_core_ai($systemprompt, $userprompt, $context);
         }
 
         // No AI source available: guide the admin to configure one.
@@ -158,17 +160,26 @@ class ai_resolver {
      *
      * @param string $systemprompt System instruction (may be empty).
      * @param string $userprompt User prompt text.
+     * @param \context|null $context Where the text is for; null stands for the whole site.
      * @return string The generated content.
-     * @throws \moodle_exception On a failed or empty response.
+     * @throws \moodle_exception On a failed or empty response, or when the course has the AI tools turned off.
      */
-    private static function call_core_ai(string $systemprompt, string $userprompt): string {
+    private static function call_core_ai(string $systemprompt, string $userprompt, ?\context $context = null): string {
         global $USER;
 
         $manager = \core\di::get(\core_ai\manager::class);
+        $context = $context ?? \context_system::instance();
+        // The per-course switch exists from Moodle 5.0; before it, there is nothing to respect.
+        if (
+            method_exists($manager, 'is_action_enabled_in_context')
+            && !$manager->is_action_enabled_in_context($context, \core_ai\aiactions\generate_text::class)
+        ) {
+            throw new \moodle_exception('aidisabledincourse', 'local_studiolms');
+        }
 
         $prompttext = $systemprompt !== '' ? ($systemprompt . "\n\n" . $userprompt) : $userprompt;
         $action = new \core_ai\aiactions\generate_text(
-            contextid: \context_system::instance()->id,
+            contextid: $context->id,
             userid: (int) $USER->id,
             prompttext: $prompttext,
         );

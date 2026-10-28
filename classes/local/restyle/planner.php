@@ -54,10 +54,11 @@ class planner {
      *
      * @param array[] $segments The pieces, from segmenter::split().
      * @param int $maxblocks The most blocks the plan may hold.
+     * @param \context|null $context Where the page is, so the course's own switch for AI tools is respected.
      * @return array|null Block type by piece id, only for the pieces that get a block; null when the AI is
      *                    unavailable or answered nothing usable.
      */
-    public static function plan(array $segments, int $maxblocks): ?array {
+    public static function plan(array $segments, int $maxblocks, ?\context $context = null): ?array {
         $shown = [];
         foreach ($segments as $segment) {
             if ($segment['kind'] === segmenter::KIND_FIXED) {
@@ -89,7 +90,10 @@ class planner {
         $user = json_encode($shown, JSON_UNESCAPED_UNICODE);
 
         try {
-            $decoded = ai_json::decode(ai_resolver::generate_text($system, $user));
+            $decoded = ai_json::decode(ai_resolver::generate_text($system, $user, $context));
+        } catch (\moodle_exception $e) {
+            // No provider, or the course has the AI tools off: the teacher needs that message, not a vague failure.
+            throw $e;
         } catch (\Throwable $e) {
             debugging('StudioLMS restyle: the plan could not be generated — ' . $e->getMessage(), DEBUG_DEVELOPER);
             return null;

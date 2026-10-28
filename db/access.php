@@ -35,4 +35,14 @@ $capabilities = [
             'manager' => CAP_ALLOW,
         ],
     ],
+
+    'local/studiolms:restyle' => [
+        'riskbitmask' => RISK_DATALOSS | RISK_XSS,
+        'captype' => 'write',
+        'contextlevel' => CONTEXT_COURSE,
+        'archetypes' => [
+            'editingteacher' => CAP_ALLOW,
+            'manager' => CAP_ALLOW,
+        ],
+    ],
 ];
