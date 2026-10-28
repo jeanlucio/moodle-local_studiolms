@@ -43,6 +43,12 @@ class restyle_activity extends external_api {
     public static function execute_parameters(): external_function_parameters {
         return new external_function_parameters([
             'cmid' => new external_value(PARAM_INT, 'Course module id of the page or label to restyle.'),
+            'polish' => new external_value(
+                PARAM_BOOL,
+                'True to let the AI reorganise and polish the text, false to keep every word.',
+                VALUE_DEFAULT,
+                false
+            ),
         ]);
     }
 
@@ -50,15 +56,16 @@ class restyle_activity extends external_api {
      * Restyles the activity into a hidden copy.
      *
      * @param int $cmid Course module id of the page or label.
+     * @param bool $polish True to let the AI reorganise and polish the text.
      * @return array The copy: cmid, name, editurl and viewurl.
      */
-    public static function execute(int $cmid): array {
-        $params = self::validate_parameters(self::execute_parameters(), ['cmid' => $cmid]);
+    public static function execute(int $cmid, bool $polish = false): array {
+        $params = self::validate_parameters(self::execute_parameters(), ['cmid' => $cmid, 'polish' => $polish]);
 
         [, $cm] = get_course_and_cm_from_cmid($params['cmid']);
         self::validate_context(context_module::instance($cm->id));
 
-        return (array) service::restyle($cm->id);
+        return (array) service::restyle($cm->id, (bool) $params['polish']);
     }
 
     /**

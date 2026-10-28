@@ -74,6 +74,8 @@ echo $OUTPUT->render_from_template('local_studiolms/restyle_list', [
     'heading' => get_string('restyle_heading', 'local_studiolms'),
     'intro' => get_string('restyle_intro', 'local_studiolms'),
     'notice' => get_string('restyle_ai_notice', 'local_studiolms'),
+    'polishlabel' => get_string('restyle_polish', 'local_studiolms'),
+    'polishhelp' => get_string('restyle_polish_help', 'local_studiolms'),
     'none' => get_string('restyle_none', 'local_studiolms'),
     'hassections' => !empty($sections),
     'sections' => $sections,

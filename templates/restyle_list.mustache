@@ -24,6 +24,8 @@
         "heading": "Restyle existing activities",
         "intro": "Choose a page or label.",
         "notice": "The text is sent to the AI provider only to plan the blocks.",
+        "polishlabel": "Reorganise and polish the text",
+        "polishhelp": "The AI may rewrite, shorten and split your text.",
         "none": "This course has no pages or labels to restyle.",
         "hassections": true,
         "backurl": "https://example.com/course/view.php?id=5",
@@ -49,6 +51,13 @@
     <h2 class="h3">{{heading}}</h2>
     <p>{{intro}}</p>
     <div class="alert alert-info" role="note">{{notice}}</div>
+
+    <div class="form-check mb-3">
+        <input type="checkbox" class="form-check-input" id="local-studiolms-polish" data-region="restyle-polish"
+               aria-describedby="local-studiolms-polish-help">
+        <label class="form-check-label fw-bold" for="local-studiolms-polish">{{polishlabel}}</label>
+        <div id="local-studiolms-polish-help" class="form-text">{{polishhelp}}</div>
+    </div>
 
     {{#hassections}}
         {{#sections}}

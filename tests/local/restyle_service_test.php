@@ -159,6 +159,59 @@ final class restyle_service_test extends \advanced_testcase {
     }
 
     /**
+     * With polishing on, the copy is written from the text the AI wrote, the original is untouched, and a result that
+     * is refused leaves no copy.
+     *
+     * @return void
+     */
+    public function test_polishing_writes_the_copy_and_a_refused_result_leaves_nothing(): void {
+        global $DB;
+
+        $this->resetAfterTest();
+        $content = '<h2>The cell</h2><p>Cells are the unit of life. Cells are the unit of life.</p>'
+            . '<p>Remember: they have a membrane.</p>';
+        [$course, $page, $teacher] = $this->course_with_page($content);
+        $this->setUser($teacher);
+        $before = $DB->count_records('course_modules', ['course' => $course->id]);
+
+        ai_resolver::set_provider_for_testing(fn(string $s, string $u): string => json_encode(['blocks' => [
+            ['type' => 'heading', 'text' => 'The cell', 'level' => 2],
+            ['type' => 'paragraph', 'html' => 'Cells are the unit of life.'],
+            ['type' => 'callout', 'html' => 'Remember: they have a membrane.'],
+        ]]));
+        $copy = service::restyle($page->cmid, true);
+
+        $modinfo = get_fast_modinfo($course->id);
+        $this->assertFalse((bool) $modinfo->get_cm($copy->cmid)->visible);
+        $this->assertSame($content, $DB->get_field('page', 'content', ['id' => $page->id]), 'the original is untouched');
+        $newcontent = $DB->get_field('page', 'content', ['id' => $modinfo->get_cm($copy->cmid)->instance]);
+        $this->assertSame(1, substr_count($newcontent, 'Cells are the unit of life.'));
+        $this->assertStringContainsString('data-slms-block-type="callout"', $newcontent);
+
+        $count = $DB->count_records('course_modules', ['course' => $course->id]);
+        ai_resolver::set_provider_for_testing(fn(string $s, string $u): string => json_encode(['blocks' => [
+            ['type' => 'paragraph', 'html' => 'Cells are the unit of life, in 99 ways. Remember: they have a membrane.'],
+        ]]));
+        try {
+            service::restyle($page->cmid, true);
+            $this->fail('A result with a number that is not in the text must be refused.');
+        } catch (\moodle_exception $e) {
+            $this->assertSame('restyle_polish_numbers', $e->errorcode);
+        }
+        $this->assertSame($count, $DB->count_records('course_modules', ['course' => $course->id]), 'no copy is left');
+        $this->assertGreaterThan($before, $count);
+
+        ai_resolver::set_provider_for_testing(fn(string $s, string $u): string => 'no idea');
+        try {
+            service::restyle($page->cmid, true);
+            $this->fail('An unusable answer must stop the restyle.');
+        } catch (\moodle_exception $e) {
+            $this->assertSame('restyle_noplan', $e->errorcode);
+        }
+        ai_resolver::set_provider_for_testing(null);
+    }
+
+    /**
      * A message of the AI layer (no provider, tools off in the course) reaches the teacher as it is.
      *
      * @return void

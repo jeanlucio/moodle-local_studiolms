@@ -43,10 +43,11 @@ class service {
      * Restyles an activity into a hidden copy.
      *
      * @param int $cmid The course module id of the activity.
+     * @param bool $polish True to let the AI reorganise and polish the text; false to keep every word.
      * @return \stdClass The copy: cmid, name, editurl and viewurl.
      * @throws moodle_exception When the user cannot restyle it, the activity cannot be restyled, or the AI fails.
      */
-    public static function restyle(int $cmid): \stdClass {
+    public static function restyle(int $cmid, bool $polish = false): \stdClass {
         global $CFG;
         require_once($CFG->dirroot . '/course/lib.php');
 
@@ -62,11 +63,16 @@ class service {
         if (empty(array_filter($segments, fn(array $segment): bool => $segment['kind'] !== segmenter::KIND_FIXED))) {
             throw new moodle_exception('restyle_nochange', 'local_studiolms');
         }
-        $plan = planner::plan($segments, adapter::max_blocks($cm->modname), context_module::instance($cm->id));
-        if ($plan === null) {
+        $context = context_module::instance($cm->id);
+        if ($polish) {
+            $restyled = polisher::polish($segments, adapter::max_blocks($cm->modname), $context);
+        } else {
+            $plan = planner::plan($segments, adapter::max_blocks($cm->modname), $context);
+            $restyled = $plan === null ? null : assembler::build($segments, $plan);
+        }
+        if ($restyled === null) {
             throw new moodle_exception('restyle_noplan', 'local_studiolms');
         }
-        $restyled = assembler::build($segments, $plan);
 
         $copy = self::duplicate($course, $cm);
         $name = get_string('restyle_copyname', 'local_studiolms', $cm->name);

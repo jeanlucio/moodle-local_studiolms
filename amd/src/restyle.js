@@ -73,7 +73,10 @@ const restyle = async(button) => {
     try {
         const copy = await Ajax.call([{
             methodname: 'local_studiolms_restyle_activity',
-            args: {cmid: Number(button.dataset.cmid)},
+            args: {
+                cmid: Number(button.dataset.cmid),
+                polish: document.querySelector('[data-region="restyle-polish"]')?.checked === true,
+            },
         }])[0];
         await showCopy(region, copy, strings);
     } catch (error) {

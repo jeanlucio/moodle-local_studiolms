@@ -57,6 +57,35 @@ final class restyle_activity_test extends \advanced_testcase {
     }
 
     /**
+     * The web service takes the option to polish the text, off by default.
+     *
+     * @return void
+     */
+    public function test_the_polish_option_is_passed_on(): void {
+        $this->resetAfterTest();
+        $course = $this->getDataGenerator()->create_course();
+        $teacher = $this->getDataGenerator()->create_and_enrol($course, 'editingteacher');
+        $page = $this->getDataGenerator()->create_module('page', [
+            'course' => $course->id, 'content' => '<h2>The cell</h2><p>Cells are the unit of life.</p>',
+            'contentformat' => FORMAT_HTML,
+        ]);
+        $this->setUser($teacher);
+        $seen = [];
+        ai_resolver::set_provider_for_testing(function (string $system, string $user) use (&$seen): string {
+            $seen[] = $system;
+            return '{"blocks":[{"type":"paragraph","html":"Cells are the unit of life."}]}';
+        });
+
+        restyle_activity::execute($page->cmid);
+        restyle_activity::execute($page->cmid, true);
+
+        $this->assertStringContainsString('layout planner', $seen[0]);
+        $this->assertStringContainsString('instructional designer', $seen[1]);
+        $this->assertTrue(isset(restyle_activity::execute_parameters()->keys['polish']));
+        ai_resolver::set_provider_for_testing(null);
+    }
+
+    /**
      * A student cannot use the web service, and an activity that does not exist is refused.
      *
      * @return void
