@@ -211,9 +211,38 @@ class activity_content {
      * @param int $questions How many questions the quiz holds.
      * @param int $attempts The attempts allowed, 0 for no limit.
      * @param int $timelimit The time limit in seconds, 0 for no limit.
+     * @param bool $live True to leave the rules to the filter_studiolms widget, which reads them when the page is shown.
      * @return string The HTML of the introduction.
      */
-    public static function quiz_intro(string $title, int $questions, int $attempts, int $timelimit): string {
+    public static function quiz_intro(
+        string $title,
+        int $questions,
+        int $attempts,
+        int $timelimit,
+        bool $live = false
+    ): string {
+        $html = self::heading($title, '✅', 'h2');
+        $html .= self::paragraph(get_string('rich_quiz_intro', 'local_studiolms'));
+        $html .= $live
+            ? block_builder::render('widgetQuizInfo', [])
+            : self::quiz_numbers($questions, $attempts, $timelimit);
+        $html .= self::callout(
+            \html_writer::tag('p', s(get_string('rich_quiz_tip', 'local_studiolms')), ['class' => 'm-0']),
+            '💡',
+            'tip'
+        );
+        return $html;
+    }
+
+    /**
+     * Builds the cards with the numbers of a quiz, written once and not kept up to date.
+     *
+     * @param int $questions How many questions the quiz holds.
+     * @param int $attempts The attempts allowed, 0 for no limit.
+     * @param int $timelimit The time limit in seconds, 0 for no limit.
+     * @return string The HTML of the cards.
+     */
+    private static function quiz_numbers(int $questions, int $attempts, int $timelimit): string {
         $items = [];
         if ($questions > 0) {
             $items[] = [
@@ -232,15 +261,27 @@ class activity_content {
             'label' => get_string('rich_quiz_time', 'local_studiolms'),
         ];
 
-        $html = self::heading($title, '✅', 'h2');
-        $html .= self::paragraph(get_string('rich_quiz_intro', 'local_studiolms'));
-        $html .= block_builder::render('infographic', ['layout' => 'stats', 'theme' => 'blue', 'title' => '', 'items' => $items]);
-        $html .= self::callout(
-            \html_writer::tag('p', s(get_string('rich_quiz_tip', 'local_studiolms')), ['class' => 'm-0']),
-            '💡',
-            'tip'
-        );
-        return $html;
+        return block_builder::render('infographic', ['layout' => 'stats', 'theme' => 'blue', 'title' => '', 'items' => $items]);
+    }
+
+    /**
+     * Tells whether the rules of a quiz can be left to the widget of the filter_studiolms plugin.
+     *
+     * The filter is optional: it must be installed, have the widget turned on in the site and be active in the course
+     * of the quiz. Otherwise the introduction keeps the numbers written at the time of the generation.
+     *
+     * @param int $cmid The course module id of the quiz.
+     * @return bool
+     */
+    public static function quiz_rules_are_live(int $cmid): bool {
+        global $CFG;
+
+        if (!class_exists(\filter_studiolms\widgets::class) || !\filter_studiolms\widgets::is_enabled('quizinfo')) {
+            return false;
+        }
+        require_once($CFG->libdir . '/filterlib.php');
+        $filters = filter_get_active_in_context(\context_module::instance($cmid));
+        return isset($filters['studiolms']);
     }
 
     /**
@@ -259,7 +300,13 @@ class activity_content {
         global $DB;
 
         $quiz = $DB->get_record('quiz', ['id' => $result->instance], 'id, attempts, timelimit', MUST_EXIST);
-        $intro = self::quiz_intro($title, $questions, (int) $quiz->attempts, (int) $quiz->timelimit);
+        $intro = self::quiz_intro(
+            $title,
+            $questions,
+            (int) $quiz->attempts,
+            (int) $quiz->timelimit,
+            self::quiz_rules_are_live((int) $result->coursemodule)
+        );
         $DB->set_field('quiz', 'intro', $intro, ['id' => $quiz->id]);
         $DB->set_field('quiz', 'introformat', FORMAT_HTML, ['id' => $quiz->id]);
         rebuild_course_cache($courseid, true);

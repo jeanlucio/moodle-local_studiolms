@@ -245,6 +245,9 @@ final class activity_content_test extends \advanced_testcase {
     public function test_write_quiz_intro_stores_the_intro_of_the_quiz(): void {
         global $DB;
 
+        $this->resetAfterTest();
+        // Where the filter is installed it would take the place of the numbers; this test is about the fixed numbers.
+        set_config('enable_quizinfo', 0, 'filter_studiolms');
         $course = $this->getDataGenerator()->create_course();
         $quiz = $this->getDataGenerator()->create_module('quiz', [
             'course' => $course->id, 'attempts' => 2, 'timelimit' => 600,
@@ -262,6 +265,86 @@ final class activity_content_test extends \advanced_testcase {
         $this->assertStringContainsString('>4<', $intro);
         $this->assertStringContainsString('>2<', $intro);
         $this->assertEquals(FORMAT_HTML, $DB->get_field('quiz', 'introformat', ['id' => $quiz->id]));
+    }
+
+    /**
+     * With the widget on, the introduction of a quiz carries the marker of the filter instead of fixed numbers.
+     *
+     * @return void
+     */
+    public function test_quiz_intro_can_leave_the_rules_to_the_widget(): void {
+        $html = activity_content::quiz_intro('Check', 5, 2, 600, true);
+
+        $this->assertStringContainsString('data-slms-block-type="widgetQuizInfo"', $html);
+        $this->assertStringContainsString('<span class="slms-widget-marker">[QUIZINFO]</span>', $html);
+        $this->assertStringContainsString('data-slms-state="' . base64_encode(rawurlencode('{}')) . '"', $html);
+        $this->assertStringNotContainsString('data-slms-block-type="infographic"', $html);
+        $this->assertStringNotContainsString(get_string('rich_quiz_attempts', 'local_studiolms'), $html);
+        $this->assertStringContainsString('Check', $html);
+    }
+
+    /**
+     * The widget is used only where the filter is installed, has the widget on and is active in the course.
+     *
+     * @return void
+     */
+    public function test_quiz_rules_are_live_only_where_the_filter_applies(): void {
+        global $CFG;
+
+        $this->resetAfterTest();
+        require_once($CFG->libdir . '/filterlib.php');
+
+        $course = $this->getDataGenerator()->create_course();
+        $quiz = $this->getDataGenerator()->create_module('quiz', ['course' => $course->id]);
+        $this->setAdminUser();
+
+        if (!class_exists(\filter_studiolms\widgets::class)) {
+            $this->assertFalse(activity_content::quiz_rules_are_live((int) $quiz->cmid), 'no filter, fixed numbers');
+            return;
+        }
+
+        filter_set_global_state('studiolms', TEXTFILTER_DISABLED);
+        $this->assertFalse(activity_content::quiz_rules_are_live((int) $quiz->cmid), 'filter off in the site');
+
+        filter_set_global_state('studiolms', TEXTFILTER_ON);
+        $this->assertTrue(activity_content::quiz_rules_are_live((int) $quiz->cmid), 'filter on');
+
+        set_config('enable_quizinfo', 0, 'filter_studiolms');
+        $this->assertFalse(activity_content::quiz_rules_are_live((int) $quiz->cmid), 'widget off in the site');
+        set_config('enable_quizinfo', 1, 'filter_studiolms');
+
+        filter_set_local_state('studiolms', \context_course::instance($course->id)->id, TEXTFILTER_OFF);
+        $this->assertFalse(activity_content::quiz_rules_are_live((int) $quiz->cmid), 'filter off in the course');
+    }
+
+    /**
+     * Where the filter applies, the written introduction holds the marker, and the numbers are left out.
+     *
+     * @return void
+     */
+    public function test_write_quiz_intro_writes_the_marker_where_the_filter_applies(): void {
+        global $CFG, $DB;
+
+        $this->resetAfterTest();
+        require_once($CFG->libdir . '/filterlib.php');
+        if (!class_exists(\filter_studiolms\widgets::class)) {
+            $this->markTestSkipped('filter_studiolms not installed in this environment.');
+        }
+        filter_set_global_state('studiolms', TEXTFILTER_ON);
+
+        $course = $this->getDataGenerator()->create_course();
+        $quiz = $this->getDataGenerator()->create_module('quiz', ['course' => $course->id, 'attempts' => 2]);
+
+        activity_content::write_quiz_intro(
+            (object) ['coursemodule' => $quiz->cmid, 'instance' => $quiz->id],
+            (int) $course->id,
+            'Check',
+            4
+        );
+
+        $intro = $DB->get_field('quiz', 'intro', ['id' => $quiz->id]);
+        $this->assertStringContainsString('[QUIZINFO]', $intro);
+        $this->assertStringNotContainsString('data-slms-block-type="infographic"', $intro);
     }
 
     /**

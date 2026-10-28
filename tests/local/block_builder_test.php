@@ -150,6 +150,25 @@ final class block_builder_test extends \advanced_testcase {
     }
 
     /**
+     * The quiz rules widget is the marker of the filter, and reopens in the editor as a block with no settings.
+     *
+     * @return void
+     */
+    public function test_widget_block_is_the_marker_of_the_filter(): void {
+        $plain = $this->render_plain('widgetQuizInfo', []);
+        $this->assertStringContainsString('<span class="slms-widget-marker">[QUIZINFO]</span>', $plain);
+
+        if (\core_component::get_component_directory('tiny_studiolms') === null) {
+            return;
+        }
+        $html = block_builder::render('widgetQuizInfo', []);
+        $this->assertStringContainsString('<span class="slms-widget-marker">[QUIZINFO]</span>', $html);
+        $this->assertStringContainsString('data-slms-block-type="widgetQuizInfo"', $html);
+        $this->assertStringContainsString('mceNonEditable', $html);
+        $this->assertStringContainsString('data-slms-state="' . base64_encode(rawurlencode('{}')) . '"', $html);
+    }
+
+    /**
      * Skips the test when the editor's templates, which the rich rendering needs, are not installed.
      *
      * @return void

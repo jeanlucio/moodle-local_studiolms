@@ -47,6 +47,7 @@ class block_builder {
         'infographicSteps'      => 'tiny_studiolms/block_infographic_steps',
         'infographicTimeline'   => 'tiny_studiolms/block_infographic_timeline',
         'infographicComparison' => 'tiny_studiolms/block_infographic_comparison',
+        'widgetQuizInfo'        => 'tiny_studiolms/block_widget',
     ];
 
     /**
@@ -181,6 +182,9 @@ class block_builder {
                 break;
             case 'infographicComparison':
                 $context = self::infographic_comparison_context($config);
+                break;
+            case 'widgetQuizInfo':
+                $context = ['widget' => 'quizinfo', 'marker' => '[QUIZINFO]'];
                 break;
             default:
                 return null;
@@ -829,7 +833,8 @@ class block_builder {
         foreach (self::EXCLUDED[$type] ?? [] as $key) {
             unset($state[$key]);
         }
-        $json = json_encode($state);
+        // A block with no settings is an object in the editor, not a list.
+        $json = $state === [] ? '{}' : json_encode($state);
         if ($json === false) {
             return $html;
         }
@@ -891,6 +896,8 @@ class block_builder {
                 return self::plain_timeline($config);
             case 'infographicComparison':
                 return self::plain_comparison($config);
+            case 'widgetQuizInfo':
+                return '<div><span class="slms-widget-marker">[QUIZINFO]</span></div>';
             default:
                 return '';
         }
