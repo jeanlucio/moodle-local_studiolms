@@ -150,6 +150,25 @@ final class block_builder_test extends \advanced_testcase {
     }
 
     /**
+     * A block is built without the empty paragraph its template ends with, so a page shows no blank line after it.
+     *
+     * @return void
+     */
+    public function test_a_block_ends_with_no_empty_paragraph(): void {
+        $this->require_editor();
+
+        foreach (['callout', 'stylizedHeading', 'advancedCard', 'accordion', 'infographicSteps'] as $type) {
+            $html = block_builder::render($type, ['contentHtml' => '<p>Text</p>', 'content' => '<p>Text</p>', 'text' => 'T']);
+            $this->assertNotSame('', $html, $type);
+            $this->assertDoesNotMatchRegularExpression('~<p>(\s|&nbsp;|<br\s*/?>)*</p>\s*$~i', $html, $type);
+            $this->assertStringContainsString('data-slms-block-type="' . $type . '"', $html, $type);
+        }
+        $two = block_builder::render('callout', ['contentHtml' => '<p>One</p>'])
+            . block_builder::render('callout', ['contentHtml' => '<p>Two</p>']);
+        $this->assertStringNotContainsString('<p><br></p>', $two);
+    }
+
+    /**
      * The quiz rules widget is the marker of the filter, and reopens in the editor as a block with no settings.
      *
      * @return void

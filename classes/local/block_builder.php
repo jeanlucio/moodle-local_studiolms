@@ -123,7 +123,21 @@ class block_builder {
         }
 
         $html = $OUTPUT->render_from_template($adapter['template'], $adapter['context']);
-        return self::wrap($html, $type, $config);
+        return self::wrap(self::without_caret_paragraph($html), $type, $config);
+    }
+
+    /**
+     * Drops the empty paragraph a block template ends with.
+     *
+     * The templates end with an empty paragraph so the editor has somewhere for the caret after a block. The editor
+     * itself keeps only the block when it inserts one, and a page that holds the paragraph shows a blank line after
+     * every block, so the blocks built here leave it out, as the editor does.
+     *
+     * @param string $html The rendered template.
+     * @return string The HTML without the empty paragraphs at its end.
+     */
+    private static function without_caret_paragraph(string $html): string {
+        return (string) preg_replace('~(?:\s*<p>(?:\s|&nbsp;|<br\s*/?>)*</p>)+\s*$~i', '', $html);
     }
 
     /**
