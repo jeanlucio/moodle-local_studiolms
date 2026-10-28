@@ -32,11 +32,11 @@ It deliberately works on a course that **already exists**: editing your own cour
 * 🧭 **Two Modes:** **Standard** (pedagogical structure) and **Gamified** (adds PlayerHUD; shown only when `block_playerhud` is installed).
 * 📑 **Native Activities Generated:**
   * **Page** (`mod_page`) — AI content rendered with rich Studio blocks (infographics, cards, callouts, grids) when `tiny_studiolms` is installed, or clean semantic HTML as a fallback; opens an automatic "Key concepts" (Pre-training) callout sourced from the course glossary.
-  * **Label** (`mod_label`) — styled visual heading separating activity groups.
-  * **Quiz** (`mod_quiz`) — AI-generated questions added to the question bank and linked to the quiz (`multichoice`, `truefalse`, `shortanswer`), with on-demand preview before committing.
-  * **Forum** (`mod_forum`) — AI-generated guiding question and debate context.
-  * **Assignment** (`mod_assign`) — AI-generated brief and expected criteria.
-  * **Glossary** (`mod_glossary`) — one course glossary created first, with auto-linking enabled; its terms feed the Pre-training callouts on every page.
+  * **Label** (`mod_label`) — a styled visual heading separating activity groups; when it is generated together with the other activities of its section, it also lists them.
+  * **Quiz** (`mod_quiz`) — questões geradas por IA adicionadas ao banco de questões e vinculadas ao quiz (`multichoice`, `truefalse`, `shortanswer`), com pré-visualização sob demanda antes de confirmar. A introdução mostra o número de questões, as tentativas e o tempo limite **como estavam na hora em que o quiz foi gerado**: esses números são texto fixo, então edite o bloco no editor se mudar depois as configurações ou as questões.
+  * **Forum** (`mod_forum`) — a rich introduction made of Studio blocks: the page title, framing text, the guiding question, three steps to take part and a tip.
+  * **Assignment** (`mod_assign`) — a rich brief: what to hand in, the steps and the evaluation criteria as a table (the AI is asked not to invent dates or points).
+  * **Glossary** (`mod_glossary`) — one course glossary created first, with auto-linking enabled and an introduction that says how to use it; its terms feed the Pre-training callouts on every page.
 * 🧩 **Editable Rich Blocks:** Generated blocks carry the `data-slms-block-type` / `data-slms-state` wrappers, so they reopen for normal editing inside the `tiny_studiolms` editor. Ready-made presets are applied when one fits; otherwise the AI generates rich blocks on the fly (hybrid strategy).
 * 🛟 **Safe by Default:** StudioLMS **adds** content without touching what already exists. An opt-in "Clean the course first" option is destructive, clearly warned and confirmed separately.
 * ⏳ **Background Generation:** Full-course generation runs in an adhoc task with real-time progress polling and a structured final report (sections, activities by type, quiz questions, glossary terms, preset per page).
@@ -195,11 +195,11 @@ A ferramenta atua deliberadamente sobre um curso que **já existe**: editar o pr
 * 🧭 **Dois modos:** **Padrão** (estrutura pedagógica) e **Gamificado** (adiciona o PlayerHUD; exibido apenas quando o `block_playerhud` está instalado).
 * 📑 **Atividades nativas geradas:**
   * **Página** (`mod_page`) — conteúdo da IA renderizado com blocos ricos do Studio (infográficos, cards, callouts, grids) quando o `tiny_studiolms` está instalado, ou HTML semântico limpo como fallback; abre um callout automático de "Conceitos-chave" (Pre-training) com os termos do glossário do curso.
-  * **Rótulo** (`mod_label`) — título visual estilizado separando grupos de atividades.
+  * **Rótulo** (`mod_label`) — um título visual estilizado separando grupos de atividades; quando é gerado junto com as outras atividades da sua seção, também as lista.
   * **Quiz** (`mod_quiz`) — questões geradas por IA adicionadas ao banco de questões e vinculadas ao quiz (`multichoice`, `truefalse`, `shortanswer`), com pré-visualização sob demanda antes de confirmar.
-  * **Fórum** (`mod_forum`) — questão norteadora e contexto de debate gerados por IA.
-  * **Tarefa** (`mod_assign`) — enunciado e critérios esperados gerados por IA.
-  * **Glossário** (`mod_glossary`) — um glossário do curso criado primeiro, com link automático habilitado; seus termos alimentam os callouts de Pre-training de cada página.
+  * **Fórum** (`mod_forum`) — uma introdução rica feita de blocos do Studio: o título da página, o texto de enquadramento, a questão norteadora, três passos de participação e uma dica.
+  * **Tarefa** (`mod_assign`) — um enunciado rico: o que entregar, os passos e os critérios de avaliação numa tabela (a IA é instruída a não inventar datas nem notas).
+  * **Glossário** (`mod_glossary`) — um glossário do curso criado primeiro, com link automático habilitado e uma introdução que explica como usar; seus termos alimentam os callouts de Pre-training de cada página.
 * 🧩 **Blocos ricos editáveis:** Os blocos gerados carregam os wrappers `data-slms-block-type` / `data-slms-state`, então reabrem para edição normal no editor `tiny_studiolms`. Presets prontos são aplicados quando há um adequado; caso contrário a IA gera blocos ricos na hora (estratégia híbrida).
 * 🛟 **Seguro por padrão:** O StudioLMS **adiciona** conteúdo sem tocar no que já existe. A opção "Limpar o curso antes" é opt-in, destrutiva, exibida com aviso e confirmada à parte.
 * ⏳ **Geração em segundo plano:** A geração de curso completo roda numa adhoc task com polling de progresso em tempo real e um relatório final estruturado (seções, atividades por tipo, questões do quiz, termos do glossário, preset por página).
