@@ -107,7 +107,7 @@ class segmenter {
         }
 
         $html = trim($dom->saveHTML($node));
-        $text = self::plain($node->textContent);
+        $text = self::text_of($html);
         $isfixed = self::is_fixed($xpath, $node);
 
         if (!$isfixed && $text === '') {
@@ -199,6 +199,18 @@ class segmenter {
             . ' or self::style or self::hr or @data-slms-block-type'
             . " or contains(concat(' ', normalize-space(@class), ' '), ' mceNonEditable ')]";
         return $xpath->query($query, $node)->length > 0;
+    }
+
+    /**
+     * Returns the plain text of some HTML, with a space where a block ends: the items of a list, the cells of a table
+     * and the lines of a quotation are separate words, not one glued together.
+     *
+     * @param string $html The HTML.
+     * @return string The text, on one line.
+     */
+    private static function text_of(string $html): string {
+        $spaced = preg_replace('~</?(?:li|ul|ol|p|div|tr|td|th|h[1-6]|blockquote|br)\b[^>]*>~i', ' ', $html);
+        return self::plain(html_entity_decode(strip_tags((string) $spaced), ENT_QUOTES | ENT_HTML5));
     }
 
     /**

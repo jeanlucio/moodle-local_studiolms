@@ -59,8 +59,8 @@ class polisher {
      * @param int $maxblocks The most visual blocks the page may hold.
      * @param \context|null $context Where the page is, so the course's own switch for AI tools is respected.
      * @return string|null The HTML, or null when the AI is unavailable or answered nothing usable.
-     * @throws \moodle_exception When the text came back with a number that is not in the original, or too different
-     *                           in length.
+     * @throws \moodle_exception When the text is too long to be sent whole, or came back with a number that is not in
+     *                           the original, or too different in length.
      */
     public static function polish(array $segments, int $maxblocks, ?\context $context = null): ?string {
         $hastext = array_filter($segments, fn(array $segment): bool => $segment['kind'] !== segmenter::KIND_FIXED);
@@ -109,6 +109,8 @@ class polisher {
      *
      * @param array[] $segments The pieces.
      * @return array[] The pieces to send.
+     * @throws \moodle_exception When the text is too long: the page is rewritten from what the AI is shown, so a
+     *                           text cut at the limit would lose its end.
      */
     private static function shown(array $segments): array {
         $shown = [];
@@ -121,7 +123,7 @@ class polisher {
             $html = self::inline($segment['inner']);
             $characters += mb_strlen($html);
             if ($characters > self::MAX_CHARACTERS) {
-                break;
+                throw new \moodle_exception('restyle_polish_toolong', 'local_studiolms');
             }
             $line = ['id' => $segment['id'], 'text' => $html];
             if ($segment['kind'] === segmenter::KIND_HEADING) {

@@ -126,6 +126,51 @@ final class block_builder_test extends \advanced_testcase {
     }
 
     /**
+     * Without the editor, the grid, the numbers, the features, the steps and the timeline still show their text, as
+     * plain markup, and drop what has no text.
+     *
+     * @return void
+     */
+    public function test_plain_layout_blocks_show_their_text_and_drop_empty_items(): void {
+        $grid = $this->render_plain(
+            'gridcards',
+            ['columns' => 2, 'containerTitle' => 'Grid', 'slots' => ['<p>One</p>', '<p>Two</p>']]
+        );
+        $this->assertStringContainsString('<h3>Grid</h3>', $grid);
+        $this->assertSame(2, substr_count($grid, 'class="col"'));
+        $this->assertStringContainsString('<p>Two</p>', $grid);
+
+        $stats = $this->render_plain('infographic', ['title' => 'Numbers', 'items' => [
+            ['value' => '5', 'label' => 'Questions'], ['value' => '', 'label' => ''],
+        ]]);
+        $this->assertStringContainsString('Questions', $stats);
+        $this->assertSame(1, substr_count($stats, 'text-center'));
+        $this->assertSame('', $this->render_plain('infographic', ['items' => [['value' => '', 'label' => '']]]));
+
+        $features = $this->render_plain('infographicFeatures', ['columns' => 2, 'title' => 'Why', 'items' => [
+            ['title' => 'Fast', 'description' => 'Quick to use'], ['title' => '', 'description' => 'No name'],
+        ]]);
+        $this->assertStringContainsString('<h5 class="card-title">Fast</h5>', $features);
+        $this->assertStringContainsString('row-cols-md-2', $features);
+        $this->assertStringNotContainsString('No name', $features);
+        $this->assertSame('', $this->render_plain('infographicFeatures', ['items' => []]));
+
+        $steps = $this->render_plain('infographicSteps', ['title' => 'How', 'items' => [
+            ['title' => 'First', 'description' => 'Do this'], ['title' => 'Second'], ['title' => ''],
+        ]]);
+        $this->assertSame(2, substr_count($steps, '<li'));
+        $this->assertStringContainsString('<ol>', $steps);
+        $this->assertSame('', $this->render_plain('infographicSteps', ['items' => [['title' => '']]]));
+
+        $timeline = $this->render_plain('infographicTimeline', ['items' => [
+            ['title' => 'Start', 'date' => '2026', 'description' => 'It began'], ['title' => 'End'], ['title' => ''],
+        ]]);
+        $this->assertStringContainsString('2026 — Start', $timeline);
+        $this->assertSame(2, substr_count($timeline, '<li'));
+        $this->assertSame('', $this->render_plain('infographicTimeline', ['items' => []]));
+    }
+
+    /**
      * An unsupported type renders to an empty string in plain mode.
      *
      * @return void

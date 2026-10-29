@@ -92,6 +92,24 @@ final class restyle_test extends \advanced_testcase {
     }
 
     /**
+     * A list, a quotation and any other element that is not a paragraph is one piece of text, kept as it is.
+     *
+     * @return void
+     */
+    public function test_split_keeps_a_list_or_a_quotation_as_one_piece(): void {
+        $segments = segmenter::split('<ul><li>One</li><li>Two</li></ul><blockquote>Said who</blockquote>');
+
+        $this->assertSame(['text', 'text'], array_column($segments, 'kind'));
+        $this->assertSame([false, false], array_column($segments, 'line'));
+        $this->assertSame('<ul><li>One</li><li>Two</li></ul>', $segments[0]['html']);
+        $this->assertSame('One Two', $segments[0]['text']);
+        $this->assertSame(
+            '<ul><li>One</li><li>Two</li></ul><blockquote>Said who</blockquote>',
+            assembler::build($segments, [])
+        );
+    }
+
+    /**
      * Non-ASCII text survives the split without being turned into entities.
      *
      * @return void
@@ -243,6 +261,39 @@ final class restyle_test extends \advanced_testcase {
         $this->assertStringContainsString('"heading":true', $seen['user']);
         $this->assertStringNotContainsString('cell.png', $seen['user'], 'fixed pieces are not sent');
         ai_resolver::set_provider_for_testing(null);
+    }
+
+    /**
+     * A very long text is shown to the AI only up to a limit, and the lines after it stay as they are.
+     *
+     * @return void
+     */
+    public function test_plan_shows_the_ai_no_more_than_the_limit(): void {
+        $this->resetAfterTest();
+        $seen = $this->ai_answers_nothing();
+        $page = str_repeat('<p>' . str_repeat('word ', 100) . '</p>', 60);
+
+        $plan = planner::plan(segmenter::split($page), 5);
+
+        $this->assertSame([], $plan);
+        $this->assertLessThan(60, substr_count($seen->user, '"id"'), 'the lines over the limit are not sent');
+        $this->assertGreaterThan(10, substr_count($seen->user, '"id"'));
+        ai_resolver::set_provider_for_testing(null);
+    }
+
+    /**
+     * Makes the AI answer with an empty plan, and keeps what it was asked.
+     *
+     * @return \stdClass Receives system and user as the AI is called.
+     */
+    private function ai_answers_nothing(): \stdClass {
+        $seen = new \stdClass();
+        ai_resolver::set_provider_for_testing(function (string $system, string $user) use ($seen): string {
+            $seen->system = $system;
+            $seen->user = $user;
+            return '{"blocks":[]}';
+        });
+        return $seen;
     }
 
     /**

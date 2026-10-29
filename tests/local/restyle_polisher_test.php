@@ -274,6 +274,57 @@ final class restyle_polisher_test extends \advanced_testcase {
     }
 
     /**
+     * A text too long to be sent whole is refused: the page is rewritten from what the AI is shown, so a text cut at
+     * the limit would lose its end without a word.
+     *
+     * @return void
+     */
+    public function test_a_text_too_long_to_send_is_refused_and_the_ai_is_not_asked(): void {
+        $this->resetAfterTest();
+        $seen = $this->ai_answers('{"blocks":[]}');
+        $page = str_repeat('<p>' . str_repeat('word ', 100) . '</p>', 60);
+
+        try {
+            polisher::polish(segmenter::split($page), 5);
+            $this->fail('A text over the limit must be refused.');
+        } catch (\moodle_exception $e) {
+            $this->assertSame('restyle_polish_toolong', $e->errorcode);
+        }
+        $this->assertObjectNotHasProperty('system', $seen);
+        ai_resolver::set_provider_for_testing(null);
+    }
+
+    /**
+     * Blocks the AI wrote with no text, or with text that is not text, are left out and nothing breaks.
+     *
+     * @return void
+     */
+    public function test_empty_and_malformed_blocks_are_left_out(): void {
+        $this->resetAfterTest();
+        $this->ai_answers(json_encode(['blocks' => [
+            ['type' => 'heading', 'text' => '   '],
+            ['type' => 'paragraph', 'html' => ['not', 'text']],
+            ['type' => 'list', 'items' => [['x'], '']],
+            ['type' => 'accordion', 'title' => '', 'blocks' => [
+                ['type' => 'paragraph', 'html' => 'Cells are the unit of life.'],
+            ]],
+            ['type' => 'accordion', 'title' => 'Empty', 'blocks' => []],
+            ['type' => 'callout', 'html' => ''],
+            'not a block',
+            ['type' => 'paragraph', 'html' => 'Visit this page to learn more. The nucleus keeps the DNA in 23 pairs.'],
+            ['type' => 'keep', 'id' => 3],
+        ]]));
+
+        $html = $this->polish();
+
+        $this->assertSame(0, substr_count($html, 'data-slms-block-type="stylizedHeading"'));
+        $this->assertSame(0, substr_count($html, 'data-slms-block-type="accordion"'));
+        $this->assertStringContainsString('<p>Cells are the unit of life.</p>', $html, 'an untitled accordion keeps its text');
+        $this->assertStringContainsString('<p>Visit this page to learn more.', $html);
+        ai_resolver::set_provider_for_testing(null);
+    }
+
+    /**
      * A page with nothing but a picture has nothing to polish, and the AI is not asked.
      *
      * @return void

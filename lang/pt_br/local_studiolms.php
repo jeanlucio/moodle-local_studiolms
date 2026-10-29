@@ -192,6 +192,7 @@ $string['restyle_polish'] = 'Reorganizar e polir o texto';
 $string['restyle_polish_help'] = 'A IA pode reescrever, encurtar e dividir o seu texto e tirar repetições, mas não deve acrescentar fatos. O original é mantido e a cópia fica oculta, então revise antes de publicar.';
 $string['restyle_polish_length'] = 'O texto polido ficou com um tamanho muito diferente do original, então nada foi copiado. Tente de novo ou estilize sem polir.';
 $string['restyle_polish_numbers'] = 'A IA escreveu um número que não está no seu texto, então nada foi copiado. Tente de novo ou estilize sem polir.';
+$string['restyle_polish_toolong'] = 'Este texto é longo demais para ser polido de uma vez, então nada foi copiado. Estilize sem polir ou divida a página antes.';
 $string['restyle_view_copy'] = 'Ver a cópia';
 $string['restyle_working'] = 'Planejando os blocos…';
 $string['rich_assign_criteria'] = 'Critérios de avaliação';

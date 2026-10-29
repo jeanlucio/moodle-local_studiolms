@@ -192,6 +192,7 @@ $string['restyle_polish'] = 'Reorganise and polish the text';
 $string['restyle_polish_help'] = 'The AI may rewrite, shorten and split your text, and remove repetition, but it must not add facts. Your original is kept untouched and the copy is hidden, so review it before you publish it.';
 $string['restyle_polish_length'] = 'The polished text came out too different in length from the original, so nothing was copied. Try again, or restyle without polishing.';
 $string['restyle_polish_numbers'] = 'The AI wrote a number that is not in your text, so nothing was copied. Try again, or restyle without polishing.';
+$string['restyle_polish_toolong'] = 'This text is too long to be polished at once, so nothing was copied. Restyle it without polishing, or split the page first.';
 $string['restyle_view_copy'] = 'View the copy';
 $string['restyle_working'] = 'Planning the blocks…';
 $string['rich_assign_criteria'] = 'Evaluation criteria';

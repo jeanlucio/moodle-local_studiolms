@@ -330,6 +330,26 @@ final class restyle_service_test extends \advanced_testcase {
     }
 
     /**
+     * A module the site has turned off cannot be restyled, even for a teacher who holds every capability.
+     *
+     * @return void
+     */
+    public function test_a_module_the_site_has_turned_off_is_refused(): void {
+        $this->resetAfterTest();
+        $this->ai_answers_a_callout();
+        [, $page, $teacher] = $this->course_with_page();
+        $this->setUser($teacher);
+        \core\plugininfo\mod::enable_plugin('page', 0);
+
+        $this->expectException(\moodle_exception::class);
+        try {
+            service::restyle($page->cmid);
+        } finally {
+            ai_resolver::set_provider_for_testing(null);
+        }
+    }
+
+    /**
      * The adapter reads HTML only, and a write raises the revision of the page so browsers fetch the new content.
      *
      * @return void
