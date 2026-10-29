@@ -70,7 +70,7 @@ const handleSubmit = async form => {
     const defaultLabel = btnLabel.textContent;
     spinner.classList.remove('d-none');
     submitBtn.setAttribute('disabled', 'disabled');
-    btnLabel.textContent = await getString('generating', 'local_studiolms');
+    btnLabel.textContent = await getString('generating_activity', 'local_studiolms');
 
     try {
         const result = await fetchMany([{

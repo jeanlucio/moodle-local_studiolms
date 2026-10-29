@@ -145,7 +145,7 @@ const handlePlan = async form => {
     const defaultLabel = btnLabel.textContent;
     spinner.classList.remove('d-none');
     submitBtn.setAttribute('disabled', 'disabled');
-    btnLabel.textContent = await getString('generating', 'local_studiolms');
+    btnLabel.textContent = await getString('planning_section', 'local_studiolms');
 
     try {
         const result = await fetchMany([{
@@ -289,7 +289,7 @@ const handleGenerate = async wrapper => {
     const defaultLabel = btnLabel.textContent;
     spinner.classList.remove('d-none');
     generateBtn.setAttribute('disabled', 'disabled');
-    btnLabel.textContent = await getString('generating', 'local_studiolms');
+    btnLabel.textContent = await getString('generating_section', 'local_studiolms');
 
     try {
         const result = await fetchMany([{

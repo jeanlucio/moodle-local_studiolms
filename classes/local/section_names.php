@@ -43,16 +43,23 @@ class section_names {
     }
 
     /**
-     * Returns the name of a section record, or its position when it has no name.
+     * Returns the name of a section record, as the course page calls it.
+     *
+     * A section with no name of its own is "General" for section 0 and "Topic 1" for a topic (or the dates of a week):
+     * the name the course format gives it, so the wizard and the course page say the same thing.
      *
      * @param \stdClass $section The record of course_sections: name and section.
      * @param \context $context The context of the course.
      * @return string
      */
     public static function of_record(\stdClass $section, \context $context): string {
-        if (trim((string) $section->name) === '') {
-            return get_string('section_number', 'local_studiolms', (int) $section->section);
+        if (trim((string) $section->name) !== '') {
+            return self::from_formatted(format_string($section->name, true, ['context' => $context]));
         }
-        return self::from_formatted(format_string($section->name, true, ['context' => $context]));
+        $info = get_fast_modinfo($context->instanceid)->get_section_info((int) $section->section);
+        if ($info !== null) {
+            return self::from_formatted((string) get_section_name($context->instanceid, $info));
+        }
+        return get_string('section_number', 'local_studiolms', (int) $section->section);
     }
 }

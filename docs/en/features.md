@@ -2,7 +2,7 @@
 
 * 🪄 **In-course AI wizard:** open the course and click **StudioLMS** in the course navigation. The wizard runs in the course context, so it never asks for a category or a course name: the course already exists.
 * 🎚️ **Three levels of generation**, chosen on the landing:
-  * **Single activity:** one activity of any of the six types, in a section you pick (runs while you wait).
+  * **Activity or resource:** one activity or resource of any of the six types (page, label, quiz, forum, assignment or glossary), in a section you pick (runs while you wait).
   * **Section:** the AI plans the activities of one existing (or new) section from reference material, you review the plan, and the section is built in the background.
   * **Full course:** outline, review, then generation in the background with live progress.
 * 🧭 **Two modes:** **Standard** (pedagogical structure) and **Gamified** (adds PlayerHUD; offered only when `block_playerhud` is installed).

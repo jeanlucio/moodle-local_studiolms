@@ -157,7 +157,7 @@ final class plan_section_test extends \advanced_testcase {
         $this->assertDebuggingCalledCount(3);
         $this->assertCount(1, $result['activities']);
         $this->assertSame('page', $result['activities'][0]['type']);
-        $this->assertSame(get_string('section_number', 'local_studiolms', 1), $result['activities'][0]['title']);
+        $this->assertSame(get_section_name($course, 1), $result['activities'][0]['title']);
     }
 
     /**

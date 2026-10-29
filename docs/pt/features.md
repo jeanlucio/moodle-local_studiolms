@@ -2,7 +2,7 @@
 
 * 🪄 **Assistente de IA dentro do curso:** abra o curso e clique em **StudioLMS** na navegação do curso. O assistente roda no contexto do curso e por isso nunca pede categoria ou nome de curso: o curso já existe.
 * 🎚️ **Três níveis de geração**, escolhidos na tela inicial:
-  * **Atividade única:** uma atividade de qualquer um dos seis tipos, na seção que você escolher (roda enquanto você espera).
+  * **Atividade ou recurso:** uma atividade ou recurso de qualquer um dos seis tipos (página, rótulo, questionário, fórum, tarefa ou glossário), na seção que você escolher (roda enquanto você espera).
   * **Seção:** a IA planeja as atividades de uma seção existente (ou nova) a partir de material de referência, você revisa o plano, e a seção é montada em segundo plano.
   * **Curso completo:** roteiro, revisão e geração em segundo plano com progresso ao vivo.
 * 🧭 **Dois modos:** **Padrão** (estrutura pedagógica) e **Gamificado** (acrescenta o PlayerHUD; só aparece quando o `block_playerhud` está instalado).

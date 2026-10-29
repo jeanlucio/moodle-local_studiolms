@@ -57,13 +57,23 @@ final class section_names_test extends \advanced_testcase {
                 "formatstringstriptags $striptags"
             );
         }
+        // A section with no name is called as the course page calls it: General for the first, Topic N for the rest.
         $this->assertSame(
-            get_string('section_number', 'local_studiolms', 3),
-            section_names::of_record((object) ['name' => '  ', 'section' => 3], $context)
+            get_string('section0name', 'format_topics'),
+            section_names::of_record((object) ['name' => '', 'section' => 0], $context)
         );
         $this->assertSame(
-            get_string('section_number', 'local_studiolms', 4),
-            section_names::of_record((object) ['name' => null, 'section' => 4], $context)
+            get_section_name($course, 1),
+            section_names::of_record((object) ['name' => '  ', 'section' => 1], $context)
+        );
+        $this->assertSame(
+            get_section_name($course, 2),
+            section_names::of_record((object) ['name' => null, 'section' => 2], $context)
+        );
+        // A section that does not exist has only its position to go by.
+        $this->assertSame(
+            get_string('section_number', 'local_studiolms', 99),
+            section_names::of_record((object) ['name' => '', 'section' => 99], $context)
         );
     }
 }

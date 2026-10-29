@@ -1,7 +1,7 @@
 # 📖 Usage
 
 1. Open the course and click **StudioLMS** in the course navigation (it is also a prominent button when the course is empty).
-2. On the landing, choose **Single Activity**, **Section**, **Full Course** or **Restyle existing**.
+2. On the landing, choose **Activity or resource**, **Section**, **Full Course** or **Restyle existing**.
 
 ## Full course
 
@@ -14,8 +14,8 @@
 3. Pick the target section (or a new one), give the theme and reference material, and click **Plan section**.
 4. Review the activities the AI planned, change what you want, and click **Generate section**. Optionally tick **Overwrite section**, which also asks you to confirm.
 
-## Single activity
+## Activity or resource
 
-3. Pick the section, the type and the title, and generate. When it is ready, a link to the new activity is shown.
+3. Pick the section, the type (page, label, quiz, forum, assignment or glossary) and the title, and generate. When it is ready, a link to the new activity is shown.
 
 There are **no dates** in any step: edit them in Moodle after generation, as usual.
