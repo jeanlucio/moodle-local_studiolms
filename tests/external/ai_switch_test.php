@@ -172,4 +172,42 @@ final class ai_switch_test extends \advanced_testcase {
         $this->assertSame('failed', $DB->get_field('local_studiolms_progress', 'status', ['id' => $sectionprogress]));
         $this->assertCount(0, get_fast_modinfo($course)->get_instances_of('label'));
     }
+
+    /**
+     * A switch turned off while a long run is going stops it at the next activity and nothing more is sent to the
+     * AI, instead of the run going on to the end with the text of the course.
+     *
+     * @return void
+     */
+    public function test_a_switch_turned_off_during_the_run_stops_it(): void {
+        global $DB;
+
+        [$course, $teacher, $outlineid, $progressid] = $this->seed();
+        $DB->set_field('local_studiolms_outline', 'outlinejson', json_encode(['objectives' => [], 'sections' => [
+            ['title' => 'Basics', 'activities' => [
+                ['type' => 'page', 'title' => 'First'],
+                ['type' => 'page', 'title' => 'Second'],
+                ['type' => 'forum', 'title' => 'Third'],
+            ]],
+        ]]), ['id' => $outlineid]);
+        $this->setUser($teacher);
+
+        $calls = 0;
+        ai_resolver::set_provider_for_testing(function () use (&$calls): string {
+            $calls++;
+            // The manager turns the tools off while the first call is being answered.
+            $this->switch_off();
+            return '{"content": "<p>x</p>"}';
+        });
+
+        $task = new generate_course_task();
+        $task->set_custom_data(['progressid' => $progressid, 'wipe' => 0]);
+        $task->execute();
+
+        $progress = $DB->get_record('local_studiolms_progress', ['id' => $progressid], '*', MUST_EXIST);
+        $this->assertSame('failed', $progress->status);
+        $this->assertSame(get_string('aidisabledincourse', 'local_studiolms'), $progress->errormsg);
+        $this->assertSame(1, $calls);
+        $this->assertCount(0, get_fast_modinfo($course)->get_instances_of('page'));
+    }
 }

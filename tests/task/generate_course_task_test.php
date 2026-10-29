@@ -636,4 +636,44 @@ final class generate_course_task_test extends \advanced_testcase {
         $this->assertSame('failed', $this->progress($progressid)->status);
         $this->assertArrayHasKey($label->cmid, get_fast_modinfo($course)->get_cms(), 'nothing was wiped');
     }
+
+    /**
+     * The name of the course in the plan page, in the warning and in the prompt is the name the course page shows:
+     * with the multilang filter on, the one in the language of the user and not the spans of the stored value.
+     *
+     * @return void
+     */
+    public function test_the_course_name_reaches_the_plan_page_and_the_prompt_as_plain_text(): void {
+        global $DB, $USER;
+        $this->setAdminUser();
+        filter_set_global_state('multilang', TEXTFILTER_ON);
+        set_config('stringfilters', 'multilang');
+        set_config('filterall', 1);
+
+        [$course, $progressid] = $this->seed((int) $USER->id, [
+            'objectives' => ['Understand loops'],
+            'sections' => [['title' => 'Basics', 'activities' => [['type' => 'page', 'title' => 'Intro']]]],
+        ]);
+        $DB->set_field('course', 'fullname', '<span lang="en" class="multilang">Biology</span>'
+            . '<span lang="pt_br" class="multilang">Biologia</span>', ['id' => $course->id]);
+        $prompts = [];
+        ai_resolver::set_provider_for_testing(static function (string $s, string $u) use (&$prompts): string {
+            $prompts[] = $u;
+            return '{"content": "<p>Generated body</p>"}';
+        });
+
+        $this->run_task($progressid);
+
+        $plan = $DB->get_record_select('page', 'course = :c AND name = :n', [
+            'c' => $course->id, 'n' => get_string('courseplantitle', 'local_studiolms'),
+        ], '*', MUST_EXIST);
+        $this->assertStringContainsString('Biology', $plan->content);
+        $this->assertStringNotContainsString('multilang', $plan->content);
+        $this->assertStringNotContainsString('Biologia', $plan->content);
+        $titles = array_filter($prompts, static fn(string $u): bool => str_contains($u, 'Course title:'));
+        $this->assertNotEmpty($titles);
+        foreach ($titles as $prompt) {
+            $this->assertStringContainsString('Course title: Biology', $prompt);
+        }
+    }
 }

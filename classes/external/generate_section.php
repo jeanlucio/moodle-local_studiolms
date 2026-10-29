@@ -116,10 +116,13 @@ class generate_section extends external_api {
         self::validate_context($context);
         require_capability('local/studiolms:generate', $context);
         ai_resolver::require_enabled_in_context($context);
+        // The list is cleaned before anything else uses it: the task builds the activities from this list and nothing
+        // else, and it is the cleaned one that gets queued.
+        $activities = content_access::clean_activities(json_decode($params['activitiesjson'], true));
         // Also covers wipe: deleting activities is governed by the same manageactivities capability.
         content_access::require_can_create(
             $context,
-            content_access::types_of(json_decode($params['activitiesjson'], true)),
+            content_access::types_of($activities),
             $params['sectionnum'] < 0
         );
 
@@ -135,11 +138,6 @@ class generate_section extends external_api {
                 'id',
                 MUST_EXIST
             );
-        }
-
-        $activities = json_decode($params['activitiesjson'], true);
-        if (!is_array($activities) || empty($activities)) {
-            throw new \moodle_exception('error_noactivities', 'local_studiolms');
         }
 
         $now = time();
@@ -165,7 +163,7 @@ class generate_section extends external_api {
             'bloom'          => $params['bloom'],
             'reference'      => $params['reference'],
             'wipe'           => $params['wipe'],
-            'activitiesjson' => $params['activitiesjson'],
+            'activitiesjson' => json_encode($activities),
         ]);
         $task->set_userid($USER->id);
         \core\task\manager::queue_adhoc_task($task);

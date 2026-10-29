@@ -35,6 +35,7 @@ use local_studiolms\local\gamification_setup;
 use local_studiolms\local\glossary_builder;
 use local_studiolms\local\page_builder;
 use local_studiolms\local\quiz_builder;
+use local_studiolms\local\section_names;
 use stdClass;
 
 /**
@@ -207,6 +208,11 @@ class generate_course_task extends \core\task\adhoc_task {
         string $theme,
         array $sectionactivities = []
     ): void {
+        // Checked at every activity: a run takes minutes, and a course whose AI tools are turned off meanwhile must
+        // not go on being sent to the AI. The builders below degrade on a failure, so only here does it stop the run.
+        $context = context_course::instance($this->course->id);
+        ai_resolver::require_enabled_in_context($context);
+
         // Unknown types are built as pages, so they are reported as pages too (there is no string for them).
         $type = content_access::modules_for([$activity['type']])[0];
         $title = $activity['title'];
@@ -220,10 +226,13 @@ class generate_course_task extends \core\task\adhoc_task {
                 if (!$this->firstpagecreated) {
                     $this->firstpagecreated = true;
                     $plandegraded = false;
+                    $coursename = section_names::from_formatted(
+                        format_string($this->course->fullname, true, ['context' => $context])
+                    );
                     $planhtml = course_plan::render(
-                        context_course::instance($this->course->id),
+                        $context,
                         $theme,
-                        $this->course->fullname,
+                        $coursename,
                         $this->outlinesections,
                         $this->objectives,
                         $plandegraded
@@ -239,12 +248,12 @@ class generate_course_task extends \core\task\adhoc_task {
                         'degraded' => $plandegraded,
                     ];
                     if ($plandegraded) {
-                        $this->warnings[] = $plantitle . ': ' . $this->course->fullname;
+                        $this->warnings[] = $plantitle . ': ' . $coursename;
                     }
                     $this->advance(get_string('progress_activity', 'local_studiolms', $plantitle));
                 }
                 $html = page_builder::render(
-                    context_course::instance($this->course->id),
+                    $context,
                     $theme,
                     $sectiontitle,
                     $title,
@@ -266,6 +275,7 @@ class generate_course_task extends \core\task\adhoc_task {
                 break;
             case 'forum':
                 $intro = activity_content::forum_intro(
+                    $context,
                     $theme,
                     $sectiontitle,
                     $title,
@@ -277,6 +287,7 @@ class generate_course_task extends \core\task\adhoc_task {
                 break;
             case 'assign':
                 $intro = activity_content::assign_intro(
+                    $context,
                     $theme,
                     $sectiontitle,
                     $title,

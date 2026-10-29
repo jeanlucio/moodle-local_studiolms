@@ -125,4 +125,32 @@ class content_access {
         }
         return $types;
     }
+
+    /**
+     * Cleans the activities a teacher approved, as the activity form cleans what it receives.
+     *
+     * The title becomes the name of the activity, so it is plain text, and the type is a word; every item must be an
+     * object with both, since a list with one broken item is refused as a whole, not built up to the item that breaks.
+     *
+     * @param mixed $decoded The decoded JSON of the list of {type, title}.
+     * @return array[] The list of ['type' => string, 'title' => string], with nothing else of the items.
+     * @throws \moodle_exception When the list is empty or any item is not well formed.
+     */
+    public static function clean_activities(mixed $decoded): array {
+        if (!is_array($decoded) || empty($decoded)) {
+            throw new \moodle_exception('error_noactivities', 'local_studiolms');
+        }
+        $clean = [];
+        foreach ($decoded as $activity) {
+            $type = is_array($activity) && is_scalar($activity['type'] ?? null)
+                ? clean_param((string) $activity['type'], PARAM_ALPHA) : '';
+            $title = is_array($activity) && is_scalar($activity['title'] ?? null)
+                ? trim(clean_param((string) $activity['title'], PARAM_TEXT)) : '';
+            if ($type === '' || $title === '') {
+                throw new \moodle_exception('error_noactivities', 'local_studiolms');
+            }
+            $clean[] = ['type' => $type, 'title' => $title];
+        }
+        return $clean;
+    }
 }

@@ -39,11 +39,11 @@ class ai_resolver {
     /**
      * Injects a deterministic provider for tests, bypassing the real AI chain.
      *
-     * The callable receives the system and user prompts and returns the generated
-     * string. Only honoured under PHPUnit or Behat; a no-op (and ignored) otherwise.
+     * The callable receives the system and user prompts and the context of the call (null for the whole site), and
+     * returns the generated string. Only honoured under PHPUnit or Behat; a no-op (and ignored) otherwise.
      * Pass null to clear the override.
      *
-     * @param callable|null $provider fn(string $system, string $user): string, or null.
+     * @param callable|null $provider fn(string $system, string $user, ?\context $context): string, or null.
      * @return void
      */
     public static function set_provider_for_testing(?callable $provider): void {
@@ -154,17 +154,17 @@ class ai_resolver {
      * @throws \moodle_exception When no AI provider is available.
      */
     public static function generate_text(string $systemprompt, string $userprompt, ?\context $context = null): string {
+        // The switch of the course holds for every source, the AI Hub and the test provider included.
+        if ($context !== null) {
+            self::require_enabled_in_context($context);
+        }
+
         // Test seam: a deterministic provider injected by PHPUnit/Behat wins.
         if (
             self::$testingprovider !== null
             && (defined('PHPUNIT_TEST') || defined('BEHAT_SITE_RUNNING'))
         ) {
-            return (string) (self::$testingprovider)($systemprompt, $userprompt);
-        }
-
-        // The switch of the course holds for every source, the AI Hub included.
-        if ($context !== null) {
-            self::require_enabled_in_context($context);
+            return (string) (self::$testingprovider)($systemprompt, $userprompt, $context);
         }
 
         // Behat-only canned answer: a Behat web request cannot see the provider a test injects, so a scenario stores

@@ -46,7 +46,7 @@ class glossary_builder {
         $intro = activity_content::glossary_intro($name);
         $result = course_builder::add_glossary($course, $sectionnum, $name, $intro);
 
-        $terms = self::generate_terms($theme);
+        $terms = self::generate_terms($theme, \context_course::instance($course->id));
         if (empty($terms)) {
             return $result;
         }
@@ -99,9 +99,10 @@ class glossary_builder {
      * Generates key glossary terms for the given theme.
      *
      * @param string $theme The course theme.
+     * @param \context $context The context of the course the glossary is in.
      * @return array List of ['term' => string, 'definition' => string].
      */
-    private static function generate_terms(string $theme): array {
+    private static function generate_terms(string $theme, \context $context): array {
         $language = current_language();
         $system = 'You are an instructional designer creating a course glossary. '
             . 'Return ONLY a valid JSON object, no markdown or commentary, shaped like '
@@ -111,7 +112,7 @@ class glossary_builder {
         $user = "Course theme or focus: {$theme}";
 
         try {
-            $decoded = ai_json::decode(ai_resolver::generate_text($system, $user));
+            $decoded = ai_json::decode(ai_resolver::generate_text($system, $user, $context));
         } catch (\Throwable $e) {
             return [];
         }

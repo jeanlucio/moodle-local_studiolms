@@ -58,12 +58,12 @@ class quiz_builder {
         require_once($CFG->dirroot . '/question/engine/lib.php');
         require_once($CFG->dirroot . '/mod/quiz/locallib.php');
 
-        $questions = self::generate_questions($theme, $quiztitle, $count);
+        $context = context_module::instance($cmid);
+        $questions = self::generate_questions($theme, $quiztitle, $count, $context);
         if (empty($questions)) {
             return 0;
         }
 
-        $context = context_module::instance($cmid);
         $category = self::ensure_question_category($context);
         $quiz = $DB->get_record('quiz', ['id' => $quizinstanceid], '*', MUST_EXIST);
 
@@ -246,9 +246,15 @@ class quiz_builder {
      * @param string $theme The course theme.
      * @param string $quiztitle The quiz title.
      * @param int $count Number of questions to request.
+     * @param context_module $context The context of the quiz the questions are for.
      * @return array List of question definitions.
      */
-    private static function generate_questions(string $theme, string $quiztitle, int $count): array {
+    private static function generate_questions(
+        string $theme,
+        string $quiztitle,
+        int $count,
+        context_module $context
+    ): array {
         $language = current_language();
         $system = 'You are an assessment designer creating quiz questions. '
             . 'Return ONLY a valid JSON object, no markdown or commentary, shaped like '
@@ -261,7 +267,7 @@ class quiz_builder {
             . "Write everything in the language identified by the code: {$language}.";
         $user = "Course theme: {$theme}\nQuiz title: {$quiztitle}\nProduce exactly {$count} questions.";
 
-        $decoded = ai_json::decode(ai_resolver::generate_text($system, $user));
+        $decoded = ai_json::decode(ai_resolver::generate_text($system, $user, $context));
         if ($decoded === null || empty($decoded['questions']) || !is_array($decoded['questions'])) {
             return [];
         }

@@ -47,17 +47,18 @@ class outline_generator {
      * Generates a course outline from the wizard briefing.
      *
      * @param array $briefing Briefing data: theme, reference, bloom, structure, mode, profile.
+     * @param \context $context The context of the course the outline is for.
      * @return array Normalised outline with 'objectives' and 'sections' keys.
      * @throws moodle_exception If the AI never returns a valid outline.
      */
-    public static function generate(array $briefing): array {
+    public static function generate(array $briefing, \context $context): array {
         $systemprompt = self::build_system_prompt($briefing);
         $gaps = [];
         $usable = null;
 
         for ($attempt = 1; $attempt <= self::MAX_ATTEMPTS; $attempt++) {
             $userprompt = self::build_user_prompt($briefing, $attempt > 1, $gaps);
-            $raw = ai_resolver::generate_text($systemprompt, $userprompt);
+            $raw = ai_resolver::generate_text($systemprompt, $userprompt, $context);
             $decoded = self::decode_json($raw);
 
             if ($decoded !== null) {

@@ -205,6 +205,56 @@ final class generate_section_test extends \advanced_testcase {
     }
 
     /**
+     * An item that is not an object, or has no title or no type, is refused before anything is stored or queued,
+     * with a message the teacher can read and not the TypeError the task would end with.
+     */
+    public function test_rejects_activities_that_are_not_well_formed(): void {
+        global $DB;
+
+        $course = $this->getDataGenerator()->create_course(['numsections' => 1]);
+        $this->setUser($this->getDataGenerator()->create_and_enrol($course, 'editingteacher'));
+
+        $lists = [
+            [['type' => 'page', 'title' => 'Lesson 1'], ['type' => 'forum']],
+            [['type' => 'page', 'title' => 'Lesson 1'], 'forum'],
+            [['type' => 'page', 'title' => '   ']],
+            [['title' => 'No type']],
+            [['type' => 'page', 'title' => ['nested']]],
+        ];
+        foreach ($lists as $list) {
+            $json = json_encode($list);
+            try {
+                generate_section::execute($course->id, 1, 'Theme', $json);
+                $this->fail('Rejected input expected for ' . $json);
+            } catch (\moodle_exception $e) {
+                $this->assertSame('error_noactivities', $e->errorcode, $json);
+            }
+        }
+        $this->assertSame(0, $DB->count_records('local_studiolms_progress'));
+        $this->assertSame([], \core\task\manager::get_adhoc_tasks(generate_section_task::class));
+    }
+
+    /**
+     * The title is cleaned like the name field of the activity form, so the task never writes markup the form
+     * would refuse, and the task gets the cleaned list.
+     */
+    public function test_the_queued_task_gets_cleaned_titles_and_types(): void {
+        $course = $this->getDataGenerator()->create_course(['numsections' => 1]);
+        $this->setUser($this->getDataGenerator()->create_and_enrol($course, 'editingteacher'));
+
+        generate_section::execute(
+            $course->id,
+            1,
+            'Theme',
+            json_encode([['type' => 'page1', 'title' => '<b>Lesson</b> 1', 'extra' => 'dropped']])
+        );
+
+        $tasks = \core\task\manager::get_adhoc_tasks(generate_section_task::class);
+        $data = reset($tasks)->get_custom_data();
+        $this->assertSame([['type' => 'page', 'title' => 'Lesson 1']], json_decode($data->activitiesjson, true));
+    }
+
+    /**
      * Regression guard for the section scope: a section that exists only in another course is refused.
      */
     public function test_section_of_another_course_is_refused(): void {

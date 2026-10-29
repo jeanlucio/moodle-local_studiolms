@@ -438,6 +438,25 @@ final class generate_section_task_test extends \advanced_testcase {
     }
 
     /**
+     * A queued list that is not well formed (it was queued before the web service checked it) fails the run with
+     * a message for the teacher, and does not wipe the section first.
+     */
+    public function test_a_list_that_is_not_well_formed_fails_before_anything_is_touched(): void {
+        global $DB, $USER;
+        $this->setAdminUser();
+        $course = $this->getDataGenerator()->create_course(['numsections' => 1]);
+        $this->getDataGenerator()->create_module('label', ['course' => $course->id, 'section' => 1]);
+        $progressid = $this->seed_progress((int) $USER->id, $course->id);
+
+        $this->run_task($progressid, $course->id, 1, [['type' => 'page', 'title' => 'Ok'], ['type' => 'forum']], true);
+
+        $progress = $this->progress($progressid);
+        $this->assertSame('failed', $progress->status);
+        $this->assertSame(get_string('error_populate', 'local_studiolms'), $progress->errormsg);
+        $this->assertSame(1, $DB->count_records('label', ['course' => $course->id]));
+    }
+
+    /**
      * Regression test: a long activity title used to overflow the varchar(255) progress message, so the update
      * failed, the failure could not be recorded either, and the run crashed while still "running".
      */

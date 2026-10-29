@@ -173,7 +173,7 @@ final class outline_generator_test extends \advanced_testcase {
 
         $outline = outline_generator::generate([
             'theme' => 'Botany', 'reference' => 'Chapter three', 'bloom' => 'apply', 'structure' => 'abc',
-        ]);
+        ], \context_system::instance());
 
         $this->assertCount(1, $prompts);
         [$system, $user] = $prompts[0];
@@ -198,7 +198,10 @@ final class outline_generator_test extends \advanced_testcase {
             return json_encode(['sections' => [['title' => 'S1', 'activities' => [['type' => 'page', 'title' => 'P']]]]]);
         });
 
-        outline_generator::generate(['theme' => 'Botany', 'bloom' => 'general', 'structure' => 'free']);
+        outline_generator::generate(
+            ['theme' => 'Botany', 'bloom' => 'general', 'structure' => 'free'],
+            \context_system::instance()
+        );
 
         $this->assertStringNotContainsString('Bloom', $system);
         $this->assertStringNotContainsString('ABC Learning Design', $system);
@@ -219,7 +222,7 @@ final class outline_generator_test extends \advanced_testcase {
             return json_encode(['sections' => [['title' => 'S1', 'activities' => [['type' => 'page', 'title' => 'P']]]]]);
         });
 
-        $outline = outline_generator::generate(['theme' => 'Botany']);
+        $outline = outline_generator::generate(['theme' => 'Botany'], \context_system::instance());
 
         $this->assertCount(2, $users);
         $this->assertStringNotContainsString('Return only valid JSON', $users[0]);
@@ -259,7 +262,7 @@ final class outline_generator_test extends \advanced_testcase {
             }
         );
 
-        $outline = outline_generator::generate(['theme' => 'Botany']);
+        $outline = outline_generator::generate(['theme' => 'Botany'], \context_system::instance());
 
         $this->assertCount(2, $users);
         $this->assertStringContainsString('Obj C', $users[1]);
@@ -276,7 +279,7 @@ final class outline_generator_test extends \advanced_testcase {
     public function test_generate_drops_an_objective_that_stays_unserved(): void {
         ai_resolver::set_provider_for_testing(fn(string $s, string $u): string => $this->answer_serving([[1], [2]]));
 
-        $outline = outline_generator::generate(['theme' => 'Botany']);
+        $outline = outline_generator::generate(['theme' => 'Botany'], \context_system::instance());
 
         $this->assertSame(['Obj A', 'Obj B'], $outline['objectives']);
     }
@@ -292,7 +295,7 @@ final class outline_generator_test extends \advanced_testcase {
             'sections' => [['title' => 'S1', 'activities' => [['type' => 'page', 'title' => 'P']]]],
         ]));
 
-        $outline = outline_generator::generate(['theme' => 'Botany']);
+        $outline = outline_generator::generate(['theme' => 'Botany'], \context_system::instance());
 
         $this->assertSame(['Obj A', 'Obj B'], $outline['objectives']);
     }
@@ -309,7 +312,7 @@ final class outline_generator_test extends \advanced_testcase {
             return '{}';
         });
         try {
-            outline_generator::generate(['theme' => 'Botany']);
+            outline_generator::generate(['theme' => 'Botany'], \context_system::instance());
         } catch (\moodle_exception $e) {
             unset($e);
         }
@@ -330,7 +333,7 @@ final class outline_generator_test extends \advanced_testcase {
         });
 
         try {
-            outline_generator::generate(['theme' => 'Botany']);
+            outline_generator::generate(['theme' => 'Botany'], \context_system::instance());
             $this->fail('An outline without sections must not be accepted.');
         } catch (\moodle_exception $e) {
             $this->assertSame('invalidairesponse', $e->errorcode);

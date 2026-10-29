@@ -109,7 +109,7 @@ class generate_outline extends external_api {
             'profile' => $profile,
         ];
 
-        $outline = outline_generator::generate($briefing);
+        $outline = outline_generator::generate($briefing, $context);
 
         $now = time();
         $record = (object) [

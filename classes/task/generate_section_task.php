@@ -107,8 +107,10 @@ class generate_section_task extends \core\task\adhoc_task {
         $wipe            = !empty($data->wipe);
         $theme           = (string) $data->theme;
 
-        $activities = json_decode($data->activitiesjson, true);
-        if (!is_array($activities) || empty($activities)) {
+        // Cleaned again, not just in the web service: a task queued before the check was there is still in the queue.
+        try {
+            $activities = content_access::clean_activities(json_decode($data->activitiesjson, true));
+        } catch (\moodle_exception $e) {
             $this->fail(get_string('error_populate', 'local_studiolms'));
             return;
         }
@@ -190,6 +192,11 @@ class generate_section_task extends \core\task\adhoc_task {
         string $theme,
         array $sectionactivities = []
     ): void {
+        // Checked at every activity: a run takes minutes, and a course whose AI tools are turned off meanwhile must
+        // not go on being sent to the AI. The builders below degrade on a failure, so only here does it stop the run.
+        $context = context_course::instance($this->course->id);
+        ai_resolver::require_enabled_in_context($context);
+
         // Unknown types are built as pages, so they are reported as pages too (there is no string for them).
         $type        = content_access::modules_for([$activity['type']])[0];
         $title       = $activity['title'];
@@ -201,7 +208,7 @@ class generate_section_task extends \core\task\adhoc_task {
             default:
             case 'page':
                 $html = page_builder::render(
-                    context_course::instance($this->course->id),
+                    $context,
                     $theme,
                     $sectionname,
                     $title,
@@ -224,12 +231,28 @@ class generate_section_task extends \core\task\adhoc_task {
                 break;
 
             case 'forum':
-                $intro  = activity_content::forum_intro($theme, $sectionname, $title, $this->reference, $this->bloom, $degraded);
+                $intro  = activity_content::forum_intro(
+                    $context,
+                    $theme,
+                    $sectionname,
+                    $title,
+                    $this->reference,
+                    $this->bloom,
+                    $degraded
+                );
                 $result = course_builder::add_forum($this->course, $sectionnum, $title, $intro);
                 break;
 
             case 'assign':
-                $intro  = activity_content::assign_intro($theme, $sectionname, $title, $this->reference, $this->bloom, $degraded);
+                $intro  = activity_content::assign_intro(
+                    $context,
+                    $theme,
+                    $sectionname,
+                    $title,
+                    $this->reference,
+                    $this->bloom,
+                    $degraded
+                );
                 $result = course_builder::add_assign($this->course, $sectionnum, $title, $intro);
                 break;
 

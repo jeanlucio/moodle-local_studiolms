@@ -67,7 +67,7 @@ final class activity_content_test extends \advanced_testcase {
     public function test_forum_intro_is_made_of_the_recipe_blocks(): void {
         $degraded = false;
 
-        $html = activity_content::forum_intro('Biology', 'Cells', 'Discuss', '', 'general', $degraded);
+        $html = activity_content::forum_intro(\context_system::instance(), 'Biology', 'Cells', 'Discuss', '', 'general', $degraded);
 
         $this->assertFalse($degraded);
         $this->assertStringContainsString('<h2 class="studiolms-heading-h2"', $html);
@@ -88,7 +88,7 @@ final class activity_content_test extends \advanced_testcase {
     public function test_assign_intro_holds_deliverables_steps_and_criteria(): void {
         $degraded = false;
 
-        $html = activity_content::assign_intro('Biology', 'Cells', 'Essay', '', 'general', $degraded);
+        $html = activity_content::assign_intro(\context_system::instance(), 'Biology', 'Cells', 'Essay', '', 'general', $degraded);
 
         $this->assertFalse($degraded);
         $this->assertStringContainsString('A file', $html);
@@ -113,7 +113,7 @@ final class activity_content_test extends \advanced_testcase {
         ]));
         $degraded = false;
 
-        $html = activity_content::forum_intro('T', 'S', 'F', '', 'general', $degraded);
+        $html = activity_content::forum_intro(\context_system::instance(), 'T', 'S', 'F', '', 'general', $degraded);
 
         $this->assertStringNotContainsString('<script', $html);
         $this->assertStringNotContainsString('<img', $html);
@@ -131,7 +131,7 @@ final class activity_content_test extends \advanced_testcase {
             ai_resolver::set_provider_for_testing(fn(string $system, string $user): string => $answer);
             $degraded = false;
 
-            $html = activity_content::forum_intro('T', 'S', 'Discuss', '', 'general', $degraded);
+            $html = activity_content::forum_intro(\context_system::instance(), 'T', 'S', 'Discuss', '', 'general', $degraded);
 
             $this->assertTrue($degraded, $answer);
             $this->assertStringContainsString('Discuss', $html);
@@ -151,7 +151,7 @@ final class activity_content_test extends \advanced_testcase {
         });
         $degraded = false;
 
-        $html = activity_content::assign_intro('T', 'S', 'Essay', '', 'general', $degraded);
+        $html = activity_content::assign_intro(\context_system::instance(), 'T', 'S', 'Essay', '', 'general', $degraded);
 
         $this->assertDebuggingCalled();
         $this->assertTrue($degraded);
@@ -171,8 +171,8 @@ final class activity_content_test extends \advanced_testcase {
         ]));
         $degraded = false;
 
-        $forum = activity_content::forum_intro('T', 'S', 'F', '', 'general', $degraded);
-        $assign = activity_content::assign_intro('T', 'S', 'A', '', 'general', $degraded);
+        $forum = activity_content::forum_intro(\context_system::instance(), 'T', 'S', 'F', '', 'general', $degraded);
+        $assign = activity_content::assign_intro(\context_system::instance(), 'T', 'S', 'A', '', 'general', $degraded);
 
         $this->assertSame(3, substr_count($forum, 'slms-steps__item"'));
         $this->assertSame(4, substr_count($assign, 'slms-steps__item"'));
@@ -192,7 +192,15 @@ final class activity_content_test extends \advanced_testcase {
         });
         $degraded = false;
 
-        activity_content::forum_intro('Biology', 'Cells', 'Discuss', 'Read chapter 3', 'analyze', $degraded);
+        activity_content::forum_intro(
+            \context_system::instance(),
+            'Biology',
+            'Cells',
+            'Discuss',
+            'Read chapter 3',
+            'analyze',
+            $degraded
+        );
 
         $this->assertStringContainsString('Read chapter 3', $seen[1]);
         $this->assertStringContainsString('Cells', $seen[1]);
@@ -373,7 +381,7 @@ final class activity_content_test extends \advanced_testcase {
         ]));
         $degraded = false;
 
-        $html = activity_content::forum_intro('Biology', 'Cells', 'Discuss', '', 'general', $degraded);
+        $html = activity_content::forum_intro(\context_system::instance(), 'Biology', 'Cells', 'Discuss', '', 'general', $degraded);
 
         $this->assertSame(1, substr_count($html, 'slms-steps__item"'));
         $this->assertStringContainsString('Real step', $html);

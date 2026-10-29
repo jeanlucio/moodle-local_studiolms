@@ -149,12 +149,12 @@ class generate_activity extends external_api {
                 break;
 
             case 'forum':
-                $intro = activity_content::forum_intro($theme, $theme, $title, $reference, $bloom, $degraded);
+                $intro = activity_content::forum_intro($context, $theme, $theme, $title, $reference, $bloom, $degraded);
                 $result = course_builder::add_forum($course, $sectionnum, $title, $intro);
                 break;
 
             case 'assign':
-                $intro = activity_content::assign_intro($theme, $theme, $title, $reference, $bloom, $degraded);
+                $intro = activity_content::assign_intro($context, $theme, $theme, $title, $reference, $bloom, $degraded);
                 $result = course_builder::add_assign($course, $sectionnum, $title, $intro);
                 break;
 

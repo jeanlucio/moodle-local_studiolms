@@ -113,7 +113,7 @@ class plan_section extends external_api {
             $sectionname = $params['theme'];
         }
 
-        $raw = self::call_ai($sectionname, $params['theme'], $params['bloom'], $params['reference']);
+        $raw = self::call_ai($context, $sectionname, $params['theme'], $params['bloom'], $params['reference']);
 
         $activities = [];
         foreach ($raw as $item) {
@@ -133,6 +133,7 @@ class plan_section extends external_api {
      *
      * Falls back to a single page activity on any error.
      *
+     * @param \context $context The context of the course the plan is for.
      * @param string $sectionname The section display name passed to the AI.
      * @param string $theme The course theme.
      * @param string $bloom Bloom's taxonomy level.
@@ -140,6 +141,7 @@ class plan_section extends external_api {
      * @return array Array of {type, title} definitions.
      */
     private static function call_ai(
+        \context $context,
         string $sectionname,
         string $theme,
         string $bloom,
@@ -167,7 +169,7 @@ class plan_section extends external_api {
 
         for ($attempt = 1; $attempt <= $maxattempts; $attempt++) {
             try {
-                $decoded = ai_json::decode(ai_resolver::generate_text($system, $user));
+                $decoded = ai_json::decode(ai_resolver::generate_text($system, $user, $context));
                 if (!is_array($decoded) || empty($decoded)) {
                     throw new \moodle_exception('invalidairesponse', 'local_studiolms');
                 }

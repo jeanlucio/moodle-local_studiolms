@@ -231,7 +231,7 @@ class page_builder {
         array $objectives = [],
         string &$chosenpreset = ''
     ): string {
-        $plan = self::plan_page($theme, $sectiontitle, $pagetitle, $reference, $bloom, $objectives);
+        $plan = self::plan_page($context, $theme, $sectiontitle, $pagetitle, $reference, $bloom, $objectives);
         if ($plan === null) {
             return '';
         }
@@ -246,7 +246,7 @@ class page_builder {
             // A preset that cannot be used as planned (unknown, not drawable or left with placeholders) must not
             // end as an empty page: the AI is asked once more, for free blocks only.
             if (empty($plan['blocks'])) {
-                $plan = self::plan_page($theme, $sectiontitle, $pagetitle, $reference, $bloom, $objectives, true);
+                $plan = self::plan_page($context, $theme, $sectiontitle, $pagetitle, $reference, $bloom, $objectives, true);
                 if ($plan === null) {
                     return '';
                 }
@@ -271,6 +271,7 @@ class page_builder {
      *
      * Returns the decoded plan array, or null on failure.
      *
+     * @param \context $context Course context the page is generated for.
      * @param string $theme Course theme.
      * @param string $sectiontitle Section title.
      * @param string $pagetitle Page title.
@@ -281,6 +282,7 @@ class page_builder {
      * @return array|null Decoded plan, or null when AI is unavailable.
      */
     private static function plan_page(
+        \context $context,
         string $theme,
         string $sectiontitle,
         string $pagetitle,
@@ -337,7 +339,7 @@ class page_builder {
             $user .= "\n\nReference material:\n" . mb_substr($reference, 0, 3000);
         }
 
-        $decoded = ai_json::decode(ai_resolver::generate_text($system, $user));
+        $decoded = ai_json::decode(ai_resolver::generate_text($system, $user, $context));
         if ($decoded === null || empty($decoded['strategy'])) {
             return null;
         }

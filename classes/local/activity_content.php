@@ -50,6 +50,7 @@ class activity_content {
     /**
      * Builds the introduction of a forum.
      *
+     * @param \context $context The context of the course the text is written for.
      * @param string $theme The course theme.
      * @param string $sectiontitle The section title.
      * @param string $title The forum title.
@@ -59,6 +60,7 @@ class activity_content {
      * @return string The HTML of the introduction.
      */
     public static function forum_intro(
+        \context $context,
         string $theme,
         string $sectiontitle,
         string $title,
@@ -71,7 +73,7 @@ class activity_content {
             . '"tip":"one short sentence of advice for a good post"}';
         $instructions = 'You write the introduction of a course discussion forum. Give exactly 3 steps that tell the '
             . 'students how to take part (write a first post, answer colleagues, and so on).';
-        $plan = self::ask($schema, $instructions, $theme, $sectiontitle, $title, $reference, $bloom);
+        $plan = self::ask($context, $schema, $instructions, $theme, $sectiontitle, $title, $reference, $bloom);
 
         $intro = self::plain($plan['intro'] ?? null, self::INTRO_LENGTH);
         $question = self::plain($plan['question'] ?? null, self::SHORT_LENGTH);
@@ -104,6 +106,7 @@ class activity_content {
     /**
      * Builds the instructions of an assignment.
      *
+     * @param \context $context The context of the course the text is written for.
      * @param string $theme The course theme.
      * @param string $sectiontitle The section title.
      * @param string $title The assignment title.
@@ -113,6 +116,7 @@ class activity_content {
      * @return string The HTML of the instructions.
      */
     public static function assign_intro(
+        \context $context,
         string $theme,
         string $sectiontitle,
         string $title,
@@ -126,7 +130,7 @@ class activity_content {
             . '"tip":"one short sentence of advice"}';
         $instructions = 'You write the instructions of a course assignment. Give 2 to 4 deliverables, 3 or 4 steps and '
             . '3 to 5 evaluation criteria. Do not invent dates or points.';
-        $plan = self::ask($schema, $instructions, $theme, $sectiontitle, $title, $reference, $bloom);
+        $plan = self::ask($context, $schema, $instructions, $theme, $sectiontitle, $title, $reference, $bloom);
 
         $intro = self::plain($plan['intro'] ?? null, self::INTRO_LENGTH);
         $deliverables = [];
@@ -332,6 +336,7 @@ class activity_content {
     /**
      * Asks the AI to fill the text of a recipe.
      *
+     * @param \context $context The context of the course the text is written for.
      * @param string $schema The JSON shape the answer must have.
      * @param string $instructions What the AI writes.
      * @param string $theme The course theme.
@@ -342,6 +347,7 @@ class activity_content {
      * @return array The decoded answer, empty when the AI is unavailable or answered nothing usable.
      */
     private static function ask(
+        \context $context,
         string $schema,
         string $instructions,
         string $theme,
@@ -361,7 +367,7 @@ class activity_content {
             if ($reference !== '') {
                 $user .= "\n\nReference material:\n" . mb_substr($reference, 0, 3000);
             }
-            return ai_json::decode(ai_resolver::generate_text($system, $user)) ?? [];
+            return ai_json::decode(ai_resolver::generate_text($system, $user, $context)) ?? [];
         } catch (\Throwable $e) {
             debugging('StudioLMS: the text of an activity could not be generated — ' . $e->getMessage(), DEBUG_DEVELOPER);
             return [];
