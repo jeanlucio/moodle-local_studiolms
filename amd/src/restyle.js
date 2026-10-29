@@ -24,6 +24,7 @@
 import Ajax from 'core/ajax';
 import Notification from 'core/notification';
 import {get_string as getString, get_strings as getStrings} from 'core/str';
+import {ensure as ensureAiPolicy} from 'local_studiolms/ai_policy';
 
 const STRINGS = ['restyle_working', 'restyle_open_copy', 'restyle_view_copy', 'restyle_error_title'];
 
@@ -75,6 +76,10 @@ const restyle = async(button) => {
     const row = button.closest('[data-region="restyle-row"]');
     const region = row.querySelector('[data-region="restyle-result"]');
     const strings = await getStrings(STRINGS.map(key => ({key, component: 'local_studiolms'})));
+
+    if (!await ensureAiPolicy()) {
+        return;
+    }
 
     button.disabled = true;
     region.textContent = strings[0];

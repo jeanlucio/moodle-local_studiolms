@@ -30,6 +30,7 @@ use local_studiolms\local\ai_json;
 use local_studiolms\local\ai_resolver;
 use local_studiolms\local\content_access;
 use local_studiolms\local\course_builder;
+use local_studiolms\local\course_plan;
 use local_studiolms\local\gamification_setup;
 use local_studiolms\local\glossary_builder;
 use local_studiolms\local\page_builder;
@@ -78,6 +79,9 @@ class generate_course_task extends \core\task\adhoc_task {
 
     /** @var string[] Section titles, used by the gamified narrative profile. */
     private array $sectiontitles = [];
+
+    /** @var array The outline sections, which the plan page of the course lists. */
+    private array $outlinesections = [];
 
     #[\Override]
     public function get_name(): string {
@@ -172,6 +176,7 @@ class generate_course_task extends \core\task\adhoc_task {
      * @return void
      */
     private function build(array $sections, string $theme): void {
+        $this->outlinesections = $sections;
         foreach ($sections as $section) {
             $title = $section['title'];
             $this->sectiontitles[] = $title;
@@ -215,14 +220,13 @@ class generate_course_task extends \core\task\adhoc_task {
                 if (!$this->firstpagecreated) {
                     $this->firstpagecreated = true;
                     $plandegraded = false;
-                    $planapplied = false;
-                    $planhtml = page_builder::render_course_intro(
+                    $planhtml = course_plan::render(
                         context_course::instance($this->course->id),
                         $theme,
                         $this->course->fullname,
-                        [],
-                        $plandegraded,
-                        $planapplied
+                        $this->outlinesections,
+                        $this->objectives,
+                        $plandegraded
                     );
                     $plantitle = get_string('courseplantitle', 'local_studiolms');
                     $planresult = course_builder::add_page($this->course, 0, $plantitle, $planhtml);
@@ -231,7 +235,7 @@ class generate_course_task extends \core\task\adhoc_task {
                     $this->report[] = [
                         'title' => $plantitle,
                         'type' => 'page',
-                        'preset' => $planapplied ? 'plan' : 'blocks',
+                        'preset' => 'plan',
                         'degraded' => $plandegraded,
                     ];
                     if ($plandegraded) {
@@ -332,6 +336,11 @@ class generate_course_task extends \core\task\adhoc_task {
     private function gamify(array $briefing, string $theme): void {
         $mode = $briefing['mode'] ?? 'standard';
         if ($mode !== 'gamified' || !gamification_setup::is_available()) {
+            return;
+        }
+        // Checked again here: the right can be taken away between the request and the run.
+        if (!gamification_setup::can_use(context_course::instance($this->course->id))) {
+            $this->warnings[] = get_string('error_playerhud_permission', 'local_studiolms');
             return;
         }
 

@@ -78,6 +78,37 @@ class gamification_setup {
     }
 
     /**
+     * Lists the core capabilities needed to add the block to a course, as a teacher does on the course page.
+     *
+     * @return string[] Capability names.
+     */
+    public static function required_capabilities(): array {
+        return ['moodle/site:manageblocks', 'block/playerhud:addinstance'];
+    }
+
+    /**
+     * Tells whether a user may have the gamified mode: the block is installed and the user may add it to the course.
+     *
+     * The setup writes the block straight into the course, so the rights a teacher needs to add it from the course
+     * page are checked here instead of by the page.
+     *
+     * @param \context_course $context Course context.
+     * @param int|null $userid The user, or null for the current one.
+     * @return bool
+     */
+    public static function can_use(\context_course $context, ?int $userid = null): bool {
+        if (!self::is_available()) {
+            return false;
+        }
+        foreach (self::required_capabilities() as $capability) {
+            if (!has_capability($capability, $context, $userid)) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    /**
      * Number of progress steps run() will report for a given profile.
      *
      * @param string $profile The gamification profile.

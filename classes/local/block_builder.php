@@ -48,6 +48,7 @@ class block_builder {
         'infographicTimeline'   => 'tiny_studiolms/block_infographic_timeline',
         'infographicComparison' => 'tiny_studiolms/block_infographic_comparison',
         'widgetQuizInfo'        => 'tiny_studiolms/block_widget',
+        'textBox'               => 'tiny_studiolms/block_textbox',
     ];
 
     /**
@@ -59,6 +60,7 @@ class block_builder {
         'accordion' => ['title', 'content'],
         'gridcards' => ['containerTitle', 'slots'],
         'table'     => ['cellData'],
+        'textBox'   => ['content'],
     ];
 
     /**
@@ -117,6 +119,10 @@ class block_builder {
             return self::render_plain($type, $config);
         }
 
+        // A text with nothing in it would draw an empty frame the editor shows as a blank block.
+        if ($type === 'textBox' && trim(strip_tags((string) ($config['content'] ?? ''))) === '') {
+            return '';
+        }
         $adapter = self::adapt($type, $config);
         if ($adapter === null) {
             return '';
@@ -124,6 +130,18 @@ class block_builder {
 
         $html = $OUTPUT->render_from_template($adapter['template'], $adapter['context']);
         return self::wrap(self::without_caret_paragraph($html), $type, $config);
+    }
+
+    /**
+     * Tells whether the builder can draw a block type.
+     *
+     * A type it cannot draw is dropped without a trace by render(), so a caller that must not lose content checks first.
+     *
+     * @param string $type The block registry id.
+     * @return bool
+     */
+    public static function supports(string $type): bool {
+        return isset(self::TEMPLATES[$type]);
     }
 
     /**
@@ -200,6 +218,9 @@ class block_builder {
             case 'widgetQuizInfo':
                 $context = ['widget' => 'quizinfo', 'marker' => '[QUIZINFO]'];
                 break;
+            case 'textBox':
+                $context = self::textbox_context($config);
+                break;
             default:
                 return null;
         }
@@ -257,6 +278,22 @@ class block_builder {
             'textColor' => $config['textColor'] ?? '#0d47a1',
             'icon' => $config['icon'] ?? '',
             'text' => $config['text'] ?? '',
+        ];
+    }
+
+    /**
+     * Builds the view model for block_textbox.
+     *
+     * @param array $config Canonical block config.
+     * @return array Mustache context.
+     */
+    private static function textbox_context(array $config): array {
+        $align = $config['textAlign'] ?? null;
+        return [
+            'hoverEffect' => $config['hoverEffect'] ?? 'none',
+            'width' => self::width($config, 'full'),
+            'textAlign' => in_array($align, ['left', 'center', 'right', 'justify'], true) ? $align : 'left',
+            'content' => $config['content'] ?? '',
         ];
     }
 
@@ -668,7 +705,9 @@ class block_builder {
         foreach ($items as $idx => $item) {
             $islast = $idx === $count - 1;
             $stepnum = $idx + 1;
-            $iconclass = self::normalise_icon((string) ($item['icon'] ?? ''));
+            // A step with no icon shows its number, as the editor does; only a chosen icon replaces it.
+            $givenicon = trim((string) ($item['icon'] ?? ''));
+            $iconclass = $givenicon === '' ? '' : self::normalise_icon($givenicon);
             $badge = '<div class="slms-steps__badge"'
                 . ' style="background:' . $palette['iconBg'] . ';color:' . $palette['iconColor'] . ';">'
                 . ($iconclass !== '' ? self::icon_html($iconclass) : '<span aria-hidden="true">' . $stepnum . '</span>')
@@ -912,9 +951,38 @@ class block_builder {
                 return self::plain_comparison($config);
             case 'widgetQuizInfo':
                 return '<div><span class="slms-widget-marker">[QUIZINFO]</span></div>';
+            case 'textBox':
+                return self::plain_text_box($config);
             default:
                 return '';
         }
+    }
+
+    /**
+     * Escapes a text for the plain fallback exactly once.
+     *
+     * The callers hand the blocks text that is already escaped, because the editor templates print it as it is. A
+     * plain escape of that text would show "&amp;amp;", so the entities are read back first.
+     *
+     * @param string $text Plain or already escaped text.
+     * @return string Text safe to print as HTML.
+     */
+    private static function once(string $text): string {
+        return s(html_entity_decode($text, ENT_QUOTES | ENT_HTML5, 'UTF-8'));
+    }
+
+    /**
+     * Plain fallback for the free text: the text itself, in a division of its own.
+     *
+     * @param array $config Canonical block config.
+     * @return string HTML.
+     */
+    private static function plain_text_box(array $config): string {
+        $content = trim((string) ($config['content'] ?? ''));
+        if (trim(strip_tags($content)) === '') {
+            return '';
+        }
+        return \html_writer::div($content);
     }
 
     /**
@@ -931,7 +999,7 @@ class block_builder {
         if (trim($label) === '') {
             return '';
         }
-        return \html_writer::tag($level, s($label));
+        return \html_writer::tag($level, self::once($label));
     }
 
     /**
@@ -943,7 +1011,7 @@ class block_builder {
     private static function plain_callout(array $config): string {
         $icon = trim((string) ($config['icon'] ?? ''));
         $content = (string) ($config['contentHtml'] ?? '');
-        $inner = ($icon !== '' ? \html_writer::tag('span', s($icon), ['class' => 'me-2']) : '') . $content;
+        $inner = ($icon !== '' ? \html_writer::tag('span', self::once($icon), ['class' => 'me-2']) : '') . $content;
         return \html_writer::div($inner, 'alert alert-secondary');
     }
 
@@ -968,7 +1036,7 @@ class block_builder {
         if ($btntext !== '') {
             $body .= \html_writer::link(
                 (string) ($config['btnUrl'] ?? '#'),
-                s($btntext),
+                self::once($btntext),
                 ['class' => 'btn btn-primary mt-2']
             );
         }
@@ -985,7 +1053,7 @@ class block_builder {
     private static function plain_accordion(array $config): string {
         $title = trim((string) ($config['title'] ?? ''));
         $content = (string) ($config['content'] ?? '');
-        $summary = \html_writer::tag('summary', s($title !== '' ? $title : '…'));
+        $summary = \html_writer::tag('summary', self::once($title !== '' ? $title : '…'));
         $attrs = ['class' => 'mb-3'];
         if (($config['state'] ?? 'closed') === 'open') {
             $attrs['open'] = 'open';
@@ -1009,7 +1077,7 @@ class block_builder {
             $cells .= \html_writer::div(!empty($slots[$i]) ? (string) $slots[$i] : '', 'col');
         }
         $row = \html_writer::div($cells, 'row row-cols-1 row-cols-md-' . $cols . ' g-3');
-        $heading = $title !== '' ? \html_writer::tag('h3', s($title)) : '';
+        $heading = $title !== '' ? \html_writer::tag('h3', self::once($title)) : '';
         return \html_writer::div($heading . $row, 'mb-3');
     }
 
@@ -1063,14 +1131,14 @@ class block_builder {
             if ($value === '' && $label === '') {
                 continue;
             }
-            $inner = \html_writer::div(s($value), 'h4 mb-1') . \html_writer::div(s($label), 'text-secondary');
+            $inner = \html_writer::div(self::once($value), 'h4 mb-1') . \html_writer::div(self::once($label), 'text-secondary');
             $cells .= \html_writer::div(\html_writer::div($inner, 'border rounded p-3 h-100 text-center'), 'col');
         }
         if ($cells === '') {
             return '';
         }
         $title = trim((string) ($config['title'] ?? ''));
-        $heading = $title !== '' ? \html_writer::tag('h3', s($title)) : '';
+        $heading = $title !== '' ? \html_writer::tag('h3', self::once($title)) : '';
         return \html_writer::div($heading . \html_writer::div($cells, 'row row-cols-1 row-cols-md-3 g-3'), 'mb-3');
     }
 
@@ -1090,9 +1158,9 @@ class block_builder {
                 continue;
             }
             $desc = trim((string) ($item['description'] ?? ''));
-            $body = \html_writer::tag('h5', s($name), ['class' => 'card-title']);
+            $body = \html_writer::tag('h5', self::once($name), ['class' => 'card-title']);
             if ($desc !== '') {
-                $body .= \html_writer::tag('p', s($desc), ['class' => 'card-text']);
+                $body .= \html_writer::tag('p', self::once($desc), ['class' => 'card-text']);
             }
             $card = \html_writer::div(\html_writer::div($body, 'card-body'), 'card h-100');
             $cells .= \html_writer::div($card, 'col');
@@ -1101,7 +1169,7 @@ class block_builder {
             return '';
         }
         $title = trim((string) ($config['title'] ?? ''));
-        $heading = $title !== '' ? \html_writer::tag('h3', s($title)) : '';
+        $heading = $title !== '' ? \html_writer::tag('h3', self::once($title)) : '';
         return \html_writer::div($heading . \html_writer::div($cells, 'row row-cols-1 row-cols-md-' . $cols . ' g-3'), 'mb-3');
     }
 
@@ -1120,9 +1188,9 @@ class block_builder {
                 continue;
             }
             $desc = trim((string) ($item['description'] ?? ''));
-            $li = \html_writer::tag('strong', s($steptitle));
+            $li = \html_writer::tag('strong', self::once($steptitle));
             if ($desc !== '') {
-                $li .= \html_writer::div(s($desc));
+                $li .= \html_writer::div(self::once($desc));
             }
             $lis .= \html_writer::tag('li', $li, ['class' => 'mb-2']);
         }
@@ -1130,7 +1198,7 @@ class block_builder {
             return '';
         }
         $title = trim((string) ($config['title'] ?? ''));
-        $heading = $title !== '' ? \html_writer::tag('h3', s($title)) : '';
+        $heading = $title !== '' ? \html_writer::tag('h3', self::once($title)) : '';
         return \html_writer::div($heading . \html_writer::tag('ol', $lis), 'mb-3');
     }
 
@@ -1151,9 +1219,9 @@ class block_builder {
             $date = trim((string) ($item['date'] ?? ''));
             $desc = trim((string) ($item['description'] ?? ''));
             $head = $date !== '' ? $date . ' — ' . $title : $title;
-            $li = \html_writer::tag('strong', s($head));
+            $li = \html_writer::tag('strong', self::once($head));
             if ($desc !== '') {
-                $li .= \html_writer::div(s($desc));
+                $li .= \html_writer::div(self::once($desc));
             }
             $lis .= \html_writer::tag('li', $li, ['class' => 'mb-2']);
         }
@@ -1161,7 +1229,7 @@ class block_builder {
             return '';
         }
         $title = trim((string) ($config['title'] ?? ''));
-        $heading = $title !== '' ? \html_writer::tag('h3', s($title)) : '';
+        $heading = $title !== '' ? \html_writer::tag('h3', self::once($title)) : '';
         return \html_writer::div($heading . \html_writer::tag('ul', $lis, ['class' => 'list-unstyled']), 'mb-3');
     }
 
@@ -1179,8 +1247,8 @@ class block_builder {
         $head = \html_writer::tag(
             'tr',
             \html_writer::tag('th', '&nbsp;', ['scope' => 'col'])
-            . \html_writer::tag('th', s($col1), ['scope' => 'col'])
-            . \html_writer::tag('th', s($col2), ['scope' => 'col'])
+            . \html_writer::tag('th', self::once($col1), ['scope' => 'col'])
+            . \html_writer::tag('th', self::once($col2), ['scope' => 'col'])
         );
         $rows = '';
         foreach ($items as $item) {
@@ -1190,7 +1258,7 @@ class block_builder {
             }
             $rows .= \html_writer::tag(
                 'tr',
-                \html_writer::tag('th', s($label), ['scope' => 'row'])
+                \html_writer::tag('th', self::once($label), ['scope' => 'row'])
                 . \html_writer::tag('td', self::plain_bool(!empty($item['col1'])))
                 . \html_writer::tag('td', self::plain_bool(!empty($item['col2'])))
             );
@@ -1204,7 +1272,7 @@ class block_builder {
             ['class' => 'table table-bordered']
         );
         $title = trim((string) ($config['title'] ?? ''));
-        $heading = $title !== '' ? \html_writer::tag('h3', s($title)) : '';
+        $heading = $title !== '' ? \html_writer::tag('h3', self::once($title)) : '';
         return \html_writer::div($heading . $table, 'mb-3');
     }
 

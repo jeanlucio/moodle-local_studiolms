@@ -95,7 +95,7 @@ foreach ($typekeys as $value) {
 
 // Full-course wizard data (step 1).
 
-$playerhudinstalled = array_key_exists('playerhud', core_component::get_plugin_list('block'));
+$playerhudinstalled = \local_studiolms\local\gamification_setup::can_use($context);
 
 $bloomdefinitions = [
     'remember'  => 'bloom_remember',
@@ -140,6 +140,11 @@ $step1context = [
 
 // AMD modules.
 
+$PAGE->requires->js_call_amd(
+    'local_studiolms/ai_policy',
+    'init',
+    [\local_studiolms\local\ai_resolver::policy_agreed((int) $USER->id)]
+);
 $PAGE->requires->js_call_amd('local_studiolms/wizard_landing', 'init');
 $PAGE->requires->js_call_amd('local_studiolms/wizard_step1', 'init');
 $PAGE->requires->js_call_amd('local_studiolms/wizard_activity', 'init');

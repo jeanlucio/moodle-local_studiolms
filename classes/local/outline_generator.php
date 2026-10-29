@@ -52,16 +52,24 @@ class outline_generator {
      */
     public static function generate(array $briefing): array {
         $systemprompt = self::build_system_prompt($briefing);
+        $gaps = [];
+        $usable = null;
 
         for ($attempt = 1; $attempt <= self::MAX_ATTEMPTS; $attempt++) {
-            $userprompt = self::build_user_prompt($briefing, $attempt > 1);
+            $userprompt = self::build_user_prompt($briefing, $attempt > 1, $gaps);
             $raw = ai_resolver::generate_text($systemprompt, $userprompt);
             $decoded = self::decode_json($raw);
 
             if ($decoded !== null) {
                 $outline = self::normalise($decoded);
                 if (!empty($outline['sections'])) {
-                    return $outline;
+                    $gaps = self::unserved_objectives($decoded);
+                    if (empty($gaps)) {
+                        return $outline;
+                    }
+                    // Kept in case no later answer is better: the course promises only what its sections deliver.
+                    $usable = self::without_objectives($outline, $gaps);
+                    continue;
                 }
             }
 
@@ -70,6 +78,9 @@ class outline_generator {
             }
         }
 
+        if ($usable !== null) {
+            return $usable;
+        }
         throw new moodle_exception('invalidairesponse', 'local_studiolms');
     }
 
@@ -108,8 +119,11 @@ class outline_generator {
             . 'the first activity of the first section.';
         $lines[] = 'Return ONLY a valid JSON object, with no markdown fences or commentary, '
             . 'using exactly this shape: '
-            . '{"objectives": ["..."], "sections": [{"title": "...", '
+            . '{"objectives": ["..."], "sections": [{"title": "...", "serves": [1], '
             . '"activities": [{"type": "page", "title": "..."}]}]}.';
+        $lines[] = 'Every objective must be worked on by at least one section. In "serves" list the numbers, '
+            . 'starting at 1, of the objectives that section works on, and make sure each objective '
+            . 'appears in the "serves" of at least one section.';
         $lines[] = 'Use double quotes for every key and string. Do not add trailing commas, '
             . 'comments or any text before or after the JSON object.';
         $lines[] = 'Produce between 3 and 6 sections, each with 2 to 4 activities.';
@@ -122,9 +136,10 @@ class outline_generator {
      *
      * @param array $briefing Briefing data.
      * @param bool $strict Whether to append a stricter JSON-only reminder (retry).
+     * @param string[] $gaps Objectives of the previous answer that no section served, to ask for again.
      * @return string The user prompt.
      */
-    private static function build_user_prompt(array $briefing, bool $strict): string {
+    private static function build_user_prompt(array $briefing, bool $strict, array $gaps = []): string {
         $theme = clean_param($briefing['theme'] ?? '', PARAM_TEXT);
         $reference = clean_param($briefing['reference'] ?? '', PARAM_TEXT);
 
@@ -135,8 +150,63 @@ class outline_generator {
         if ($strict) {
             $prompt .= "\n\nReturn only valid JSON, no markdown, no explanations.";
         }
+        if (!empty($gaps)) {
+            $prompt .= "\n\nIn your previous answer no section worked on these objectives. Add a section or an "
+                . "activity for each of them, or reword the objective to what the course really covers:\n- "
+                . implode("\n- ", $gaps);
+        }
 
         return $prompt;
+    }
+
+    /**
+     * Lists the objectives that no section says it serves.
+     *
+     * An answer that does not say which objectives the sections serve is not judged: there is nothing to check.
+     *
+     * @param array $decoded Raw decoded outline.
+     * @return string[] The text of the objectives no section serves.
+     */
+    private static function unserved_objectives(array $decoded): array {
+        $served = [];
+        $given = false;
+        foreach (ai_json::items($decoded['sections'] ?? null) as $section) {
+            if (!is_array($section) || !is_array($section['serves'] ?? null)) {
+                continue;
+            }
+            $given = true;
+            foreach ($section['serves'] as $number) {
+                if (is_int($number) || (is_string($number) && ctype_digit($number))) {
+                    $served[(int) $number] = true;
+                }
+            }
+        }
+        if (!$given) {
+            return [];
+        }
+
+        $gaps = [];
+        foreach (array_values(ai_json::items($decoded['objectives'] ?? null)) as $index => $objective) {
+            if (is_string($objective) && trim($objective) !== '' && empty($served[$index + 1])) {
+                $gaps[] = clean_param($objective, PARAM_TEXT);
+            }
+        }
+        return $gaps;
+    }
+
+    /**
+     * Takes some objectives out of an outline, keeping at least one.
+     *
+     * @param array $outline Normalised outline.
+     * @param string[] $gaps The objectives to take out.
+     * @return array The outline without them.
+     */
+    private static function without_objectives(array $outline, array $gaps): array {
+        $kept = array_values(array_diff($outline['objectives'], $gaps));
+        if (!empty($kept)) {
+            $outline['objectives'] = $kept;
+        }
+        return $outline;
     }
 
     /**

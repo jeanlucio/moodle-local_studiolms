@@ -51,6 +51,31 @@ final class gamification_setup_test extends \advanced_testcase {
     }
 
     /**
+     * The block is for whoever may add it to the course: the right to add that block and to manage blocks.
+     *
+     * @return void
+     */
+    public function test_can_use_needs_the_rights_to_add_the_block(): void {
+        global $DB;
+        $this->resetAfterTest();
+        if (!gamification_setup::is_available()) {
+            $this->markTestSkipped('block_playerhud is not installed in this environment.');
+        }
+        $course = $this->getDataGenerator()->create_course();
+        $context = \context_course::instance($course->id);
+        $teacher = $this->getDataGenerator()->create_and_enrol($course, 'editingteacher');
+        $student = $this->getDataGenerator()->create_and_enrol($course, 'student');
+
+        $this->assertTrue(gamification_setup::can_use($context, (int) $teacher->id));
+        $this->assertFalse(gamification_setup::can_use($context, (int) $student->id));
+
+        $roleid = $DB->get_field('role', 'id', ['shortname' => 'editingteacher'], MUST_EXIST);
+        assign_capability('block/playerhud:addinstance', CAP_PREVENT, $roleid, $context->id, true);
+        accesslib_clear_all_caches_for_unit_testing();
+        $this->assertFalse(gamification_setup::can_use($context, (int) $teacher->id));
+    }
+
+    /**
      * Builds a setup object for a profile without running it, so its private helpers can be called.
      *
      * @param string $profile The profile.

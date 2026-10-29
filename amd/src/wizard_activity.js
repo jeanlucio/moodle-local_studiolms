@@ -23,6 +23,7 @@
 
 import {call as fetchMany} from 'core/ajax';
 import {get_string as getString} from 'core/str';
+import {ensure as ensureAiPolicy} from 'local_studiolms/ai_policy';
 
 const FORM_ID = 'local-studiolms-activity-form';
 
@@ -66,6 +67,10 @@ const handleSubmit = async form => {
     if (title === '') {
         errorRegion.textContent = await getString('error_title_required', 'local_studiolms');
         errorRegion.classList.remove('d-none');
+        return;
+    }
+
+    if (!await ensureAiPolicy()) {
         return;
     }
 

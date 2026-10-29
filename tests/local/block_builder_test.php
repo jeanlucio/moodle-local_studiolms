@@ -54,6 +54,88 @@ final class block_builder_test extends \advanced_testcase {
     }
 
     /**
+     * The callers hand the blocks text that is already escaped (the editor template prints it as it is), so the
+     * plain fallback escapes it once and not twice: "A &amp; B" must not become "A &amp;amp; B".
+     *
+     * @return void
+     */
+    public function test_plain_blocks_do_not_escape_the_text_twice(): void {
+        $text = s('Perguntas & "Respostas" <b>');
+        $configs = [
+            'stylizedHeading' => ['level' => 'h3', 'text' => $text],
+            'accordion' => ['title' => $text, 'content' => '<p>x</p>'],
+            'infographic' => ['items' => [['value' => $text, 'label' => $text]]],
+            'infographicSteps' => ['title' => $text, 'items' => [['title' => $text, 'description' => $text]]],
+            'infographicFeatures' => ['title' => $text, 'items' => [['title' => $text, 'description' => $text]]],
+            'infographicTimeline' => ['title' => $text, 'items' => [['title' => $text, 'date' => $text, 'description' => $text]]],
+        ];
+        foreach ($configs as $type => $config) {
+            $html = $this->render_plain($type, $config);
+            $this->assertStringContainsString('Perguntas &amp; &quot;Respostas&quot; &lt;b&gt;', $html, $type);
+            $this->assertStringNotContainsString('&amp;amp;', $html, $type);
+            $this->assertStringNotContainsString('<b>', $html, $type);
+        }
+    }
+
+    /**
+     * The free text block is drawn as the editor draws it: an editable island with its alignment and width, whose
+     * text stays out of the state chip so the editor reads it back from the page.
+     *
+     * @return void
+     */
+    public function test_text_box_is_drawn_as_the_editor_block(): void {
+        $html = block_builder::render('textBox', [
+            'content' => '<p>Free text</p>', 'textAlign' => 'justify', 'width' => 'reduced',
+        ]);
+
+        $this->assertStringContainsString('data-slms-block-type="textBox"', $html);
+        $this->assertStringContainsString('studiolms-textbox-wrap', $html);
+        $this->assertStringContainsString('slms-textalign-justify', $html);
+        $this->assertStringContainsString('slms-width-reduced', $html);
+        $this->assertStringContainsString('<p>Free text</p>', $html);
+        $chip = preg_match('/data-slms-state="([^"]+)"/', $html, $m) ? rawurldecode(base64_decode($m[1])) : '';
+        $this->assertStringNotContainsString('Free text', $chip);
+        $this->assertTrue(block_builder::supports('textBox'));
+    }
+
+    /**
+     * An alignment that is not one the editor knows falls back to left, and a text with nothing in it draws nothing.
+     *
+     * @return void
+     */
+    public function test_text_box_normalises_the_alignment_and_skips_an_empty_text(): void {
+        $html = block_builder::render('textBox', ['content' => '<p>Text</p>', 'textAlign' => 'diagonal']);
+        $this->assertStringContainsString('slms-textalign-left', $html);
+        $this->assertSame('', block_builder::render('textBox', ['content' => '<p> </p>']));
+    }
+
+    /**
+     * Without the editor the free text is plain HTML of its own.
+     *
+     * @return void
+     */
+    public function test_plain_text_box(): void {
+        $this->assertSame('<div><p>Text</p></div>', $this->render_plain('textBox', ['content' => '<p>Text</p>']));
+        $this->assertSame('', $this->render_plain('textBox', ['content' => '']));
+    }
+
+    /**
+     * A step with no icon is shown by its number, as the editor shows it, and not by a default icon.
+     *
+     * @return void
+     */
+    public function test_a_step_without_an_icon_shows_its_number(): void {
+        $html = block_builder::render('infographicSteps', [
+            'theme' => 'blue', 'layout' => 'vertical',
+            'items' => [['title' => 'First', 'description' => '', 'icon' => ''], ['title' => 'Second', 'icon' => 'star']],
+        ]);
+
+        $this->assertStringContainsString('<span aria-hidden="true">1</span>', $html);
+        $this->assertStringNotContainsString('<span aria-hidden="true">2</span>', $html, 'A step with an icon keeps it.');
+        $this->assertStringNotContainsString('fa-circle-info', $html);
+    }
+
+    /**
      * The plain callout renders a Bootstrap alert and keeps the rich content.
      *
      * @return void

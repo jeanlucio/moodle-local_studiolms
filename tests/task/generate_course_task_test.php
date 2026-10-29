@@ -264,6 +264,8 @@ final class generate_course_task_test extends \advanced_testcase {
             'question'     => 'Universal question?',
             'steps'        => [['title' => 'First step', 'description' => 'Do it']],
             'tip'          => 'Universal tip',
+            'general'      => 'Universal general objective',
+            'sections'     => ['Universal section sentence'],
             'deliverables' => ['A file'],
             'criteria'     => [['criterion' => 'Clarity', 'expectation' => 'Clear text']],
             'questions' => [['type' => 'truefalse', 'question' => 'PHP is a language.', 'answer' => true]],
@@ -283,8 +285,8 @@ final class generate_course_task_test extends \advanced_testcase {
     }
 
     /**
-     * Regression guard for the first page: the course gets a plan page in section 0 built from the intro
-     * renderer, once, before the first content page.
+     * Regression guard for the first page: the course gets a plan page in section 0 built from the outline,
+     * once, before the first content page.
      *
      * @return void
      */
@@ -318,40 +320,13 @@ final class generate_course_task_test extends \advanced_testcase {
         );
         $this->assertEquals(0, $plancm->section);
         $report = json_decode($progress->reportjson, true);
-        // The catalog is empty here, so the plan page is the blocks fallback and must not be reported as the preset.
-        $this->assertSame('blocks', $report[0]['preset']);
+        $this->assertSame('plan', $report[0]['preset']);
         $this->assertSame($plantitle, $report[0]['title']);
         $this->assertCount(3, $report);
         $this->assertSame(4, (int) $progress->total);
         $this->assertSame((int) $progress->total, (int) $progress->step);
     }
 
-    /**
-     * With the course plan preset in the catalog the plan page is reported as the preset.
-     *
-     * @return void
-     */
-    public function test_course_plan_page_is_reported_as_the_preset_when_it_is_applied(): void {
-        global $USER;
-        $this->setAdminUser();
-        $this->universal_ai();
-        $base = make_request_directory();
-        mkdir($base . '/en');
-        file_put_contents($base . '/en/course_syllabus.json', json_encode([
-            'name' => 'Course Syllabus',
-            'blocks' => [['type' => 'callout', 'config' => ['icon' => '', 'contentHtml' => '<p>[Topic 1]</p>']]],
-        ]));
-        preset_loader::set_directory_for_testing($base);
-
-        [, $progressid] = $this->seed((int) $USER->id, [
-            'objectives' => [],
-            'sections' => [['title' => 'Basics', 'activities' => [['type' => 'page', 'title' => 'Intro']]]],
-        ]);
-        $this->run_task($progressid);
-
-        $report = json_decode($this->progress($progressid)->reportjson, true);
-        $this->assertSame('plan', $report[0]['preset']);
-    }
 
     /**
      * Every activity type is built in its section, with a report entry each and no warnings when the AI works.
@@ -579,6 +554,45 @@ final class generate_course_task_test extends \advanced_testcase {
             'blockname' => 'playerhud',
             'parentcontextid' => \context_course::instance($course->id)->id,
         ]));
+    }
+
+    /**
+     * A teacher who may not add the block is not given it: the course is built and the report says it was left out.
+     *
+     * @return void
+     */
+    public function test_the_playerhud_block_is_not_added_for_a_teacher_who_may_not_add_it(): void {
+        global $DB;
+        if (!\local_studiolms\local\gamification_setup::is_available()) {
+            $this->markTestSkipped('block_playerhud is not installed in this environment.');
+        }
+        $teacher = $this->getDataGenerator()->create_user();
+        [$course, $progressid] = $this->seed((int) $teacher->id, [
+            'objectives' => [],
+            'sections' => [['title' => 'Basics', 'activities' => [['type' => 'forum', 'title' => 'Talk']]]],
+        ]);
+        $this->getDataGenerator()->enrol_user($teacher->id, $course->id, 'editingteacher');
+        $roleid = $DB->get_field('role', 'id', ['shortname' => 'editingteacher'], MUST_EXIST);
+        assign_capability('block/playerhud:addinstance', CAP_PREVENT, $roleid, \context_course::instance($course->id)->id, true);
+        accesslib_clear_all_caches_for_unit_testing();
+        $outline = $DB->get_record('local_studiolms_progress', ['id' => $progressid]);
+        $DB->set_field('local_studiolms_outline', 'briefingjson', json_encode([
+            'theme' => 'Programming', 'mode' => 'gamified', 'bloom' => 'general', 'profile' => 'narrative',
+        ]), ['id' => $outline->outlineid]);
+
+        $this->setUser($teacher);
+        $this->run_task($progressid);
+
+        $progress = $this->progress($progressid);
+        $this->assertSame('completed', $progress->status, (string) $progress->errormsg);
+        $this->assertFalse($DB->record_exists('block_instances', [
+            'blockname' => 'playerhud',
+            'parentcontextid' => \context_course::instance($course->id)->id,
+        ]));
+        $this->assertStringContainsString(
+            get_string('error_playerhud_permission', 'local_studiolms'),
+            implode('|', json_decode($progress->warnings, true))
+        );
     }
 
     /**

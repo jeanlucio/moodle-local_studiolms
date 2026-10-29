@@ -25,6 +25,7 @@ import {call as fetchMany} from 'core/ajax';
 import {get_string as getString, get_strings as getStrings} from 'core/str';
 import Config from 'core/config';
 import Notification from 'core/notification';
+import {ensure as ensureAiPolicy} from 'local_studiolms/ai_policy';
 
 const FORM_ID = 'local-studiolms-section-form';
 const WRAPPER_ID = 'local-studiolms-section';
@@ -142,6 +143,10 @@ const handlePlan = async form => {
         return;
     }
 
+    if (!await ensureAiPolicy()) {
+        return;
+    }
+
     const defaultLabel = btnLabel.textContent;
     spinner.classList.remove('d-none');
     submitBtn.setAttribute('disabled', 'disabled');
@@ -203,7 +208,7 @@ const createActivityRow = (activity = {type: 'page', title: ''}) => {
     const select = document.createElement('select');
     select.className = 'form-select';
     select.style.maxWidth = '160px';
-    select.setAttribute('aria-label', ariaTypeLabel || 'Activity type');
+    select.setAttribute('aria-label', ariaTypeLabel);
     typeOptions.forEach(opt => {
         const option = document.createElement('option');
         option.value = opt.value;
@@ -218,13 +223,13 @@ const createActivityRow = (activity = {type: 'page', title: ''}) => {
     input.type = 'text';
     input.className = 'form-control';
     input.value = activity.title ?? '';
-    input.setAttribute('aria-label', ariaTitleLabel || 'Activity title');
+    input.setAttribute('aria-label', ariaTitleLabel);
 
     const removeBtn = document.createElement('button');
     removeBtn.type = 'button';
     removeBtn.className = 'btn btn-outline-danger';
     removeBtn.dataset.action = 'remove-activity';
-    removeBtn.setAttribute('aria-label', ariaRemoveLabel || 'Remove');
+    removeBtn.setAttribute('aria-label', ariaRemoveLabel);
     removeBtn.innerHTML = '<span aria-hidden="true">&times;</span>';
 
     row.appendChild(select);
@@ -283,6 +288,10 @@ const handleGenerate = async wrapper => {
     const reference = wrapper.dataset.pendingReference;
     const wipe = wrapper.dataset.pendingWipe === '1';
     if (wipe && !await confirmSectionWipe()) {
+        return;
+    }
+
+    if (!await ensureAiPolicy()) {
         return;
     }
 
@@ -384,13 +393,17 @@ const startPolling = (wrapper, progressid, courseid) => {
     }, POLL_INTERVAL);
 };
 
-const formatDuration = seconds => {
+// Writes a duration in the units of the language, which the language pack owns.
+const formatDuration = async seconds => {
     if (seconds < 60) {
-        return `${seconds} s`;
+        return getString('duration_seconds', 'local_studiolms', seconds);
     }
-    const m = Math.floor(seconds / 60);
-    const s = seconds % 60;
-    return s > 0 ? `${m} min ${s} s` : `${m} min`;
+    const minutes = Math.floor(seconds / 60);
+    const rest = seconds % 60;
+    if (rest === 0) {
+        return getString('duration_minutes', 'local_studiolms', minutes);
+    }
+    return getString('duration_minutes_seconds', 'local_studiolms', {minutes, seconds: rest});
 };
 
 // Parses the per-activity report JSON and renders a summary panel with badges and a list.
@@ -412,7 +425,7 @@ const showReport = async(wrapper, reportjson, duration = 0) => {
     const total = activities.length;
     const degradedCount = activities.filter(a => a.degraded).length;
     const successCount = total - degradedCount;
-    const formattedDuration = duration > 0 ? formatDuration(duration) : '';
+    const formattedDuration = duration > 0 ? await formatDuration(duration) : '';
 
     const [
         headingStr, successStr, degradedStr, activitiesStr,

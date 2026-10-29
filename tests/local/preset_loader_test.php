@@ -141,6 +141,23 @@ final class preset_loader_test extends \advanced_testcase {
     }
 
     /**
+     * A preset with a block the builder cannot draw is not offered to the AI: the block would be dropped silently.
+     */
+    public function test_catalog_for_prompt_leaves_out_presets_the_builder_cannot_draw(): void {
+        $this->catalog([
+            'en/a.json' => $this->preset('Drawable'),
+            'en/b.json' => json_encode(['name' => 'With tabs', 'blocks' => [
+                ['type' => 'stylizedHeading', 'config' => ['text' => 'Lesson', 'level' => 'h2']],
+                ['type' => 'tabs', 'config' => ['tabs' => []]],
+            ]]),
+        ]);
+
+        $this->assertSame(['Drawable'], array_column(preset_loader::catalog_for_prompt('en'), 'name'));
+        $this->assertTrue(preset_loader::is_renderable(preset_loader::find('Drawable', 'en')));
+        $this->assertFalse(preset_loader::is_renderable(preset_loader::find('With tabs', 'en')));
+    }
+
+    /**
      * Rendering concatenates the blocks and skips entries without a type or with a malformed config.
      */
     public function test_render_skips_malformed_blocks(): void {

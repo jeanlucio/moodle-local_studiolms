@@ -51,9 +51,10 @@ final class populate_course_test extends \advanced_testcase {
      * Seeds a course with an enrolled editing teacher, a reviewed outline and a denied capability.
      *
      * @param string $capability The capability to prevent for the editing teacher role.
+     * @param array $briefing The briefing the outline was made from.
      * @return array [course, teacher, outlineid].
      */
-    private function seed(string $capability): array {
+    private function seed(string $capability, array $briefing = ['theme' => 'Programming']): array {
         global $DB;
 
         $course = $this->getDataGenerator()->create_course();
@@ -67,7 +68,7 @@ final class populate_course_test extends \advanced_testcase {
             'userid'       => $teacher->id,
             'status'       => 'draft',
             'courseid'     => $course->id,
-            'briefingjson' => json_encode(['theme' => 'Programming']),
+            'briefingjson' => json_encode($briefing),
             'outlinejson'  => '{}',
             'timecreated'  => $now,
             'timemodified' => $now,
@@ -110,6 +111,41 @@ final class populate_course_test extends \advanced_testcase {
 
         $this->expectException(\required_capability_exception::class);
         $this->populate($course, $outlineid, 'label');
+    }
+
+    /**
+     * The gamified mode adds a block to the course, so it is refused to whoever may not add that block.
+     *
+     * @return void
+     */
+    public function test_gamified_mode_requires_the_right_to_add_the_playerhud_block(): void {
+        if (!\local_studiolms\local\gamification_setup::is_available()) {
+            $this->markTestSkipped('block_playerhud is not installed in this environment.');
+        }
+        foreach (['block/playerhud:addinstance', 'moodle/site:manageblocks'] as $capability) {
+            [$course, $teacher, $outlineid] = $this->seed($capability, ['theme' => 'P', 'mode' => 'gamified']);
+            $this->setUser($teacher);
+            try {
+                $this->populate($course, $outlineid, 'label');
+                $this->fail('The gamified mode was accepted without ' . $capability);
+            } catch (\required_capability_exception $e) {
+                $this->assertStringContainsString(get_capability_string($capability), $e->getMessage());
+            }
+        }
+    }
+
+    /**
+     * The standard mode adds no block, so it does not ask for that right.
+     *
+     * @return void
+     */
+    public function test_standard_mode_does_not_ask_for_the_block_capability(): void {
+        [$course, $teacher, $outlineid] = $this->seed('block/playerhud:addinstance');
+        $this->setUser($teacher);
+
+        $result = $this->populate($course, $outlineid, 'label');
+
+        $this->assertArrayHasKey('progressid', $result);
     }
 
     /**

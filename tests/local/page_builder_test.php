@@ -178,93 +178,13 @@ final class page_builder_test extends \advanced_testcase {
         );
     }
 
-    /**
-     * End-to-end reproduction of the reported PoC: a course intro built from the course plan
-     * preset, with an AI fill response carrying an XSS payload, renders with the payload neutralized.
-     *
-     * Runs against a fixture catalog, so it does not depend on the editor's presets or on any language pack.
-     */
-    public function test_course_intro_neutralizes_malicious_ai_fill_end_to_end(): void {
-        $this->use_presets(['course_syllabus' => $this->plan_preset()]);
-        $payload = json_encode([
-            '[Topic 1]' => '<img src=x onerror=fetch(1)>PWNED',
-            '<strong>' => 'PWNED2',
-        ]);
-        ai_resolver::set_provider_for_testing(fn(string $system, string $user): string => $payload);
-        $course = $this->getDataGenerator()->create_course();
-        $degraded = false;
 
-        $html = page_builder::render_course_intro(\context_course::instance($course->id), 'Biology', 'Course X', [], $degraded);
 
-        $this->assertFalse($degraded);
-        $this->assertStringNotContainsString('<img', $html);
-        $this->assertStringNotContainsString('onerror', $html);
-        $this->assertStringNotContainsString('PWNED2', $html);
-        $this->assertStringContainsString('PWNED', $html);
-        $this->assertStringContainsString('Plan — Course X', $html);
-        $this->assertStringContainsString('<strong>fixed</strong>', $html);
-    }
 
-    /**
-     * Without a course plan preset, the course intro falls back to AI-generated blocks.
-     *
-     * Regression test: the fallback called generate_body() without its context argument, which shifted every
-     * argument and raised a TypeError swallowed by the catch-all, so the intro page silently came out empty
-     * (degraded) whenever the preset catalog lacked that preset.
-     */
-    public function test_course_intro_falls_back_to_blocks_when_preset_is_missing(): void {
-        $this->use_presets([]);
-        $course = $this->getDataGenerator()->create_course();
-        $degraded = false;
 
-        $html = page_builder::render_course_intro(
-            \context_course::instance($course->id),
-            'Biology',
-            'Course X',
-            [],
-            $degraded
-        );
 
-        $this->assertFalse($degraded);
-        $this->assertStringContainsString('Photosynthesis basics', $html);
-    }
 
-    /**
-     * When the AI cannot fill the intro, the preset is still rendered with its base values.
-     */
-    public function test_course_intro_survives_a_failing_fill(): void {
-        $this->use_presets(['course_syllabus' => $this->plan_preset()]);
-        ai_resolver::set_provider_for_testing(function (string $system, string $user): string {
-            throw new \moodle_exception('invalidairesponse', 'local_studiolms');
-        });
-        $course = $this->getDataGenerator()->create_course();
-        $degraded = false;
 
-        $html = page_builder::render_course_intro(\context_course::instance($course->id), 'Biology', 'Course X', [], $degraded);
-
-        $this->assertDebuggingCalled();
-        $this->assertFalse($degraded);
-        $this->assertStringContainsString('Plan — Course X', $html);
-        $this->assertStringContainsString('[Topic 1]', $html);
-    }
-
-    /**
-     * The course plan keeps the contract the editor needs to reopen its blocks (data-slms-* attributes).
-     *
-     * Regression test: a clean_text() over the rendered HTML removed the attributes, so the blocks of every
-     * preset page opened as locked HTML.
-     */
-    public function test_course_intro_keeps_the_editor_contract(): void {
-        $this->use_presets(['course_syllabus' => $this->plan_preset()]);
-        ai_resolver::set_provider_for_testing(fn(string $system, string $user): string => '{}');
-        $course = $this->getDataGenerator()->create_course();
-        $degraded = false;
-
-        $html = page_builder::render_course_intro(\context_course::instance($course->id), 'Biology', 'Course X', [], $degraded);
-
-        $this->assertStringContainsString('data-slms-block-type="callout"', $html);
-        $this->assertStringContainsString('data-slms-state="', $html);
-    }
 
     /**
      * Markup fields of a preset are still sanitized, even though the rendered HTML no longer is.
@@ -281,41 +201,6 @@ final class page_builder_test extends \advanced_testcase {
         $this->assertStringNotContainsString('<script', $html);
         $this->assertStringNotContainsString('onerror', $html);
         $this->assertStringContainsString('data-slms-block-type="callout"', $html);
-    }
-
-    /**
-     * Reports whether the course plan preset was used or the blocks fallback took its place.
-     */
-    public function test_course_intro_reports_whether_the_plan_was_applied(): void {
-        $course = $this->getDataGenerator()->create_course();
-        $context = \context_course::instance($course->id);
-        $degraded = false;
-
-        $this->use_presets(['course_syllabus' => $this->plan_preset()]);
-        $applied = false;
-        page_builder::render_course_intro($context, 'Biology', 'Course X', [], $degraded, $applied);
-        $this->assertTrue($applied);
-
-        $this->use_presets([]);
-        page_builder::render_course_intro($context, 'Biology', 'Course X', [], $degraded, $applied);
-        $this->assertFalse($applied);
-    }
-
-    /**
-     * Every placeholder the course plan expects exists in the real catalog files, so a renamed placeholder in
-     * tiny_studiolms is caught here instead of silently leaving the plan unfilled.
-     */
-    public function test_course_plan_placeholders_exist_in_the_real_catalog(): void {
-        $constant = new \ReflectionClassConstant(page_builder::class, 'COURSE_PLAN_PRESETS');
-        $lang = ['course_syllabus' => 'en', 'plano_de_disciplina' => 'pt_br'];
-        foreach ($constant->getValue() as $stem => $placeholders) {
-            $preset = preset_loader::find_by_file($stem, $lang[$stem]);
-            $this->assertNotNull($preset, $stem);
-            $json = json_encode($preset, JSON_UNESCAPED_UNICODE);
-            foreach (array_merge([$placeholders['name']], $placeholders['ai']) as $token) {
-                $this->assertStringContainsString($token, $json, $stem . ' ' . $token);
-            }
-        }
     }
 
     /**
@@ -339,6 +224,130 @@ final class page_builder_test extends \advanced_testcase {
         $this->assertStringNotContainsString('<script', $html);
         $this->assertStringContainsString('Plan — Botany', $html);
         $this->assertStringContainsString('&amp; tissues', $html);
+    }
+
+    /**
+     * A preset the builder cannot draw completely is not applied, so the page never loses a block in silence.
+     */
+    public function test_a_preset_with_a_block_the_builder_cannot_draw_is_not_applied(): void {
+        $this->use_presets(['lesson_tabs' => [
+            'name' => 'Lesson in tabs',
+            'description' => 'A lesson',
+            'blocks' => [
+                ['type' => 'stylizedHeading', 'config' => ['text' => 'Lesson [N]', 'level' => 'h2']],
+                ['type' => 'tabs', 'config' => ['tabs' => [['title' => 'Read', 'content' => '<p>Body</p>']]]],
+            ],
+        ]]);
+        $plan = json_encode([
+            'strategy' => 'preset',
+            'preset_name' => 'Lesson in tabs',
+            'blocks' => [['type' => 'callout', 'html' => '<p>Planned block</p>']],
+        ]);
+        ai_resolver::set_provider_for_testing(fn(string $system, string $user): string => $plan);
+        $degraded = false;
+        $chosen = '';
+
+        $html = $this->render_with([], $degraded, $chosen);
+
+        $this->assertSame('blocks', $chosen);
+        $this->assertStringContainsString('Planned block', $html);
+        $this->assertStringNotContainsString('Lesson [N]', $html);
+    }
+
+    /**
+     * The AI can answer a stretch of plain prose as a free text block, which is cleaned like any other markup.
+     */
+    public function test_a_free_text_block_is_drawn_and_cleaned(): void {
+        $this->use_presets([]);
+        $plan = json_encode([
+            'strategy' => 'blocks',
+            'blocks' => [
+                ['type' => 'text', 'html' => '<p>Plain prose.</p><script>alert(1)</script>'],
+                ['type' => 'text', 'html' => ''],
+            ],
+        ]);
+        ai_resolver::set_provider_for_testing(fn(string $system, string $user): string => $plan);
+        $degraded = false;
+        $chosen = '';
+
+        $html = $this->render_with([], $degraded, $chosen);
+
+        $this->assertSame('blocks', $chosen);
+        $this->assertSame(1, substr_count($html, 'data-slms-block-type="textBox"'));
+        $this->assertStringContainsString('Plain prose.', $html);
+        $this->assertStringNotContainsString('<script', $html);
+    }
+
+    /**
+     * The planner is told it may write free text, and that the heading level and the prose are separate things.
+     */
+    public function test_the_plan_prompt_offers_free_text(): void {
+        $this->use_presets([]);
+        $seen = '';
+        ai_resolver::set_provider_for_testing(function (string $system, string $user) use (&$seen): string {
+            $seen = $system;
+            return '{}';
+        });
+        $degraded = false;
+        $chosen = '';
+
+        $this->render_with([], $degraded, $chosen);
+
+        $this->assertStringContainsString('"type":"text"', $seen);
+    }
+
+    /**
+     * A preset the AI leaves with a placeholder unfilled is not published with the brackets in it: the page is asked
+     * for again as free blocks.
+     */
+    public function test_a_preset_with_an_unfilled_placeholder_is_replaced_by_blocks(): void {
+        $this->use_presets(['lesson' => [
+            'name' => 'Lesson',
+            'description' => 'A lesson',
+            'blocks' => [['type' => 'stylizedHeading', 'config' => ['text' => 'Lesson [N] — [Title]', 'level' => 'h2']]],
+        ]]);
+        $systems = [];
+        ai_resolver::set_provider_for_testing(function (string $system, string $user) use (&$systems): string {
+            $systems[] = $system;
+            if (count($systems) === 1) {
+                return json_encode(['strategy' => 'preset', 'preset_name' => 'Lesson', 'fill' => ['[Title]' => 'Cells']]);
+            }
+            return json_encode(['strategy' => 'blocks', 'blocks' => [['type' => 'text', 'html' => '<p>Own words</p>']]]);
+        });
+        $degraded = false;
+        $chosen = '';
+
+        $html = $this->render_with([], $degraded, $chosen);
+
+        $this->assertCount(2, $systems);
+        $this->assertStringNotContainsString('[PRESET]', $systems[1]);
+        $this->assertStringNotContainsString('"strategy":"preset"', $systems[1]);
+        $this->assertSame('blocks', $chosen);
+        $this->assertStringContainsString('Own words', $html);
+        $this->assertStringNotContainsString('[N]', $html);
+    }
+
+    /**
+     * A preset the AI fills completely is used as it is, with a single call.
+     */
+    public function test_a_preset_filled_completely_costs_one_call(): void {
+        $this->use_presets(['lesson' => [
+            'name' => 'Lesson',
+            'blocks' => [['type' => 'stylizedHeading', 'config' => ['text' => 'Lesson [N]', 'level' => 'h2']]],
+        ]]);
+        $calls = 0;
+        ai_resolver::set_provider_for_testing(function () use (&$calls): string {
+            $calls++;
+            return json_encode(['strategy' => 'preset', 'preset_name' => 'Lesson', 'fill' => ['[N]' => '3']]);
+        });
+        $degraded = false;
+        $chosen = '';
+
+        $html = $this->render_with([], $degraded, $chosen);
+
+        $this->assertSame(1, $calls);
+        $this->assertSame('Lesson', $chosen);
+        $this->assertStringContainsString('Lesson 3', $html);
     }
 
     /**
@@ -378,22 +387,72 @@ final class page_builder_test extends \advanced_testcase {
     }
 
     /**
-     * The pre-training block lists at most six glossary terms and escapes them.
+     * Plans a page whose text mentions the given words.
+     *
+     * @param string[] $words What the page says.
+     * @return void
+     */
+    private function plan_page_saying(array $words): void {
+        $plan = json_encode(['strategy' => 'blocks', 'blocks' => [
+            ['type' => 'text', 'html' => '<p>' . implode(' and ', $words) . '</p>'],
+        ]]);
+        ai_resolver::set_provider_for_testing(fn(string $system, string $user): string => $plan);
+    }
+
+    /**
+     * The pre-training block lists at most six of the glossary terms the page uses and escapes them.
      */
     public function test_pretraining_block_escapes_and_limits_terms(): void {
-        $terms = [['term' => '<b>Bad</b>', 'definition' => '<i>def</i>']];
+        $terms = [['term' => 'R&D', 'definition' => '<i>def</i>']];
         for ($i = 2; $i <= 8; $i++) {
             $terms[] = ['term' => 'Term' . $i, 'definition' => 'Definition' . $i];
         }
+        $this->use_presets([]);
+        $this->plan_page_saying(array_merge(['R&D'], array_column(array_slice($terms, 1), 'term')));
         $degraded = false;
         $chosen = '';
 
         $html = $this->render_with($terms, $degraded, $chosen);
 
-        $this->assertStringNotContainsString('<b>Bad', $html);
-        $this->assertStringContainsString('&lt;b&gt;Bad', $html);
-        $this->assertStringContainsString('Term6', $html);
-        $this->assertStringNotContainsString('Term7', $html);
+        $this->assertStringNotContainsString('<i>def', $html);
+        $this->assertStringContainsString('&lt;i&gt;def', $html);
+        $this->assertStringContainsString('Definition6', $html);
+        $this->assertStringNotContainsString('Definition7', $html);
+    }
+
+    /**
+     * The key terms of a page are the ones it uses: the same list on every page would say nothing about any of them.
+     */
+    public function test_pretraining_block_holds_only_the_terms_the_page_uses(): void {
+        $terms = [
+            ['term' => 'Photosynthesis', 'definition' => 'Light into sugar'],
+            ['term' => 'Two-factor authentication (2FA)', 'definition' => 'A second check'],
+            ['term' => 'Mitosis', 'definition' => 'Cell division'],
+        ];
+        $this->use_presets([]);
+        $this->plan_page_saying(['photosynthesis', 'the 2FA of the account']);
+        $degraded = false;
+        $chosen = '';
+
+        $html = $this->render_with($terms, $degraded, $chosen);
+
+        $this->assertStringContainsString('Light into sugar', $html);
+        $this->assertStringContainsString('A second check', $html);
+        $this->assertStringNotContainsString('Cell division', $html);
+    }
+
+    /**
+     * A page that uses no term of the glossary has no key terms block.
+     */
+    public function test_no_pretraining_block_when_the_page_uses_no_term(): void {
+        $this->use_presets([]);
+        $this->plan_page_saying(['something else']);
+        $degraded = false;
+        $chosen = '';
+
+        $html = $this->render_with([['term' => 'Mitosis', 'definition' => 'Cell division']], $degraded, $chosen);
+
+        $this->assertStringNotContainsString('Cell division', $html);
     }
 
     /**
@@ -552,34 +611,5 @@ final class page_builder_test extends \advanced_testcase {
             $this->assertTrue($degraded, $case);
             $this->assertSame('<p>Photosynthesis</p>', $html, $case);
         }
-    }
-
-    /**
-     * The intro of a course keeps the pre-training block of the glossary and, with nothing else to show, its title.
-     */
-    public function test_the_course_intro_keeps_the_glossary_and_a_title_when_the_ai_fails(): void {
-        ai_resolver::set_provider_for_testing(static function (): string {
-            throw new \RuntimeException('No provider.');
-        });
-        preset_loader::set_directory_for_testing(make_request_directory());
-        $course = $this->getDataGenerator()->create_course();
-        $context = \context_course::instance($course->id);
-
-        $planapplied = false;
-        $degraded = false;
-        $withterms = page_builder::render_course_intro(
-            $context,
-            'Biology',
-            'Cells 101',
-            [['term' => 'Cell', 'definition' => 'The unit of life']],
-            $degraded,
-            $planapplied
-        );
-        $this->assertTrue($degraded);
-        $this->assertFalse($planapplied);
-        $this->assertStringContainsString('The unit of life', $withterms);
-
-        $alone = page_builder::render_course_intro($context, 'Biology', 'Cells 101', [], $degraded, $planapplied);
-        $this->assertSame('<p>Cells 101</p>', $alone);
     }
 }

@@ -157,10 +157,30 @@ class preset_loader {
      * @return array Array of {name, description} maps.
      */
     public static function catalog_for_prompt(string $lang = ''): array {
-        return array_map(static fn($p) => [
+        $drawable = array_filter(self::get_all($lang), [self::class, 'is_renderable']);
+        return array_values(array_map(static fn($p) => [
             'name'        => $p['name'],
             'description' => $p['description'] ?? '',
-        ], self::get_all($lang));
+        ], $drawable));
+    }
+
+    /**
+     * Tells whether every block of a preset is one the builder can draw.
+     *
+     * The catalog also holds blocks only the editor knows (tabs, resources, profile card, gauge...). Rendering a
+     * preset with one of them would silently drop that block and leave the page without its content.
+     *
+     * @param array $preset Preset definition.
+     * @return bool
+     */
+    public static function is_renderable(array $preset): bool {
+        foreach ($preset['blocks'] ?? [] as $block) {
+            $type = is_array($block) ? ($block['type'] ?? '') : '';
+            if ($type !== '' && !block_builder::supports($type)) {
+                return false;
+            }
+        }
+        return true;
     }
 
     /**

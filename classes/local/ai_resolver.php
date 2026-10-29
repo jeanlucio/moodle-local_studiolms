@@ -122,6 +122,28 @@ class ai_resolver {
     }
 
     /**
+     * Tells whether a user has accepted the site's AI usage policy.
+     *
+     * What the teacher types and the text of the activities go to an external provider, so the policy of the site is
+     * shown before the first use, as the core's own AI placements do. The core keeps the answer. An older Moodle
+     * without that policy has nothing to accept.
+     *
+     * @param int $userid The user.
+     * @return bool
+     */
+    public static function policy_agreed(int $userid): bool {
+        if (!class_exists(\core_ai\manager::class) || !method_exists(\core_ai\manager::class, 'get_user_policy_status')) {
+            return true;
+        }
+        // Behat-only: a scenario with a canned AI answer sends nothing anywhere, so it has no policy to accept. Inert
+        // in production, like the canned answer itself.
+        if (defined('BEHAT_SITE_RUNNING') && BEHAT_SITE_RUNNING && get_config('local_studiolms', 'behatfakeai')) {
+            return true;
+        }
+        return (bool) \core_ai\manager::get_user_policy_status($userid);
+    }
+
+    /**
      * Generates free text from the resolved AI provider.
      *
      * @param string $systemprompt System instruction text.

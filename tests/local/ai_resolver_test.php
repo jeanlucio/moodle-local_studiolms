@@ -437,4 +437,23 @@ final class ai_resolver_test extends \advanced_testcase {
         $this->fake_core_ai(false, 'core text', false);
         $this->assertTrue(ai_resolver::is_enabled_in_context($context));
     }
+
+    /**
+     * The policy of the site is accepted once and the core remembers it.
+     *
+     * @return void
+     */
+    public function test_policy_agreed_follows_the_acceptance_the_core_keeps(): void {
+        $this->resetAfterTest();
+        if (!method_exists(\core_ai\manager::class, 'get_user_policy_status')) {
+            $this->markTestSkipped('This Moodle has no AI usage policy.');
+        }
+        $user = $this->getDataGenerator()->create_user();
+
+        $this->assertFalse(ai_resolver::policy_agreed((int) $user->id));
+
+        \core_ai\manager::user_policy_accepted((int) $user->id, \context_system::instance()->id);
+
+        $this->assertTrue(ai_resolver::policy_agreed((int) $user->id));
+    }
 }

@@ -26,6 +26,7 @@ import {get_string as getString, get_strings as getStrings} from 'core/str';
 import Templates from 'core/templates';
 import Config from 'core/config';
 import Notification from 'core/notification';
+import {ensure as ensureAiPolicy} from 'local_studiolms/ai_policy';
 import * as Step2 from 'local_studiolms/wizard_step2';
 import * as Step3 from 'local_studiolms/wizard_step3';
 
@@ -163,6 +164,10 @@ const handleSubmit = async form => {
         errorRegion.textContent = await getString('error_theme_required', 'local_studiolms');
         errorRegion.classList.remove('d-none');
         themeInput.focus();
+        return;
+    }
+
+    if (!await ensureAiPolicy()) {
         return;
     }
 

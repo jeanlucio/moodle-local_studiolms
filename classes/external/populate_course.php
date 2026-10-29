@@ -31,6 +31,7 @@ use core_external\external_single_structure;
 use core_external\external_value;
 use local_studiolms\local\ai_resolver;
 use local_studiolms\local\content_access;
+use local_studiolms\local\gamification_setup;
 use local_studiolms\task\generate_course_task;
 
 /**
@@ -120,6 +121,14 @@ class populate_course extends external_api {
             'userid' => $USER->id,
             'courseid' => $course->id,
         ], '*', MUST_EXIST);
+
+        // The gamified mode adds a block to the course, which only whoever may add it from the course page can ask for.
+        $briefing = json_decode((string) $outline->briefingjson, true);
+        if (is_array($briefing) && ($briefing['mode'] ?? '') === 'gamified') {
+            foreach (gamification_setup::required_capabilities() as $capability) {
+                require_capability($capability, $context);
+            }
+        }
 
         $outline->outlinejson = json_encode([
             'objectives' => $params['objectives'],

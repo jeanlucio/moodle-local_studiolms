@@ -39,13 +39,17 @@ export const init = (root, options = {}) => {
     const done = root.querySelector('[data-region="done"]');
     const backLink = root.querySelector('[data-region="backtocourse"]');
 
-    const formatDuration = seconds => {
+    // Writes a duration in the units of the language, which the language pack owns.
+    const formatDuration = async seconds => {
         if (seconds < 60) {
-            return `${seconds} s`;
+            return getString('duration_seconds', 'local_studiolms', seconds);
         }
-        const m = Math.floor(seconds / 60);
-        const s = seconds % 60;
-        return s > 0 ? `${m} min ${s} s` : `${m} min`;
+        const minutes = Math.floor(seconds / 60);
+        const rest = seconds % 60;
+        if (rest === 0) {
+            return getString('duration_minutes', 'local_studiolms', minutes);
+        }
+        return getString('duration_minutes_seconds', 'local_studiolms', {minutes, seconds: rest});
     };
 
     // Parses the per-activity report and renders a unified summary panel.
@@ -68,7 +72,7 @@ export const init = (root, options = {}) => {
         const total = activities.length;
         const degradedCount = activities.filter(a => a.degraded).length;
         const successCount = total - degradedCount;
-        const formattedDuration = duration > 0 ? formatDuration(duration) : '';
+        const formattedDuration = duration > 0 ? await formatDuration(duration) : '';
 
         const [
             headingStr, successStr, degradedStr, activitiesStr,

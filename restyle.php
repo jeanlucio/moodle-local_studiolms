@@ -76,6 +76,11 @@ if (!\local_studiolms\local\ai_resolver::is_available()) {
 
 $sections = \local_studiolms\local\restyle\overview::sections($course, $cmid);
 
+$PAGE->requires->js_call_amd(
+    'local_studiolms/ai_policy',
+    'init',
+    [\local_studiolms\local\ai_resolver::policy_agreed((int) $USER->id)]
+);
 $PAGE->requires->js_call_amd('local_studiolms/restyle', 'init');
 
 echo $OUTPUT->header();

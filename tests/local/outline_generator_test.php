@@ -228,6 +228,96 @@ final class outline_generator_test extends \advanced_testcase {
     }
 
     /**
+     * Builds the answer of an AI that tells which objectives each section serves.
+     *
+     * @param array $serves For each section, the numbers (from 1) of the objectives it works on.
+     * @return string JSON.
+     */
+    private function answer_serving(array $serves): string {
+        $sections = [];
+        foreach ($serves as $i => $numbers) {
+            $sections[] = [
+                'title' => 'S' . ($i + 1),
+                'serves' => $numbers,
+                'activities' => [['type' => 'page', 'title' => 'P' . ($i + 1)]],
+            ];
+        }
+        return json_encode(['objectives' => ['Obj A', 'Obj B', 'Obj C'], 'sections' => $sections]);
+    }
+
+    /**
+     * An objective no section serves is asked for again, naming it, and the complete answer is the one used.
+     *
+     * @return void
+     */
+    public function test_generate_asks_again_for_an_objective_no_section_serves(): void {
+        $users = [];
+        ai_resolver::set_provider_for_testing(
+            function (string $system, string $user) use (&$users): string {
+                $users[] = $user;
+                return count($users) === 1 ? $this->answer_serving([[1], [2]]) : $this->answer_serving([[1], [2], [3]]);
+            }
+        );
+
+        $outline = outline_generator::generate(['theme' => 'Botany']);
+
+        $this->assertCount(2, $users);
+        $this->assertStringContainsString('Obj C', $users[1]);
+        $this->assertSame(['Obj A', 'Obj B', 'Obj C'], $outline['objectives']);
+        $this->assertCount(3, $outline['sections']);
+    }
+
+    /**
+     * When the objective is still unserved on the last attempt it is dropped, so the course promises only what it
+     * delivers.
+     *
+     * @return void
+     */
+    public function test_generate_drops_an_objective_that_stays_unserved(): void {
+        ai_resolver::set_provider_for_testing(fn(string $s, string $u): string => $this->answer_serving([[1], [2]]));
+
+        $outline = outline_generator::generate(['theme' => 'Botany']);
+
+        $this->assertSame(['Obj A', 'Obj B'], $outline['objectives']);
+    }
+
+    /**
+     * An answer that does not say which objectives the sections serve is taken as it is.
+     *
+     * @return void
+     */
+    public function test_generate_keeps_the_objectives_when_the_coverage_is_not_given(): void {
+        ai_resolver::set_provider_for_testing(fn(string $s, string $u): string => json_encode([
+            'objectives' => ['Obj A', 'Obj B'],
+            'sections' => [['title' => 'S1', 'activities' => [['type' => 'page', 'title' => 'P']]]],
+        ]));
+
+        $outline = outline_generator::generate(['theme' => 'Botany']);
+
+        $this->assertSame(['Obj A', 'Obj B'], $outline['objectives']);
+    }
+
+    /**
+     * The prompt asks for the objectives each section serves.
+     *
+     * @return void
+     */
+    public function test_the_prompt_asks_which_objectives_each_section_serves(): void {
+        $system = '';
+        ai_resolver::set_provider_for_testing(static function (string $s, string $u) use (&$system): string {
+            $system = $s;
+            return '{}';
+        });
+        try {
+            outline_generator::generate(['theme' => 'Botany']);
+        } catch (\moodle_exception $e) {
+            unset($e);
+        }
+
+        $this->assertStringContainsString('"serves"', $system);
+    }
+
+    /**
      * When every attempt is unusable the generator gives up with a clear error after three tries.
      *
      * @return void
