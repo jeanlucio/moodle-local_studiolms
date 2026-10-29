@@ -7,7 +7,7 @@
 
 3. **Briefing:** describe the topic (or paste reference material), choose the Bloom level, the structure and the mode (Standard or Gamified). Optionally tick **Wipe the course first**.
 4. **Outline review:** the AI proposes objectives, sections and activities. Rename anything, change the type of an activity, add or remove objectives, sections and activities. An estimate of the time is shown.
-5. **Generation:** click **Populate course** and follow the live progress. If you ticked the wipe, a dialog asks you to confirm before anything is deleted. When it finishes, return to the course.
+5. **Generation:** click **Build course** and follow the live progress. If you ticked the wipe, a dialog asks you to confirm before anything is deleted. When it finishes, return to the course.
 
 ## Section
 

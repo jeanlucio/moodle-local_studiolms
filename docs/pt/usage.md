@@ -7,7 +7,7 @@
 
 3. **Briefing:** descreva o tema (ou cole material de referência), escolha o nível de Bloom, a estrutura e o modo (Padrão ou Gamificado). Opcionalmente marque **Limpar o curso antes**.
 4. **Revisão do roteiro:** a IA propõe objetivos, seções e atividades. Renomeie o que quiser, mude o tipo de uma atividade, acrescente ou remova objetivos, seções e atividades. Uma estimativa do tempo é mostrada.
-5. **Geração:** clique em **Preencher curso** e acompanhe o progresso ao vivo. Se você marcou o apagar, uma janela pede a confirmação antes de qualquer exclusão. Ao terminar, volte ao curso.
+5. **Geração:** clique em **Montar curso** e acompanhe o progresso ao vivo. Se você marcou o apagar, uma janela pede a confirmação antes de qualquer exclusão. Ao terminar, volte ao curso.
 
 ## Seção
 
