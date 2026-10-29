@@ -175,7 +175,7 @@ class generate_activity extends external_api {
                         5
                     );
                     $degraded = $created === 0;
-                    activity_content::write_quiz_intro($result, (int) $course->id, $title, $created);
+                    activity_content::write_quiz_intro($result, $title, $created);
                 } catch (\Throwable $e) {
                     debugging('StudioLMS quiz questions failed: ' . $e->getMessage(), DEBUG_DEVELOPER);
                     $degraded = true;

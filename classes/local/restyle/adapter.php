@@ -69,34 +69,4 @@ class adapter {
         $record = $DB->get_record($modname, ['id' => $instanceid], 'id, intro, introformat', MUST_EXIST);
         return (int) $record->introformat === (int) FORMAT_HTML ? (string) $record->intro : null;
     }
-
-    /**
-     * Writes a new HTML into an activity.
-     *
-     * @param string $modname The module name.
-     * @param int $instanceid The id of the activity in its own table.
-     * @param string $html The new HTML.
-     * @return void
-     */
-    public static function write(string $modname, int $instanceid, string $html): void {
-        global $DB;
-
-        if ($modname === 'page') {
-            $record = $DB->get_record('page', ['id' => $instanceid], 'id, revision', MUST_EXIST);
-            $DB->update_record('page', (object) [
-                'id' => $instanceid,
-                'content' => $html,
-                'contentformat' => FORMAT_HTML,
-                'revision' => (int) $record->revision + 1,
-                'timemodified' => time(),
-            ]);
-            return;
-        }
-        $DB->update_record($modname, (object) [
-            'id' => $instanceid,
-            'intro' => $html,
-            'introformat' => FORMAT_HTML,
-            'timemodified' => time(),
-        ]);
-    }
 }

@@ -204,6 +204,51 @@ final class restyle_polisher_test extends \advanced_testcase {
     }
 
     /**
+     * The text of a step is not escaped twice: the description of a step is plain text, which the block escapes once.
+     *
+     * @return void
+     */
+    public function test_a_step_with_an_ampersand_is_escaped_once(): void {
+        $this->resetAfterTest();
+        $this->ai_answers(json_encode(['blocks' => [
+            ['type' => 'steps', 'items' => [
+                ['title' => 'Research', 'text' => 'Research & development, when a < b'],
+                ['title' => 'Test', 'text' => 'Try it'],
+            ]],
+            ['type' => 'keep', 'id' => 3],
+        ]]));
+
+        $html = $this->polish();
+
+        $this->assertStringContainsString('Research &amp; development, when a &lt; b', $html);
+        $this->assertStringNotContainsString('&amp;amp;', $html);
+        ai_resolver::set_provider_for_testing(null);
+    }
+
+    /**
+     * A step the AI gives with a text and no title does not make its text disappear: the steps become plain text.
+     *
+     * @return void
+     */
+    public function test_a_step_without_a_title_keeps_its_text(): void {
+        $this->resetAfterTest();
+        $this->ai_answers(json_encode(['blocks' => [
+            ['type' => 'steps', 'items' => [
+                ['title' => 'Cells are the unit of life', 'text' => 'Visit this page to learn more'],
+                ['title' => '', 'text' => 'keeps the DNA in 23 pairs'],
+            ]],
+            ['type' => 'keep', 'id' => 3],
+        ]]));
+
+        $html = $this->polish();
+
+        $this->assertStringContainsString('keeps the DNA in 23 pairs', $html);
+        $this->assertStringContainsString('Visit this page to learn more', $html);
+        $this->assertStringNotContainsString('data-slms-block-type="infographicSteps"', $html);
+        ai_resolver::set_provider_for_testing(null);
+    }
+
+    /**
      * Grids, steps, cards and accordions are built, and over the limit or with too few items they become plain text.
      *
      * @return void

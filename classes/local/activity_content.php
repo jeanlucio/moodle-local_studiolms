@@ -291,12 +291,11 @@ class activity_content {
      * after the questions are in, so the introduction is written then.
      *
      * @param \stdClass $result The add_moduleinfo result of the quiz (coursemodule and instance).
-     * @param int $courseid The course id.
      * @param string $title The quiz title.
      * @param int $questions How many questions were created.
      * @return void
      */
-    public static function write_quiz_intro(\stdClass $result, int $courseid, string $title, int $questions): void {
+    public static function write_quiz_intro(\stdClass $result, string $title, int $questions): void {
         global $DB;
 
         $quiz = $DB->get_record('quiz', ['id' => $result->instance], 'id, attempts, timelimit', MUST_EXIST);
@@ -307,10 +306,7 @@ class activity_content {
             (int) $quiz->timelimit,
             self::quiz_rules_are_live((int) $result->coursemodule)
         );
-        $DB->set_field('quiz', 'intro', $intro, ['id' => $quiz->id]);
-        $DB->set_field('quiz', 'introformat', FORMAT_HTML, ['id' => $quiz->id]);
-        course_builder::mark_module_updated((int) $result->coursemodule);
-        rebuild_course_cache($courseid, true);
+        course_builder::write_module_text((int) $result->coursemodule, $intro);
     }
 
     /**

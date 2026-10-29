@@ -256,6 +256,36 @@ final class gamification_setup_test extends \advanced_testcase {
     }
 
     /**
+     * The block is a real instance for the core: its own context exists and the block loads with the profile config.
+     *
+     * @return void
+     */
+    public function test_block_loads_through_the_core_with_its_config_and_context(): void {
+        global $DB;
+        $this->resetAfterTest();
+        if (!gamification_setup::is_available()) {
+            $this->markTestSkipped('block_playerhud is not installed in this environment.');
+        }
+        $course = $this->getDataGenerator()->create_course();
+        $setup = $this->setup_for(gamification_setup::PROFILE_SOCIAL, [
+            'course' => $course,
+            'advance' => \Closure::fromCallable(static function (string $message): void {
+            }),
+        ]);
+
+        $this->call($setup, 'setup_block');
+
+        $record = $DB->get_record('block_instances', [
+            'blockname' => 'playerhud',
+            'parentcontextid' => \context_course::instance($course->id)->id,
+        ], '*', MUST_EXIST);
+        $this->assertTrue($DB->record_exists('context', ['contextlevel' => CONTEXT_BLOCK, 'instanceid' => $record->id]));
+        $block = block_instance('playerhud', $record);
+        $this->assertSame(1, $block->config->enable_ranking);
+        $this->assertSame('course-view-*', $record->pagetypepattern);
+    }
+
+    /**
      * The full setup reports one step per phase, adds the block, and an unknown profile behaves as conquest.
      *
      * Needs the PlayerHUD block, whose generators the setup drives, so it only runs where that is installed.

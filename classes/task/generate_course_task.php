@@ -297,7 +297,7 @@ class generate_course_task extends \core\task\adhoc_task {
                 try {
                     $created = quiz_builder::create($result->coursemodule, $result->instance, $theme, $title, 5);
                     $degraded = $created === 0;
-                    activity_content::write_quiz_intro($result, (int) $this->course->id, $title, $created);
+                    activity_content::write_quiz_intro($result, $title, $created);
                 } catch (\Throwable $e) {
                     debugging('StudioLMS quiz questions failed: ' . $e->getMessage(), DEBUG_DEVELOPER);
                     $degraded = true;

@@ -80,9 +80,7 @@ class service {
         $copy = self::duplicate($course, $cm);
         $name = get_string('restyle_copyname', 'local_studiolms', $cm->name);
         self::hide_and_rename($course, $copy, $name);
-        adapter::write($copy->modname, (int) $copy->instance, $restyled);
-        course_builder::mark_module_updated((int) $copy->id);
-        rebuild_course_cache($course->id, true);
+        course_builder::write_module_text((int) $copy->id, $restyled);
 
         return (object) [
             'cmid' => (int) $copy->id,

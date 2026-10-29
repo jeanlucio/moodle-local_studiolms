@@ -170,10 +170,10 @@ class gamification_setup {
     /**
      * Adds the PlayerHUD block to the course and applies the profile config.
      *
-     * The block instance is inserted directly rather than through the page
-     * block manager: the generation runs in a background task with no real
-     * page or theme region context, where add_block_at_end_of_default_region()
-     * cannot resolve a default region.
+     * The block is added through the block manager, as the core does for the default blocks of a new course, so its
+     * context and its own set-up hook are made by the core. The manager is given the course and the region itself:
+     * the generation runs in a background task with no real page or theme, where the manager cannot choose a
+     * default region.
      *
      * @return void
      */
@@ -189,23 +189,13 @@ class gamification_setup {
             ['ctx' => $coursecontext->id, 'region' => 'side-pre']
         );
 
-        $now = time();
-        $this->instanceid = (int) $DB->insert_record('block_instances', (object) [
-            'blockname'         => 'playerhud',
-            'parentcontextid'   => $coursecontext->id,
-            'showinsubcontexts' => 0,
-            'requiredbytheme'   => 0,
-            'pagetypepattern'   => 'course-view-*',
-            'subpagepattern'    => null,
-            'defaultregion'     => 'side-pre',
-            'defaultweight'     => $weight + 1,
-            'configdata'        => base64_encode(serialize($this->profile_config())),
-            'timecreated'       => $now,
-            'timemodified'      => $now,
-        ]);
+        $page = new \moodle_page();
+        $page->set_course($this->course);
+        $page->blocks->add_regions(['side-pre'], false);
+        $block = $page->blocks->add_block('playerhud', 'side-pre', $weight + 1, false, 'course-view-*');
+        $this->instanceid = (int) $block->instance->id;
+        $block->instance_config_save($this->profile_config());
 
-        // Create the block context so capability checks resolve.
-        \context_block::instance($this->instanceid);
         $coursecontext->mark_dirty();
 
         ($this->advance)(get_string('progress_playerhud', 'local_studiolms'));
@@ -541,8 +531,7 @@ class gamification_setup {
         $shortcode = '[PLAYERHUD_DROP code=' . $code . ']';
         $intro = (string) $DB->get_field($cm->modname, 'intro', ['id' => $cm->instance]);
         $newintro = $shortcode . ($intro !== '' ? '<br>' . $intro : '');
-        $DB->set_field($cm->modname, 'intro', $newintro, ['id' => $cm->instance]);
-        course_builder::mark_module_updated($cmid);
+        course_builder::write_module_text($cmid, $newintro);
 
         return true;
     }

@@ -56,21 +56,42 @@ class course_builder {
     }
 
     /**
-     * Records that the introduction of an activity was changed after its creation, outside the update of its module.
+     * Writes the text of an activity once it exists: the content of a page, the introduction of any other module.
      *
-     * The plugin writes the introduction of a quiz, and the drop shortcode of a forum or an assignment, straight to
-     * the table once the content exists. That skips what the update of a module does, so the time of the change and
-     * the event are recorded here: the search index follows the time, and the logs and the observers follow the event.
+     * The core has no call for changing only the text of a module. Saving the module again (update_moduleinfo) takes
+     * the data of its form, which is not what the module holds: it resets the display options of a page and fails
+     * on a quiz or an assignment. So the text is written to the table, as the core itself does to rename an
+     * activity (set_coursemodule_name), and what the update of a module would do for it is done here: the time of
+     * the change, which the search index follows, the event, which the logs and the observers follow, the revision
+     * of a page, which makes the browsers fetch it again, and the cache of the module.
      *
      * @param int $cmid The course module id.
+     * @param string $html The new HTML.
      * @return void
      */
-    public static function mark_module_updated(int $cmid): void {
+    public static function write_module_text(int $cmid, string $html): void {
         global $DB;
 
         $cm = get_coursemodule_from_id('', $cmid, 0, false, MUST_EXIST);
-        $DB->set_field($cm->modname, 'timemodified', time(), ['id' => $cm->instance]);
+        if ($cm->modname === 'page') {
+            $revision = (int) $DB->get_field('page', 'revision', ['id' => $cm->instance], MUST_EXIST);
+            $DB->update_record('page', (object) [
+                'id' => $cm->instance,
+                'content' => $html,
+                'contentformat' => FORMAT_HTML,
+                'revision' => $revision + 1,
+                'timemodified' => time(),
+            ]);
+        } else {
+            $DB->update_record($cm->modname, (object) [
+                'id' => $cm->instance,
+                'intro' => $html,
+                'introformat' => FORMAT_HTML,
+                'timemodified' => time(),
+            ]);
+        }
         \core\event\course_module_updated::create_from_cm($cm)->trigger();
+        \course_modinfo::purge_course_module_cache((int) $cm->course, (int) $cm->id);
     }
 
     /**

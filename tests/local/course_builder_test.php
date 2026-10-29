@@ -106,6 +106,48 @@ final class course_builder_test extends \advanced_testcase {
     }
 
     /**
+     * Writing the text of a module sets it, records the change and tells the core, as the core does when it renames
+     * an activity: the time of the change, the event and the cache of that module.
+     *
+     * @return void
+     */
+    public function test_write_module_text_sets_the_text_and_records_the_change(): void {
+        global $DB;
+        $forum = course_builder::add_forum($this->course, 0, 'Talk', '<p>Old</p>');
+        $DB->set_field('forum', 'timemodified', 1000, ['id' => $forum->instance]);
+        $sink = $this->redirectEvents();
+
+        course_builder::write_module_text((int) $forum->coursemodule, '<p>New</p>');
+
+        $record = $DB->get_record('forum', ['id' => $forum->instance], '*', MUST_EXIST);
+        $this->assertSame('<p>New</p>', $record->intro);
+        $this->assertEquals(FORMAT_HTML, $record->introformat);
+        $this->assertGreaterThan(1000, (int) $record->timemodified);
+        $events = array_filter(
+            $sink->get_events(),
+            static fn($event): bool => $event instanceof \core\event\course_module_updated
+        );
+        $this->assertCount(1, $events);
+    }
+
+    /**
+     * The text of a page is its content, and a new revision makes the browsers fetch it again.
+     *
+     * @return void
+     */
+    public function test_write_module_text_writes_the_content_of_a_page_and_raises_its_revision(): void {
+        global $DB;
+        $page = course_builder::add_page($this->course, 0, 'Lesson', '<p>Old</p>');
+        $revision = (int) $DB->get_field('page', 'revision', ['id' => $page->instance]);
+
+        course_builder::write_module_text((int) $page->coursemodule, '<p>New</p>');
+
+        $record = $DB->get_record('page', ['id' => $page->instance], '*', MUST_EXIST);
+        $this->assertSame('<p>New</p>', $record->content);
+        $this->assertSame($revision + 1, (int) $record->revision);
+    }
+
+    /**
      * Each activity helper creates a module of the expected type.
      *
      * @return void

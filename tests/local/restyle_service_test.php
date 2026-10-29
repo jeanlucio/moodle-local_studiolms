@@ -351,21 +351,18 @@ final class restyle_service_test extends \advanced_testcase {
     }
 
     /**
-     * The adapter reads HTML only, and a write raises the revision of the page so browsers fetch the new content.
+     * The adapter reads HTML only, and says which modules it can restyle.
      *
      * @return void
      */
-    public function test_the_adapter_writes_the_page_and_raises_its_revision(): void {
+    public function test_the_adapter_reads_html_only_and_knows_its_modules(): void {
         global $DB;
 
         $this->resetAfterTest();
         [, $page] = $this->course_with_page();
-        $revision = (int) $DB->get_field('page', 'revision', ['id' => $page->id]);
-
-        adapter::write('page', (int) $page->id, '<p>New</p>');
+        $DB->set_field('page', 'content', '<p>New</p>', ['id' => $page->id]);
 
         $this->assertSame('<p>New</p>', adapter::read('page', (int) $page->id));
-        $this->assertSame($revision + 1, (int) $DB->get_field('page', 'revision', ['id' => $page->id]));
         $DB->set_field('page', 'contentformat', FORMAT_PLAIN, ['id' => $page->id]);
         $this->assertNull(adapter::read('page', (int) $page->id));
         $this->assertTrue(adapter::supports('label'));

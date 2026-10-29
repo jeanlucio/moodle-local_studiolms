@@ -255,7 +255,6 @@ final class activity_content_test extends \advanced_testcase {
 
         activity_content::write_quiz_intro(
             (object) ['coursemodule' => $quiz->cmid, 'instance' => $quiz->id],
-            (int) $course->id,
             'Check',
             4
         );
@@ -337,7 +336,6 @@ final class activity_content_test extends \advanced_testcase {
 
         activity_content::write_quiz_intro(
             (object) ['coursemodule' => $quiz->cmid, 'instance' => $quiz->id],
-            (int) $course->id,
             'Check',
             4
         );
@@ -400,7 +398,6 @@ final class activity_content_test extends \advanced_testcase {
 
         activity_content::write_quiz_intro(
             (object) ['coursemodule' => $quiz->cmid, 'instance' => $quiz->id],
-            (int) $course->id,
             'Check',
             3
         );

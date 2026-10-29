@@ -330,12 +330,15 @@ class polisher {
                 $items[] = ['title' => $title, 'html' => $body];
             }
         }
-        if ($fits && count($items) >= 2) {
+        // The steps are drawn by their titles, so a step with no title would lose its text: they become plain text.
+        $titled = $type === 'grid' || count(array_filter(array_column($items, 'title'))) === count($items);
+        if ($fits && $titled && count($items) >= 2) {
             return $type === 'grid'
                 ? blocks::grid($items)
                 : blocks::steps(array_map(fn(array $item): array => [
                     'title' => $item['title'],
-                    'description' => trim(strip_tags($item['html'])),
+                    // Plain text, as the steps block asks: the block escapes it once.
+                    'description' => trim(html_entity_decode(strip_tags($item['html']), ENT_QUOTES | ENT_HTML5)),
                 ], $items));
         }
         $html = '';
