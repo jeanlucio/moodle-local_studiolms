@@ -9,6 +9,7 @@ lang: en
 ![Status](https://img.shields.io/badge/Status-Beta-yellow?style=flat)
 [![Latest Release](https://img.shields.io/github/v/release/jeanlucio/moodle-local_studiolms?style=flat)](https://github.com/jeanlucio/moodle-local_studiolms/releases)
 [![Author](https://img.shields.io/badge/by-Jean_Lucio-6f42c1?style=flat)](https://marketplace.moodle.com/user/984)
+[![StudioLMS Ecosystem](https://img.shields.io/badge/StudioLMS-Ecosystem-1d4ed8?style=flat)](https://jeanlucio.github.io/studiolms/)
 
 [![Moodle Plugin CI](https://github.com/jeanlucio/moodle-local_studiolms/actions/workflows/ci.yml/badge.svg)](https://github.com/jeanlucio/moodle-local_studiolms/actions/workflows/ci.yml)
 [![Last Commit](https://img.shields.io/github/last-commit/jeanlucio/moodle-local_studiolms?style=flat)](https://github.com/jeanlucio/moodle-local_studiolms/commits)
