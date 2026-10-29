@@ -214,7 +214,7 @@ class gamification_setup {
         $config->enable_quests = 1;
         // RPG mode stays on: the narrative chapters tab depends on this flag.
         $config->enable_rpg = 1;
-        // Group ranking needs course groups, which this plugin no longer sets up.
+        // Group ranking needs course groups, which this plugin does not set up.
         $config->enable_group_ranking = 0;
         // The narrative profile keeps the focus on the story, hiding the ranking.
         $config->enable_ranking = $this->profile === self::PROFILE_NARRATIVE ? 0 : 1;
