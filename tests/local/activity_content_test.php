@@ -359,4 +359,26 @@ final class activity_content_test extends \advanced_testcase {
         $this->assertStringContainsString(get_string('glossary_intro', 'local_studiolms'), $html);
         $this->assertStringContainsString(get_string('rich_glossary_howto', 'local_studiolms'), $html);
     }
+
+    /**
+     * A step the AI wrote with no title, or that is not a step, is left out of the forum introduction.
+     *
+     * @return void
+     */
+    public function test_steps_with_no_title_are_left_out(): void {
+        $this->resetAfterTest();
+        ai_resolver::set_provider_for_testing(static fn(): string => json_encode([
+            'intro' => 'Framing text',
+            'question' => 'What changed?',
+            'steps' => [['title' => ''], 'not a step', ['title' => 'Real step', 'description' => 'Do it']],
+            'tip' => 'Be brief',
+        ]));
+        $degraded = false;
+
+        $html = activity_content::forum_intro('Biology', 'Cells', 'Discuss', '', 'general', $degraded);
+
+        $this->assertSame(1, substr_count($html, 'slms-steps__item"'));
+        $this->assertStringContainsString('Real step', $html);
+        ai_resolver::set_provider_for_testing(null);
+    }
 }

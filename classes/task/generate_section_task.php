@@ -190,6 +190,8 @@ class generate_section_task extends \core\task\adhoc_task {
         $chosenpreset = '';
 
         switch ($type) {
+            // Any other type was already turned into a page by content_access::modules_for().
+            default:
             case 'page':
                 $html = page_builder::render(
                     context_course::instance($this->course->id),
@@ -247,11 +249,6 @@ class generate_section_task extends \core\task\adhoc_task {
                     $degraded = true;
                 }
                 break;
-
-            default:
-                $html   = $this->generate_html('page', $theme, $sectionname, $title, $degraded);
-                $result = course_builder::add_page($this->course, $sectionnum, $title, $html);
-                break;
         }
 
         if ($degraded) {
@@ -270,59 +267,6 @@ class generate_section_task extends \core\task\adhoc_task {
         $this->progress->step    = $this->step;
         $this->progress->message = get_string('progress_activity', 'local_studiolms', $title);
         $this->update();
-    }
-
-    /**
-     * Generates clean HTML content for an activity using the AI provider.
-     *
-     * Falls back to a plain paragraph when the AI is unavailable.
-     *
-     * @param string $kind Content kind: 'page', 'forum', or 'assign'.
-     * @param string $theme The course theme.
-     * @param string $sectionname The section display name.
-     * @param string $title The activity title.
-     * @param bool $degraded Set to true when AI content could not be generated.
-     * @return string Clean HTML content.
-     */
-    private function generate_html(
-        string $kind,
-        string $theme,
-        string $sectionname,
-        string $title,
-        bool &$degraded
-    ): string {
-        $language = current_language();
-        $instructions = [
-            'page'   => 'Write the body of a course page with headings, paragraphs and lists.',
-            'forum'  => 'Write a short forum introduction with a guiding discussion question.',
-            'assign' => 'Write clear assignment instructions and the expected deliverables.',
-        ];
-        $instruction = $instructions[$kind] ?? $instructions['page'];
-
-        try {
-            $system = $instruction
-                . ' Return ONLY a valid JSON object shaped like {"content": "..."}'
-                . ' where content is clean HTML (headings, paragraphs, lists) with no markdown fences.'
-                . " Write in the language identified by the code: {$language}.";
-            if ($this->bloom !== 'general' && $this->bloom !== '') {
-                $system .= " Cognitive level (Bloom's taxonomy): {$this->bloom}.";
-            }
-            $user = "Course theme: {$theme}\nSection: {$sectionname}\nTitle: {$title}";
-            if ($this->reference !== '') {
-                $user .= "\n\nReference material:\n" . mb_substr($this->reference, 0, 3000);
-            }
-            $decoded = \local_studiolms\local\ai_json::decode(
-                \local_studiolms\local\ai_resolver::generate_text($system, $user)
-            );
-            $html    = is_array($decoded) ? trim(\local_studiolms\local\ai_json::html($decoded['content'] ?? null)) : '';
-            if ($html === '' || trim(html_to_text($html)) === '') {
-                throw new \moodle_exception('invalidairesponse', 'local_studiolms');
-            }
-            return clean_text($html, FORMAT_HTML);
-        } catch (\Throwable $e) {
-            $degraded = true;
-            return \html_writer::tag('p', s($title));
-        }
     }
 
     /**

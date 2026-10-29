@@ -266,4 +266,103 @@ final class gamification_setup_test extends \advanced_testcase {
         ], '*', MUST_EXIST);
         $this->assertSame(1, unserialize_object(base64_decode($block->configdata))->enable_ranking);
     }
+
+    /**
+     * Makes a course with a quiz, an assignment and a forum, and runs the setup on them.
+     *
+     * @param string $profile The gamification profile.
+     * @param array $sectiontitles The section titles.
+     * @param int $steps Receives how many steps were reported.
+     * @return string[] The warnings of the run.
+     */
+    private function run_on_activities(string $profile, array $sectiontitles, int &$steps): array {
+        $course = $this->getDataGenerator()->create_course();
+        $generator = $this->getDataGenerator();
+        $cmids = [
+            'quiz' => [(int) $generator->create_module('quiz', ['course' => $course->id])->cmid],
+            'assign' => [(int) $generator->create_module('assign', ['course' => $course->id])->cmid],
+            'forum' => [(int) $generator->create_module('forum', ['course' => $course->id])->cmid],
+        ];
+        $steps = 0;
+
+        return gamification_setup::run(
+            $course,
+            $profile,
+            'Botany',
+            $cmids,
+            $sectiontitles,
+            static function (string $message) use (&$steps): void {
+                $steps++;
+            }
+        );
+    }
+
+    /**
+     * With activities of every kind, every profile reports every step, whatever the AI answers, and a failing AI
+     * only adds warnings: the course is never left half done.
+     *
+     * @return void
+     */
+    public function test_run_reports_every_step_with_activities_and_a_failing_ai(): void {
+        if (!gamification_setup::is_available()) {
+            $this->markTestSkipped('block_playerhud is not installed in this environment.');
+        }
+        $this->resetAfterTest();
+        $this->setAdminUser();
+
+        foreach ([gamification_setup::PROFILE_CONQUEST, 'narrative', 'social'] as $profile) {
+            ai_resolver::set_provider_for_testing(static function (): string {
+                throw new \RuntimeException('No provider.');
+            });
+            $steps = 0;
+            $warnings = $this->run_on_activities($profile, ['Roots', 'Leaves'], $steps);
+            $this->assertIsArray($warnings, $profile);
+            $this->assertSame(gamification_setup::step_count($profile), $steps, $profile);
+
+            ai_resolver::set_provider_for_testing(static fn(): string => '{"items": [], "content": "x"}');
+            $steps = 0;
+            $this->assertIsArray($this->run_on_activities($profile, [], $steps), $profile);
+            $this->assertSame(gamification_setup::step_count($profile), $steps, $profile);
+        }
+        ai_resolver::set_provider_for_testing(null);
+        $this->resetDebugging();
+    }
+
+    /**
+     * Run by someone who may not set PlayerHUD up, the steps that need that permission fail one by one: each failure
+     * is a warning and every step is still reported, so the course is never left half done.
+     *
+     * @return void
+     */
+    public function test_run_by_a_user_without_permission_warns_and_still_reports_every_step(): void {
+        if (!gamification_setup::is_available()) {
+            $this->markTestSkipped('block_playerhud is not installed in this environment.');
+        }
+        $this->resetAfterTest();
+        $course = $this->getDataGenerator()->create_course();
+        $student = $this->getDataGenerator()->create_and_enrol($course, 'student');
+        $this->setAdminUser();
+        $generator = $this->getDataGenerator();
+        $cmids = [
+            'quiz' => [(int) $generator->create_module('quiz', ['course' => $course->id])->cmid],
+            'forum' => [(int) $generator->create_module('forum', ['course' => $course->id])->cmid],
+        ];
+        $this->setUser($student);
+        $steps = 0;
+
+        $warnings = gamification_setup::run(
+            $course,
+            'social',
+            'Botany',
+            $cmids,
+            ['Roots'],
+            static function (string $message) use (&$steps): void {
+                $steps++;
+            }
+        );
+
+        $this->assertSame(gamification_setup::step_count('social'), $steps);
+        $this->assertNotEmpty($warnings);
+        $this->resetDebugging();
+    }
 }

@@ -115,4 +115,25 @@ final class lib_test extends advanced_testcase {
             );
         }
     }
+
+    /**
+     * A page whose settings navigation has no module settings node gets no entry, and nothing breaks.
+     *
+     * @return void
+     */
+    public function test_no_entry_without_the_module_settings_node(): void {
+        global $CFG, $PAGE;
+
+        $this->resetAfterTest();
+        require_once($CFG->dirroot . '/local/studiolms/lib.php');
+        [$course, $cm, $teacher] = $this->activity_and_user('page', 'editingteacher');
+        $this->setUser($teacher);
+        $PAGE = new \moodle_page();
+        $PAGE->set_cm($cm, $course);
+        $PAGE->set_url('/mod/page/view.php', ['id' => $cm->id]);
+        $settingsnav = $this->createMock(\settings_navigation::class);
+        $settingsnav->expects($this->once())->method('find')->willReturn(false);
+
+        local_studiolms_extend_settings_navigation($settingsnav, \context_module::instance($cm->id));
+    }
 }

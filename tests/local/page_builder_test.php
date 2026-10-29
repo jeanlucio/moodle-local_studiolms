@@ -497,4 +497,89 @@ final class page_builder_test extends \advanced_testcase {
         $this->assertStringNotContainsString('Lost with its title', $html);
         $this->assertStringNotContainsString('Array', $html);
     }
+
+    /**
+     * The level, the objectives and the reference material of the page reach the plan prompt.
+     */
+    public function test_the_plan_prompt_carries_the_level_the_objectives_and_the_reference(): void {
+        $seen = [];
+        ai_resolver::set_provider_for_testing(function (string $system, string $user) use (&$seen): string {
+            $seen[] = $system . "\n" . $user;
+            return self::PLAN;
+        });
+        $course = $this->getDataGenerator()->create_course();
+        $degraded = false;
+
+        page_builder::render(
+            \context_course::instance($course->id),
+            'Biology',
+            'Plants',
+            'Photosynthesis',
+            [],
+            'Reference text here',
+            'apply',
+            ['Understand light', 'Draw a diagram'],
+            $degraded
+        );
+
+        $this->assertFalse($degraded);
+        $prompt = implode("\n", $seen);
+        $this->assertStringContainsString('apply', $prompt);
+        $this->assertStringContainsString('Understand light; Draw a diagram', $prompt);
+        $this->assertStringContainsString('Reference text here', $prompt);
+    }
+
+    /**
+     * When the AI fails, or names a preset that does not exist and gives no blocks, the page is only its title and
+     * is reported as degraded.
+     */
+    public function test_a_page_without_a_usable_plan_is_its_title_and_degraded(): void {
+        $course = $this->getDataGenerator()->create_course();
+        $context = \context_course::instance($course->id);
+        $answers = [
+            'throws' => static function (): string {
+                throw new \RuntimeException('No provider.');
+            },
+            'missing preset' => static fn(): string => '{"strategy":"preset","preset_name":"nope"}',
+        ];
+
+        foreach ($answers as $case => $provider) {
+            ai_resolver::set_provider_for_testing($provider);
+            $degraded = false;
+
+            $html = page_builder::render($context, 'Biology', 'Plants', 'Photosynthesis', [], '', 'general', [], $degraded);
+
+            $this->assertTrue($degraded, $case);
+            $this->assertSame('<p>Photosynthesis</p>', $html, $case);
+        }
+    }
+
+    /**
+     * The intro of a course keeps the pre-training block of the glossary and, with nothing else to show, its title.
+     */
+    public function test_the_course_intro_keeps_the_glossary_and_a_title_when_the_ai_fails(): void {
+        ai_resolver::set_provider_for_testing(static function (): string {
+            throw new \RuntimeException('No provider.');
+        });
+        preset_loader::set_directory_for_testing(make_request_directory());
+        $course = $this->getDataGenerator()->create_course();
+        $context = \context_course::instance($course->id);
+
+        $planapplied = false;
+        $degraded = false;
+        $withterms = page_builder::render_course_intro(
+            $context,
+            'Biology',
+            'Cells 101',
+            [['term' => 'Cell', 'definition' => 'The unit of life']],
+            $degraded,
+            $planapplied
+        );
+        $this->assertTrue($degraded);
+        $this->assertFalse($planapplied);
+        $this->assertStringContainsString('The unit of life', $withterms);
+
+        $alone = page_builder::render_course_intro($context, 'Biology', 'Cells 101', [], $degraded, $planapplied);
+        $this->assertSame('<p>Cells 101</p>', $alone);
+    }
 }

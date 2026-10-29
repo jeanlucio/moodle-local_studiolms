@@ -30,8 +30,6 @@ use core_external\external_function_parameters;
 use core_external\external_single_structure;
 use core_external\external_value;
 use local_studiolms\local\activity_content;
-use local_studiolms\local\ai_json;
-use local_studiolms\local\ai_resolver;
 use local_studiolms\local\content_access;
 use local_studiolms\local\course_builder;
 use local_studiolms\local\glossary_builder;
@@ -198,58 +196,6 @@ class generate_activity extends external_api {
             'viewurl'  => $viewurl,
             'degraded' => $degraded,
         ];
-    }
-
-    /**
-     * Generates clean HTML content for an activity using the AI provider.
-     *
-     * Falls back to a plain paragraph when the AI is unavailable.
-     *
-     * @param string $kind Activity kind: 'forum' or 'assign'.
-     * @param string $theme Course theme or topic.
-     * @param string $title Activity title.
-     * @param string $reference Optional reference material.
-     * @param string $bloom Bloom's taxonomy level, or 'general'.
-     * @param bool $degraded Set to true when AI content could not be generated.
-     * @return string Clean HTML content.
-     */
-    private static function generate_html(
-        string $kind,
-        string $theme,
-        string $title,
-        string $reference,
-        string $bloom,
-        bool &$degraded
-    ): string {
-        $language = current_language();
-        $instructions = [
-            'forum'  => 'Write a short forum introduction with a guiding discussion question.',
-            'assign' => 'Write clear assignment instructions and the expected deliverables.',
-        ];
-        $instruction = $instructions[$kind] ?? $instructions['forum'];
-
-        try {
-            $system = $instruction
-                . ' Return ONLY a valid JSON object shaped like {"content": "..."}'
-                . ' where content is clean HTML (headings, paragraphs, lists) with no markdown fences.'
-                . " Write in the language identified by the code: {$language}.";
-            if ($bloom !== 'general' && $bloom !== '') {
-                $system .= " Cognitive level (Bloom's taxonomy): {$bloom}.";
-            }
-            $user = "Course theme: {$theme}\nTitle: {$title}";
-            if ($reference !== '') {
-                $user .= "\n\nReference material:\n" . mb_substr($reference, 0, 3000);
-            }
-            $decoded = ai_json::decode(ai_resolver::generate_text($system, $user));
-            $html = is_array($decoded) ? trim(ai_json::html($decoded['content'] ?? null)) : '';
-            if ($html === '' || trim(html_to_text($html)) === '') {
-                throw new \moodle_exception('invalidairesponse', 'local_studiolms');
-            }
-            return clean_text($html, FORMAT_HTML);
-        } catch (\Throwable $e) {
-            $degraded = true;
-            return \html_writer::tag('p', s($title));
-        }
     }
 
     /**

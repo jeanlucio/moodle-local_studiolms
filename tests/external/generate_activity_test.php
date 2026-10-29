@@ -296,4 +296,20 @@ final class generate_activity_test extends \advanced_testcase {
         $this->assertStringNotContainsString('Array', $intro);
         $this->assertStringContainsString('Discuss', $intro);
     }
+
+    /**
+     * When the AI fails while the questions are made, the quiz is still created and is reported as degraded.
+     */
+    public function test_a_quiz_is_created_and_degraded_when_the_ai_fails(): void {
+        ai_resolver::set_provider_for_testing(static function (): string {
+            throw new \RuntimeException('No provider.');
+        });
+        $course = $this->course_with_teacher();
+
+        $quiz = generate_activity::execute($course->id, 1, 'quiz', 'Check', 'Theme', 'general', '');
+
+        $this->assertTrue($quiz['degraded']);
+        $this->assertNotEmpty(get_coursemodule_from_id('quiz', $quiz['cmid'], $course->id));
+        $this->assertDebuggingCalled();
+    }
 }

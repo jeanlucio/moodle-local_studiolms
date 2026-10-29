@@ -110,6 +110,17 @@ final class restyle_test extends \advanced_testcase {
     }
 
     /**
+     * Space between two paragraphs is not a piece.
+     *
+     * @return void
+     */
+    public function test_split_ignores_the_space_between_paragraphs(): void {
+        $segments = segmenter::split("<p>One</p>\n  \n<p>Two</p>");
+
+        $this->assertSame(['One', 'Two'], array_column($segments, 'text'));
+    }
+
+    /**
      * Non-ASCII text survives the split without being turned into entities.
      *
      * @return void

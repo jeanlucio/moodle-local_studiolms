@@ -174,4 +174,19 @@ final class preset_loader_test extends \advanced_testcase {
         $this->assertNull(preset_loader::find_by_file('broken', 'en'));
         $this->assertNull(preset_loader::find_by_file('../en/course_syllabus', 'en'));
     }
+
+    /**
+     * Without a language, the presets of the language of the user are read.
+     *
+     * @return void
+     */
+    public function test_the_current_language_is_used_when_none_is_given(): void {
+        $this->catalog([
+            'en/one.json' => json_encode(['name' => 'One', 'blocks' => [['type' => 'callout', 'config' => []]]]),
+        ]);
+
+        $names = array_column(preset_loader::get_all(), 'name');
+
+        $this->assertContains('One', $names);
+    }
 }

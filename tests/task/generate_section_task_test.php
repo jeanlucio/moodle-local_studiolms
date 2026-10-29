@@ -475,4 +475,72 @@ final class generate_section_task_test extends \advanced_testcase {
         $this->assertSame('failed', $progress->status);
         $this->assertLessThanOrEqual(255, \core_text::strlen($progress->message));
     }
+
+    /**
+     * The task has a name for the list of adhoc tasks.
+     */
+    public function test_the_task_has_a_name(): void {
+        $this->assertSame(
+            get_string('task_generate_section', 'local_studiolms'),
+            (new generate_section_task())->get_name()
+        );
+    }
+
+    /**
+     * A user who does not hold the plugin capability in the course creates nothing, even if the task was queued.
+     */
+    public function test_a_user_without_the_generate_capability_fails_and_creates_nothing(): void {
+        $course = $this->getDataGenerator()->create_course(['numsections' => 1]);
+        $student = $this->getDataGenerator()->create_and_enrol($course, 'student');
+        $this->setUser($student);
+        $progressid = $this->seed_progress((int) $student->id, $course->id);
+
+        $this->run_task($progressid, $course->id, 1, [['type' => 'label', 'title' => 'New']], false);
+
+        $this->assertSame('failed', $this->progress($progressid)->status);
+        $this->assertCount(0, get_fast_modinfo($course)->get_instances_of('label'));
+    }
+
+    /**
+     * The name the teacher gave to the section is the one the AI is told, and a type the plugin does not know is
+     * built as a page.
+     */
+    public function test_the_section_name_reaches_the_prompt_and_an_unknown_type_is_a_page(): void {
+        global $DB;
+
+        $this->setAdminUser();
+        $course = $this->getDataGenerator()->create_course(['numsections' => 1]);
+        $DB->set_field('course_sections', 'name', 'Week of cells', ['course' => $course->id, 'section' => 1]);
+        $prompts = [];
+        $this->universal_ai($prompts);
+        $progressid = $this->seed_progress((int) get_admin()->id, $course->id);
+
+        $this->run_task($progressid, $course->id, 1, [['type' => 'poem', 'title' => 'A verse']], false);
+
+        $this->assertSame('completed', $this->progress($progressid)->status);
+        $pages = get_fast_modinfo($course)->get_instances_of('page');
+        $this->assertCount(1, $pages);
+        $this->assertSame('A verse', reset($pages)->name);
+        $this->assertStringContainsString('Week of cells', implode("\n", $prompts));
+    }
+
+    /**
+     * When the AI fails while the questions of a quiz are made, the section still completes, and the quiz is
+     * reported as degraded.
+     */
+    public function test_a_quiz_whose_questions_fail_is_degraded_and_the_run_completes(): void {
+        $this->setAdminUser();
+        $course = $this->getDataGenerator()->create_course(['numsections' => 1]);
+        ai_resolver::set_provider_for_testing(static function (): string {
+            throw new \RuntimeException('No provider.');
+        });
+        $progressid = $this->seed_progress((int) get_admin()->id, $course->id);
+
+        $this->run_task($progressid, $course->id, 1, [['type' => 'quiz', 'title' => 'Check']], false);
+
+        $this->assertSame('completed', $this->progress($progressid)->status);
+        $this->assertCount(1, get_fast_modinfo($course)->get_instances_of('quiz'));
+        $this->assertNotEmpty(json_decode($this->progress($progressid)->warnings, true));
+        $this->assertDebuggingCalled();
+    }
 }

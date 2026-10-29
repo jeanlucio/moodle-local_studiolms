@@ -200,6 +200,8 @@ class generate_course_task extends \core\task\adhoc_task {
         $chosenpreset = '';
 
         switch ($type) {
+            // Any other type was already turned into a page by content_access::modules_for().
+            default:
             case 'page':
                 if (!$this->firstpagecreated) {
                     $this->firstpagecreated = true;
@@ -288,18 +290,6 @@ class generate_course_task extends \core\task\adhoc_task {
                     $degraded = true;
                 }
                 break;
-            default:
-                $html = $this->generate_html(
-                    'page',
-                    $theme,
-                    $sectiontitle,
-                    $title,
-                    $this->reference,
-                    $this->bloom,
-                    $degraded
-                );
-                $result = course_builder::add_page($this->course, $sectionnum, $title, $html);
-                break;
         }
 
         if ($degraded) {
@@ -353,58 +343,6 @@ class generate_course_task extends \core\task\adhoc_task {
         } catch (\Throwable $e) {
             debugging('StudioLMS gamification failed: ' . $e->getMessage(), DEBUG_DEVELOPER);
             $this->warnings[] = get_string('progress_playerhud', 'local_studiolms');
-        }
-    }
-
-    /**
-     * Generates cleaned HTML content for an activity, falling back to a simple paragraph.
-     *
-     * @param string $kind The content kind (page, forum, assign).
-     * @param string $theme The course theme.
-     * @param string $sectiontitle The section title.
-     * @param string $title The activity title.
-     * @param string $reference Reference material from the briefing.
-     * @param string $bloom Bloom's taxonomy level, or 'general'.
-     * @param bool $degraded Set to true when the AI content could not be generated.
-     * @return string The cleaned HTML content.
-     */
-    private function generate_html(
-        string $kind,
-        string $theme,
-        string $sectiontitle,
-        string $title,
-        string $reference = '',
-        string $bloom = 'general',
-        bool &$degraded = false
-    ): string {
-        $language = current_language();
-        $instructions = [
-            'page' => 'Write the body of a course page with headings, paragraphs and lists.',
-            'forum' => 'Write a short forum introduction with a guiding discussion question.',
-            'assign' => 'Write clear assignment instructions and the expected deliverables.',
-        ];
-        $instruction = $instructions[$kind] ?? $instructions['page'];
-
-        try {
-            $system = $instruction . ' Return ONLY a valid JSON object shaped like {"content": "..."} '
-                . 'where content is clean HTML (headings, paragraphs, lists) with no markdown fences. '
-                . "Write in the language identified by the code: {$language}.";
-            if ($bloom !== 'general' && $bloom !== '') {
-                $system .= " Cognitive level (Bloom's taxonomy): {$bloom}.";
-            }
-            $user = "Course theme: {$theme}\nSection: {$sectiontitle}\nTitle: {$title}";
-            if ($reference !== '') {
-                $user .= "\n\nReference material:\n" . mb_substr($reference, 0, 3000);
-            }
-            $decoded = ai_json::decode(ai_resolver::generate_text($system, $user));
-            $html = is_array($decoded) ? trim(ai_json::html($decoded['content'] ?? null)) : '';
-            if ($html === '' || trim(html_to_text($html)) === '') {
-                throw new \moodle_exception('invalidairesponse', 'local_studiolms');
-            }
-            return clean_text($html, FORMAT_HTML);
-        } catch (\Throwable $e) {
-            $degraded = true;
-            return \html_writer::tag('p', s($title));
         }
     }
 

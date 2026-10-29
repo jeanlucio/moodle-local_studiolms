@@ -175,4 +175,21 @@ final class plan_section_test extends \advanced_testcase {
 
         $this->assertSame(['Kept'], array_column($result['activities'], 'title'));
     }
+
+    /**
+     * The level and the reference material the teacher gave reach the prompt of the AI.
+     */
+    public function test_the_level_and_the_reference_reach_the_prompt(): void {
+        $seen = [];
+        ai_resolver::set_provider_for_testing(static function (string $system, string $user) use (&$seen): string {
+            $seen[] = $system . "\n" . $user;
+            return json_encode([['type' => 'quiz', 'title' => 'Check']]);
+        });
+        $course = $this->course_with_teacher();
+
+        plan_section::execute($course->id, 1, 'Loops', 'apply', 'Some reference material');
+
+        $this->assertStringContainsString('apply', $seen[0]);
+        $this->assertStringContainsString('Some reference material', $seen[0]);
+    }
 }

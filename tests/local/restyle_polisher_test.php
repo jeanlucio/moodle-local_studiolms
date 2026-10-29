@@ -310,6 +310,7 @@ final class restyle_polisher_test extends \advanced_testcase {
             ]],
             ['type' => 'accordion', 'title' => 'Empty', 'blocks' => []],
             ['type' => 'callout', 'html' => ''],
+            ['type' => 'poster', 'html' => 'A type the plugin does not know.'],
             'not a block',
             ['type' => 'paragraph', 'html' => 'Visit this page to learn more. The nucleus keeps the DNA in 23 pairs.'],
             ['type' => 'keep', 'id' => 3],

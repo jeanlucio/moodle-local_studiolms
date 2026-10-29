@@ -721,4 +721,101 @@ final class block_builder_test extends \advanced_testcase {
 
         $this->assertSame('', block_builder::render('doesNotExist', ['x' => 1]));
     }
+
+    /**
+     * Calls a private static method of the renderer.
+     *
+     * @param string $name The method.
+     * @param mixed ...$args The arguments.
+     * @return mixed What the method returns.
+     */
+    private function call_private(string $name, mixed ...$args): mixed {
+        $method = new \ReflectionMethod(block_builder::class, $name);
+        $method->setAccessible(true);
+        return $method->invoke(null, ...$args);
+    }
+
+    /**
+     * A type the renderer does not know renders to nothing, and a grid takes its background and ignores slots that
+     * are not text.
+     *
+     * @return void
+     */
+    public function test_unknown_types_and_odd_grid_slots(): void {
+        $this->require_editor();
+
+        $this->assertSame('', block_builder::render('nope', []));
+
+        $grid = block_builder::render('gridcards', [
+            'columns' => 2, 'background' => '#eef6ff', 'slots' => [123, ['x'], '<p>kept</p>'],
+        ]);
+        $this->assertStringContainsString('background: #eef6ff', $grid);
+        $this->assertStringContainsString('kept', $grid);
+        $this->assertSame(3, substr_count($grid, 'slms-grid-slot mceEditable'));
+    }
+
+    /**
+     * The comparison draws a tick or a cross for each column of each row.
+     *
+     * @return void
+     */
+    public function test_the_comparison_draws_ticks_and_crosses(): void {
+        $this->require_editor();
+
+        $html = block_builder::render('infographicComparison', [
+            'col1' => 'A', 'col2' => 'B', 'items' => [
+                ['label' => 'First', 'col1' => true, 'col2' => false],
+                ['label' => 'Second', 'col1' => false, 'col2' => true],
+            ],
+        ]);
+
+        $this->assertSame(2, substr_count($html, 'slms-comparison__yes'));
+        $this->assertSame(2, substr_count($html, 'slms-comparison__no'));
+    }
+
+    /**
+     * Wrapping a block copes with an empty template, with a string that is not a tag, with a root that has no class,
+     * and with a config that cannot be stored as JSON.
+     *
+     * @return void
+     */
+    public function test_wrap_copes_with_odd_html_and_odd_state(): void {
+        $this->assertSame('', $this->call_private('wrap', '  ', 'callout', []));
+        $this->assertSame('plain text', $this->call_private('wrap', 'plain text', 'callout', []));
+        $this->assertStringContainsString(
+            'class="mceNonEditable"',
+            $this->call_private('wrap', '<div>x</div>', 'callout', [])
+        );
+        $this->assertSame(
+            '<div class="a">x</div>',
+            $this->call_private('wrap', '<div class="a">x</div>', 'callout', ['bad' => "\xB1\x31"])
+        );
+    }
+
+    /**
+     * Without the editor, a heading with no text and a comparison with no rows draw nothing.
+     *
+     * @return void
+     */
+    public function test_plain_blocks_with_nothing_to_show_draw_nothing(): void {
+        $this->assertSame('', $this->render_plain('stylizedHeading', ['text' => '  ', 'icon' => '']));
+        $this->assertSame('', $this->render_plain('infographicComparison', ['items' => [['label' => '']]]));
+        $comparison = $this->render_plain('infographicComparison', ['items' => [
+            ['label' => '', 'col1' => true], ['label' => 'Row', 'col1' => true, 'col2' => false],
+        ]]);
+        $this->assertStringContainsString('Row', $comparison);
+    }
+
+    /**
+     * An icon name becomes a Font Awesome class: a full class is kept, a bare name or a name with the prefix gets
+     * the solid style.
+     *
+     * @return void
+     */
+    public function test_icon_names_become_font_awesome_classes(): void {
+        $this->assertSame('fa-regular fa-star', $this->call_private('normalise_icon', 'fa-regular fa-star'));
+        $this->assertSame('fa-solid fa-rocket', $this->call_private('normalise_icon', 'rocket'));
+        $this->assertSame('fa-solid fa-rocket', $this->call_private('normalise_icon', 'fa-rocket'));
+        $this->assertSame('fa-solid fa-circle-info', $this->call_private('normalise_icon', ''));
+    }
 }

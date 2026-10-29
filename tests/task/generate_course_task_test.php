@@ -506,4 +506,102 @@ final class generate_course_task_test extends \advanced_testcase {
         $this->assertSame('failed', $progress->status);
         $this->assertLessThanOrEqual(255, \core_text::strlen($progress->message));
     }
+
+    /**
+     * The task has a name for the list of adhoc tasks.
+     *
+     * @return void
+     */
+    public function test_the_task_has_a_name(): void {
+        $this->assertSame(
+            get_string('task_generate_course', 'local_studiolms'),
+            (new generate_course_task())->get_name()
+        );
+    }
+
+    /**
+     * A progress record that is gone ends the task quietly: there is nothing to run.
+     *
+     * @return void
+     */
+    public function test_a_missing_progress_record_ends_the_task_quietly(): void {
+        $this->setAdminUser();
+
+        $this->run_task(987654);
+
+        $this->assertDebuggingNotCalled();
+    }
+
+    /**
+     * A type the plugin does not know is built as a page.
+     *
+     * @return void
+     */
+    public function test_an_unknown_activity_type_is_built_as_a_page(): void {
+        global $USER;
+        $this->setAdminUser();
+        [$course, $progressid] = $this->seed((int) $USER->id, [
+            'objectives' => [],
+            'sections' => [['title' => 'Basics', 'activities' => [['type' => 'poem', 'title' => 'A verse']]]],
+        ]);
+
+        $this->run_task($progressid);
+
+        $this->assertSame('completed', $this->progress($progressid)->status);
+        $names = array_map(fn($cm) => $cm->name, get_fast_modinfo($course)->get_instances_of('page'));
+        $this->assertContains('A verse', $names);
+    }
+
+    /**
+     * A gamified course gets the PlayerHUD setup after its content, where that plugin is installed.
+     *
+     * @return void
+     */
+    public function test_a_gamified_course_gets_the_playerhud_setup(): void {
+        global $DB, $USER;
+        if (!\local_studiolms\local\gamification_setup::is_available()) {
+            $this->markTestSkipped('block_playerhud is not installed in this environment.');
+        }
+        $this->setAdminUser();
+        [$course, $progressid] = $this->seed((int) $USER->id, [
+            'objectives' => [],
+            'sections' => [['title' => 'Basics', 'activities' => [['type' => 'forum', 'title' => 'Talk']]]],
+        ]);
+        $outline = $DB->get_record('local_studiolms_progress', ['id' => $progressid]);
+        $DB->set_field('local_studiolms_outline', 'briefingjson', json_encode([
+            'theme' => 'Programming', 'mode' => 'gamified', 'bloom' => 'general', 'profile' => 'narrative',
+        ]), ['id' => $outline->outlineid]);
+
+        $this->run_task($progressid);
+
+        $this->assertSame('completed', $this->progress($progressid)->status);
+        $this->assertTrue($DB->record_exists('block_instances', [
+            'blockname' => 'playerhud',
+            'parentcontextid' => \context_course::instance($course->id)->id,
+        ]));
+    }
+
+    /**
+     * When the AI fails while the questions of a quiz are made, the course still completes, and the quiz is
+     * reported as degraded.
+     *
+     * @return void
+     */
+    public function test_a_quiz_whose_questions_fail_is_degraded_and_the_run_completes(): void {
+        global $USER;
+        $this->setAdminUser();
+        [$course, $progressid] = $this->seed((int) $USER->id, [
+            'objectives' => [],
+            'sections' => [['title' => 'Basics', 'activities' => [['type' => 'quiz', 'title' => 'Check']]]],
+        ]);
+        ai_resolver::set_provider_for_testing(static function (): string {
+            throw new \RuntimeException('No provider.');
+        });
+
+        $this->run_task($progressid);
+
+        $this->assertSame('completed', $this->progress($progressid)->status);
+        $this->assertCount(1, get_fast_modinfo($course)->get_instances_of('quiz'));
+        $this->assertDebuggingCalled();
+    }
 }

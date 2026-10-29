@@ -373,4 +373,27 @@ final class ai_resolver_test extends \advanced_testcase {
             $this->assertSame('invalidairesponse', $e->errorcode);
         }
     }
+
+    /**
+     * A core_ai manager that fails when asked for its providers means no AI is available, not an error.
+     */
+    public function test_a_core_ai_manager_that_fails_means_no_ai_is_available(): void {
+        if (!class_exists(\core_ai\aiactions\generate_text::class)) {
+            $this->markTestSkipped('core_ai is not available.');
+        }
+        \core\di::set(\core_ai\manager::class, new class {
+            /**
+             * Fails, as a manager does when its providers cannot be read.
+             *
+             * @param array $actions The action classes.
+             * @param bool $enabledonly Whether only enabled providers count.
+             * @return array
+             */
+            public function get_providers_for_actions(array $actions, bool $enabledonly): array {
+                throw new \RuntimeException('Broken.');
+            }
+        });
+
+        $this->assertFalse(ai_resolver::is_available());
+    }
 }
