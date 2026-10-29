@@ -163,7 +163,8 @@ class blocks {
             'icon' => '❯ / ❯',
             'openSound' => 'none',
             'hoverEffect' => 'none',
-            'title' => s($title),
+            // Plain text: the template of the block escapes it.
+            'title' => $title,
             'content' => $content,
         ]);
     }

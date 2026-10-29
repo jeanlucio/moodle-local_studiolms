@@ -519,4 +519,18 @@ final class restyle_test extends \advanced_testcase {
             substr_count($again, 'data-slms-block-type=')
         );
     }
+
+    /**
+     * The title of an accordion is plain text that the block escapes once, so an ampersand is not shown as "&amp;".
+     *
+     * @return void
+     */
+    public function test_the_title_of_an_accordion_is_escaped_once(): void {
+        $this->resetAfterTest();
+
+        $html = restyle\blocks::accordion('Questions & answers', '<p>Text</p>');
+
+        $this->assertStringContainsString('Questions &amp; answers', $html);
+        $this->assertStringNotContainsString('&amp;amp;', $html);
+    }
 }
