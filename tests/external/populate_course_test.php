@@ -140,7 +140,8 @@ final class populate_course_test extends \advanced_testcase {
      * @return void
      */
     public function test_standard_mode_does_not_ask_for_the_block_capability(): void {
-        [$course, $teacher, $outlineid] = $this->seed('block/playerhud:addinstance');
+        // A core capability, so the test also runs where block_playerhud is not installed.
+        [$course, $teacher, $outlineid] = $this->seed('moodle/site:manageblocks');
         $this->setUser($teacher);
 
         $result = $this->populate($course, $outlineid, 'label');
