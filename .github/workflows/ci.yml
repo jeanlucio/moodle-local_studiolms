@@ -1,17 +1,32 @@
 name: Moodle Plugin CI
 
-on: [push, pull_request]
+on:
+  push:
+    paths-ignore:
+      - 'docs/**'
+      - 'README.md'
+      - 'CHANGES.md'
+  pull_request:
+    paths-ignore:
+      - 'docs/**'
+      - 'README.md'
+      - 'CHANGES.md'
 
 permissions:
   contents: read
 
 jobs:
   test:
+    # ubuntu-22.04 began deprecation 17/09/2026 (brownouts from now, unsupported
+    # 17/04/2027) — https://github.com/actions/runner-images/issues/14254.
     runs-on: ubuntu-24.04
 
     services:
+      # Only the database a given leg actually tests is started for it (matrix.database
+      # gates each image), matching moodlehq/moodle-plugin-ci's own gha.dist.yml template —
+      # a broken image for one engine no longer takes down legs that never touch it.
       postgres:
-        image: postgres:16
+        image: ${{ matrix.database == 'pgsql' && 'postgres:17' || '' }}
         env:
           POSTGRES_USER: 'postgres'
           POSTGRES_HOST_AUTH_METHOD: 'trust'
@@ -19,16 +34,23 @@ jobs:
           - 5432:5432
         options: --health-cmd pg_isready --health-interval 10s --health-timeout 5s --health-retries 3
 
+      # Floating on the 11.x major, not pinned — this plugin gets periodic maintenance, so
+      # an incompatible point release surfaces at the next visit rather than needing its own
+      # bump commit. A major only moves forward within itself, so this never resolves below
+      # 5.3's own 11.4.0 floor.
       mariadb:
-        image: mariadb:10.11
+        image: ${{ matrix.database == 'mariadb' && 'mariadb:11' || '' }}
         env:
-          MYSQL_USER: 'root'
-          MYSQL_ALLOW_EMPTY_PASSWORD: 'true'
+          MARIADB_ALLOW_EMPTY_ROOT_PASSWORD: '1'
           MYSQL_CHARACTER_SET_SERVER: 'utf8mb4'
           MYSQL_COLLATION_SERVER: 'utf8mb4_unicode_ci'
         ports:
           - 3306:3306
-        options: --health-cmd="mysqladmin ping" --health-interval 10s --health-timeout 5s --health-retries 3
+        # mariadb:11.4+ dropped the mysql*-prefixed client binaries entirely — a raw client
+        # ping is also the wrong tool regardless, since it doesn't know InnoDB is actually
+        # ready. healthcheck.sh is the image's own bundled script for exactly this, and
+        # matches the official template.
+        options: --health-cmd="healthcheck.sh --connect --innodb_initialized" --health-interval 10s --health-timeout 5s --health-retries 3
 
     strategy:
       fail-fast: false
@@ -50,16 +72,17 @@ jobs:
 
     steps:
       - name: Check out repository code
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
         with:
           path: plugin
+          persist-credentials: false
 
       - name: Setup PHP ${{ matrix.php }}
         uses: shivammathur/setup-php@v2
         with:
           php-version: ${{ matrix.php }}
           extensions: pgsql, mysqli, gd, xml, dom, json, zip, bcmath, intl, soap, sodium
-          ini-values: max_input_vars=5000
+          ini-values: max_input_vars=5000, opcache.enable_cli=1
           coverage: none
 
       - name: Initialise moodle-plugin-ci
