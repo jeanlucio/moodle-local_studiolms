@@ -48,6 +48,7 @@ const handleSubmit = async form => {
     const resultRegion = form.querySelector('[data-region="result"]');
     const viewLink = form.querySelector('[data-region="viewlink"]');
     const spinner = form.querySelector('[data-region="spinner"]');
+    const waitRegion = form.querySelector('[data-region="wait"]');
     const btnLabel = form.querySelector('[data-region="btnlabel"]');
     const submitBtn = form.querySelector('[data-action="generate-activity"]');
 
@@ -58,11 +59,12 @@ const handleSubmit = async form => {
     const sectionnum = parseInt(form.querySelector('#activity-sectionnum').value, 10);
     const type = form.querySelector('#activity-type').value;
     const title = form.querySelector('#activity-title').value.trim();
-    const theme = form.querySelector('#activity-theme').value.trim();
+    // The title already says what the content is about, so an empty theme is the title.
+    const theme = form.querySelector('#activity-theme').value.trim() || title;
     const reference = form.querySelector('#activity-reference').value;
 
-    if (title === '' || theme === '') {
-        errorRegion.textContent = await getString('error_theme_required', 'local_studiolms');
+    if (title === '') {
+        errorRegion.textContent = await getString('error_title_required', 'local_studiolms');
         errorRegion.classList.remove('d-none');
         return;
     }
@@ -70,6 +72,7 @@ const handleSubmit = async form => {
     const defaultLabel = btnLabel.textContent;
     spinner.classList.remove('d-none');
     submitBtn.setAttribute('disabled', 'disabled');
+    waitRegion.classList.remove('d-none');
     btnLabel.textContent = await getString('generating_activity', 'local_studiolms');
 
     try {
@@ -87,6 +90,7 @@ const handleSubmit = async form => {
         errorRegion.classList.remove('d-none');
     } finally {
         spinner.classList.add('d-none');
+        waitRegion.classList.add('d-none');
         submitBtn.removeAttribute('disabled');
         btnLabel.textContent = defaultLabel;
     }

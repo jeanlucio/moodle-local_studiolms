@@ -313,4 +313,21 @@ final class generate_activity_test extends \advanced_testcase {
         $this->assertNotEmpty(get_coursemodule_from_id('quiz', $quiz['cmid'], $course->id));
         $this->assertDebuggingCalled();
     }
+
+    /**
+     * An empty theme is the title, for the form and for any other caller: the title already says what it is about.
+     */
+    public function test_an_empty_theme_is_the_title(): void {
+        $prompts = [];
+        ai_resolver::set_provider_for_testing(static function (string $system, string $user) use (&$prompts): string {
+            $prompts[] = $user;
+            return json_encode(['intro' => 'Intro', 'question' => 'Question?', 'steps' => [], 'tip' => 'Tip']);
+        });
+        $course = $this->course_with_teacher();
+
+        generate_activity::execute($course->id, 1, 'forum', 'Active methodologies', '   ', 'general', '');
+
+        $this->assertNotEmpty($prompts);
+        $this->assertStringContainsString('Course theme: Active methodologies', $prompts[0]);
+    }
 }

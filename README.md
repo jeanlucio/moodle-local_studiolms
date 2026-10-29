@@ -27,7 +27,7 @@
 | Moodle    | 4.5 and later |
 | PHP       | 8.1+ |
 
-An AI source is needed to generate anything: the AI Hub (`local_aihub`) with a key, or a provider in Moodle's AI subsystem. Everything else is optional (`tiny_studiolms`, `filter_studiolms`, `block_playerhud`).
+An AI source is needed to generate anything: the [AI Hub](https://github.com/jeanlucio/moodle-local_aihub) (`local_aihub`, a plugin by the same author) with a key, or a provider in Moodle's AI subsystem. Everything else is optional (`tiny_studiolms`, `filter_studiolms`, `block_playerhud`).
 
 ### 🛠️ Installation
 
@@ -55,7 +55,7 @@ O **StudioLMS** (`local_studiolms`) é um assistente de IA que monta conteúdo d
 | Moodle     | 4.5 ou superior |
 | PHP        | 8.1+ |
 
-É preciso uma fonte de IA para gerar qualquer coisa: o Hub de IA (`local_aihub`) com uma chave, ou um provedor no subsistema de IA do Moodle. Todo o resto é opcional (`tiny_studiolms`, `filter_studiolms`, `block_playerhud`).
+É preciso uma fonte de IA para gerar qualquer coisa: o [Hub de IA](https://github.com/jeanlucio/moodle-local_aihub) (`local_aihub`, um plugin do mesmo autor) com uma chave, ou um provedor no subsistema de IA do Moodle. Todo o resto é opcional (`tiny_studiolms`, `filter_studiolms`, `block_playerhud`).
 
 ### 🛠️ Instalação
 

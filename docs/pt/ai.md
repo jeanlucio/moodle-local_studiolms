@@ -4,7 +4,7 @@ O StudioLMS **não tem chave nem tela de chave próprias**. A geração de texto
 
 | Ordem | Fonte |
 |-------|-------|
-| 1 | **`local_aihub`**: quando instalado e com uma chave (pessoal, depois do site) |
+| 1 | **[`local_aihub`](https://github.com/jeanlucio/moodle-local_aihub)** (o Hub de IA, do mesmo autor): quando instalado e com uma chave (pessoal, depois do site) |
 | 2 | **`core_ai` do Moodle**: chamado diretamente; não precisa de chave quando o site já tem um provedor |
 | 3 | Uma mensagem clara pede ao administrador que configure a IA (Administração do site > IA), ou instale o hub |
 

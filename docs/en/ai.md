@@ -4,7 +4,7 @@ StudioLMS has **no key and no key screen of its own**. Text generation is resolv
 
 | Order | Source |
 |------|--------|
-| 1 | **`local_aihub`**: when installed and holding a key (personal, then site) |
+| 1 | **[`local_aihub`](https://github.com/jeanlucio/moodle-local_aihub)** (the AI Hub, by the same author): when installed and holding a key (personal, then site) |
 | 2 | **Moodle `core_ai`**: called directly; no key needed when the site already has a provider |
 | 3 | A clear message asks the administrator to configure AI (Site administration > AI), or to install the hub |
 

@@ -118,7 +118,8 @@ class generate_activity extends external_api {
 
         $type       = $params['type'];
         $title      = $params['title'];
-        $theme      = $params['theme'];
+        // The title already says what the content is about, so an empty theme is the title.
+        $theme      = trim($params['theme']) !== '' ? $params['theme'] : $params['title'];
         $bloom      = $params['bloom'];
         $reference  = $params['reference'];
         $sectionnum = $params['sectionnum'];

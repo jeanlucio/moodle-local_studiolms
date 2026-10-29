@@ -6,7 +6,7 @@ StudioLMS generates everything with AI, so **one of these two must be available*
 
 | Source | What it needs |
 |---|---|
-| `local_aihub` (the AI Hub) | The plugin installed, and an API key (a personal one, or the site's) |
+| [`local_aihub`](https://github.com/jeanlucio/moodle-local_aihub) (the AI Hub, a plugin by the same author) | The plugin installed, and an API key (a personal one, or the site's) |
 | `core_ai` (Moodle's AI subsystem, part of Moodle) | A provider configured and enabled for text generation, under **Site administration > AI** |
 
 You need only one. If both are there, the AI Hub is asked first and `core_ai` answers when the hub is absent or fails. See [AI & Third-party Services](#ai).

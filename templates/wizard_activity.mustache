@@ -77,9 +77,9 @@
 
         <div class="mb-3">
             <label class="form-label" for="activity-theme">
-                {{#str}}briefing_theme, local_studiolms{{/str}} <span class="text-danger" aria-hidden="true">*</span>
+                {{#str}}activity_theme, local_studiolms{{/str}}
             </label>
-            <input type="text" class="form-control" id="activity-theme" name="theme" required
+            <input type="text" class="form-control" id="activity-theme" name="theme"
                 placeholder="{{#str}}briefing_theme_placeholder, local_studiolms{{/str}}">
         </div>
 
@@ -97,6 +97,8 @@
                 {{#str}}activity_view, local_studiolms{{/str}}
             </a>
         </div>
+
+        <p class="text-muted d-none" role="status" data-region="wait">{{#str}}activity_wait, local_studiolms{{/str}}</p>
 
         <div class="d-flex justify-content-start">
             <button type="button" class="btn btn-secondary me-2" data-action="back-to-landing">
