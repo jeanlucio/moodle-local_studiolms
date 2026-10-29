@@ -58,11 +58,18 @@ class polisher {
      * @param array[] $segments The pieces, from segmenter::split().
      * @param int $maxblocks The most visual blocks the page may hold.
      * @param \context|null $context Where the page is, so the course's own switch for AI tools is respected.
+     * @param string[] $missing Receives the numbers of the original text that are not in the result. They do not
+     *                          refuse it (the AI may have cut a repeated sentence on purpose), but the teacher is told.
      * @return string|null The HTML, or null when the AI is unavailable or answered nothing usable.
      * @throws \moodle_exception When the text is too long to be sent whole, or came back with a number that is not in
      *                           the original, or too different in length.
      */
-    public static function polish(array $segments, int $maxblocks, ?\context $context = null): ?string {
+    public static function polish(
+        array $segments,
+        int $maxblocks,
+        ?\context $context = null,
+        array &$missing = []
+    ): ?string {
         $hastext = array_filter($segments, fn(array $segment): bool => $segment['kind'] !== segmenter::KIND_FIXED);
         $shown = self::shown($segments);
         if (empty($hastext) || empty($shown)) {
@@ -101,6 +108,7 @@ class polisher {
         }
 
         self::check($segments, $state['written']);
+        $missing = self::missing_numbers($segments, $state['written']);
         return $html;
     }
 
@@ -437,6 +445,36 @@ class polisher {
         if ($before > 0 && ($after < $before * self::MIN_RATIO || $after > $before * self::MAX_RATIO)) {
             throw new \moodle_exception('restyle_polish_length', 'local_studiolms');
         }
+    }
+
+    /**
+     * Lists the numbers of the original text that the result does not have.
+     *
+     * Only the text the AI was shown counts: a picture or a table is carried over as it was. A number that starts a
+     * line as a list marker (1. or 2)) is the list the AI made out of it, so it is not missed. Numbers are compared
+     * as whole numbers (24.000, 3,5), and each is told once however many times it appeared.
+     *
+     * @param array[] $segments The pieces.
+     * @param string $written The text the AI wrote.
+     * @return string[] The numbers, in the order they come in the original.
+     */
+    private static function missing_numbers(array $segments, string $written): array {
+        $pattern = '/\d+(?:[.,]\d+)*/u';
+        preg_match_all($pattern, $written, $kept);
+        $missing = [];
+        foreach ($segments as $segment) {
+            if ($segment['kind'] === segmenter::KIND_FIXED) {
+                continue;
+            }
+            $text = (string) preg_replace('/^\s*\d+[.)]\s+/u', '', $segment['text']);
+            preg_match_all($pattern, $text, $had);
+            foreach ($had[0] as $number) {
+                if (!in_array($number, $kept[0], true) && !in_array($number, $missing, true)) {
+                    $missing[] = $number;
+                }
+            }
+        }
+        return $missing;
     }
 
     /**

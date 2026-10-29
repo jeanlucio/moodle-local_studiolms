@@ -197,6 +197,7 @@ $string['restyle_none'] = 'Este curso não tem páginas nem rótulos para estili
 $string['restyle_noplan'] = 'A IA não conseguiu planejar os blocos. Tente de novo.';
 $string['restyle_notsupported'] = 'Só é possível estilizar páginas e rótulos.';
 $string['restyle_notsupportedformat'] = 'O texto desta atividade não está em formato HTML e por isso não pode ser estilizado.';
+$string['restyle_numbers_missing'] = 'Estes números do seu texto não aparecem na cópia: {$a}. Confira se foi de propósito.';
 $string['restyle_open_copy'] = 'Abrir a cópia para ajustar';
 $string['restyle_polish'] = 'Reorganizar e polir o texto';
 $string['restyle_polish_help'] = 'A IA pode reescrever, encurtar e dividir o seu texto e tirar repetições, mas não deve acrescentar fatos. O original é mantido e a cópia fica oculta, então revise antes de publicar.';

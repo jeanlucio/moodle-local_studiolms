@@ -55,6 +55,14 @@ const showCopy = async(region, copy, [, open, view]) => {
             link.textContent = label;
             alert.append(link);
         });
+    // A polished copy may have lost a number of the original (a year, a quantity): the teacher is told which.
+    if (Array.isArray(copy.missingnumbers) && copy.missingnumbers.length > 0) {
+        const warning = document.createElement('p');
+        warning.className = 'mt-2 mb-0';
+        warning.setAttribute('role', 'alert');
+        warning.textContent = await getString('restyle_numbers_missing', 'local_studiolms', copy.missingnumbers.join(', '));
+        alert.append(warning);
+    }
     region.append(alert);
 };
 

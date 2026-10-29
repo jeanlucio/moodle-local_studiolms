@@ -27,6 +27,7 @@ namespace local_studiolms\external;
 use context_module;
 use core_external\external_api;
 use core_external\external_function_parameters;
+use core_external\external_multiple_structure;
 use core_external\external_single_structure;
 use core_external\external_value;
 use local_studiolms\local\restyle\service;
@@ -57,7 +58,7 @@ class restyle_activity extends external_api {
      *
      * @param int $cmid Course module id of the page or label.
      * @param bool $polish True to let the AI reorganise and polish the text.
-     * @return array The copy: cmid, name, editurl and viewurl.
+     * @return array The copy: cmid, name, editurl, viewurl and missingnumbers.
      */
     public static function execute(int $cmid, bool $polish = false): array {
         $params = self::validate_parameters(self::execute_parameters(), ['cmid' => $cmid, 'polish' => $polish]);
@@ -77,6 +78,12 @@ class restyle_activity extends external_api {
         return new external_single_structure([
             'cmid' => new external_value(PARAM_INT, 'Course module id of the hidden copy.'),
             'name' => new external_value(PARAM_TEXT, 'Name of the copy.'),
+            'missingnumbers' => new external_multiple_structure(
+                new external_value(PARAM_TEXT, 'A number of the original text that the polished copy does not have.'),
+                'The numbers of the original text that the copy does not have: the teacher is told, nothing is refused.',
+                VALUE_DEFAULT,
+                []
+            ),
             'editurl' => new external_value(PARAM_URL, 'Address of the form that edits the copy with the Studio.'),
             'viewurl' => new external_value(PARAM_URL, 'Address that shows the copy.'),
         ]);

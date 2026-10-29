@@ -180,6 +180,7 @@ final class restyle_service_test extends \advanced_testcase {
             ['type' => 'callout', 'html' => 'Remember: they have a membrane.'],
         ]]));
         $copy = service::restyle($page->cmid, true);
+        $this->assertSame([], $copy->missingnumbers);
 
         $modinfo = get_fast_modinfo($course->id);
         $this->assertFalse((bool) $modinfo->get_cm($copy->cmid)->visible);
@@ -369,5 +370,30 @@ final class restyle_service_test extends \advanced_testcase {
         $this->assertNull(adapter::read('page', (int) $page->id));
         $this->assertTrue(adapter::supports('label'));
         $this->assertFalse(adapter::supports('quiz'));
+    }
+
+    /**
+     * A polished copy that lost a number of the original is made, and the answer says which number.
+     *
+     * @return void
+     */
+    public function test_a_polished_copy_says_which_numbers_it_lost(): void {
+        $this->resetAfterTest();
+        [, $page, $teacher] = $this->course_with_page(
+            '<h2>The cell</h2><p>Cells were named in 1665 by Hooke, in a book of 1667.</p>'
+        );
+        $this->setUser($teacher);
+        ai_resolver::set_provider_for_testing(fn(string $s, string $u): string => json_encode(['blocks' => [
+            ['type' => 'heading', 'text' => 'The cell', 'level' => 2],
+            ['type' => 'paragraph', 'html' => 'Cells were named in 1665 by Hooke.'],
+        ]]));
+
+        $copy = service::restyle($page->cmid, true);
+
+        $this->assertSame(['1667'], $copy->missingnumbers);
+        $this->assertNotEmpty($copy->cmid);
+        $plain = service::restyle($page->cmid);
+        $this->assertSame([], $plain->missingnumbers, 'without polishing every word is kept');
+        ai_resolver::set_provider_for_testing(null);
     }
 }

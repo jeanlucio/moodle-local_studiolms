@@ -45,7 +45,8 @@ class service {
      *
      * @param int $cmid The course module id of the activity.
      * @param bool $polish True to let the AI reorganise and polish the text; false to keep every word.
-     * @return \stdClass The copy: cmid, name, editurl and viewurl.
+     * @return \stdClass The copy: cmid, name, editurl, viewurl and missingnumbers (the numbers of the original text
+     *                   that a polished copy does not have, empty otherwise).
      * @throws moodle_exception When the user cannot restyle it, the activity cannot be restyled, or the AI fails.
      */
     public static function restyle(int $cmid, bool $polish = false): \stdClass {
@@ -65,8 +66,9 @@ class service {
             throw new moodle_exception('restyle_nochange', 'local_studiolms');
         }
         $context = context_module::instance($cm->id);
+        $missing = [];
         if ($polish) {
-            $restyled = polisher::polish($segments, adapter::max_blocks($cm->modname), $context);
+            $restyled = polisher::polish($segments, adapter::max_blocks($cm->modname), $context, $missing);
         } else {
             $plan = planner::plan($segments, adapter::max_blocks($cm->modname), $context);
             $restyled = $plan === null ? null : assembler::build($segments, $plan);
@@ -85,6 +87,7 @@ class service {
         return (object) [
             'cmid' => (int) $copy->id,
             'name' => $name,
+            'missingnumbers' => $missing,
             'editurl' => (new moodle_url('/course/modedit.php', ['update' => $copy->id, 'return' => 1]))->out(false),
             'viewurl' => $copy->modname === 'label'
                 ? (new moodle_url('/course/view.php', ['id' => $course->id]))->out(false)

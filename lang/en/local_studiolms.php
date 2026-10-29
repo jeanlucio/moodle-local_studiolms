@@ -197,6 +197,7 @@ $string['restyle_none'] = 'This course has no pages or labels to restyle.';
 $string['restyle_noplan'] = 'The AI could not plan the blocks. Please try again.';
 $string['restyle_notsupported'] = 'Only pages and labels can be restyled.';
 $string['restyle_notsupportedformat'] = 'The text of this activity is not in HTML format, so it cannot be restyled.';
+$string['restyle_numbers_missing'] = 'These numbers of your text are not in the copy: {$a}. Check that this is what you wanted.';
 $string['restyle_open_copy'] = 'Open the copy to adjust it';
 $string['restyle_polish'] = 'Reorganise and polish the text';
 $string['restyle_polish_help'] = 'The AI may rewrite, shorten and split your text, and remove repetition, but it must not add facts. Your original is kept untouched and the copy is hidden, so review it before you publish it.';

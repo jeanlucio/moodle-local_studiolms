@@ -338,4 +338,72 @@ final class restyle_polisher_test extends \advanced_testcase {
         $this->assertObjectNotHasProperty('system', $seen);
         ai_resolver::set_provider_for_testing(null);
     }
+
+    /**
+     * A number of the original that the result does not have is told, and does not refuse the result: the AI may have
+     * cut a sentence on purpose, and the teacher decides.
+     *
+     * @return void
+     */
+    public function test_a_number_that_goes_missing_is_told_and_does_not_refuse(): void {
+        $this->resetAfterTest();
+        $segments = segmenter::split(
+            '<p>Lipovetsky wrote the book (2006) and said it again in 2010.</p><p>It sold 24.000 copies.</p>'
+        );
+        $this->ai_answers(json_encode(['blocks' => [
+            ['type' => 'paragraph', 'html' => 'Lipovetsky wrote the book and said it again in 2010. It sold 24.000 copies.'],
+        ]]));
+
+        $missing = [];
+        $html = polisher::polish($segments, 5, null, $missing);
+
+        $this->assertNotNull($html);
+        $this->assertSame(['2006'], $missing);
+        ai_resolver::set_provider_for_testing(null);
+    }
+
+    /**
+     * A number kept anywhere in the result is not missing, one told twice is told once, the markers of a typed list are
+     * not numbers of the text, and a number of a picture or table is not asked of the AI.
+     *
+     * @return void
+     */
+    public function test_numbers_kept_or_typed_as_a_list_marker_are_not_missing(): void {
+        $this->resetAfterTest();
+        $segments = segmenter::split(
+            '<p>1. First step in 2002.<br>2. Second step, again in 2002.<br>Total of 3,5 hours in 2002.</p>'
+            . '<table><tr><td>Year 1999</td></tr></table>'
+        );
+        $this->ai_answers(json_encode(['blocks' => [
+            ['type' => 'list', 'items' => ['First step', 'Second step']],
+            ['type' => 'paragraph', 'html' => 'Total of 3,5 hours.'],
+            ['type' => 'keep', 'id' => 3],
+        ]]));
+
+        $missing = [];
+        polisher::polish($segments, 5, null, $missing);
+
+        $this->assertSame(['2002'], $missing, '2002 is told once, and 1 and 2 are list markers; 3,5 and 1999 are there');
+        ai_resolver::set_provider_for_testing(null);
+    }
+
+    /**
+     * With every number kept, nothing is missing.
+     *
+     * @return void
+     */
+    public function test_nothing_is_missing_when_every_number_is_kept(): void {
+        $this->resetAfterTest();
+        $this->ai_answers(json_encode(['blocks' => [
+            ['type' => 'paragraph', 'html' => 'Cells are the unit of life. Visit this page to learn more.'],
+            ['type' => 'paragraph', 'html' => 'The nucleus keeps the DNA in 23 pairs.'],
+            ['type' => 'keep', 'id' => 3],
+        ]]));
+        $missing = ['stale'];
+
+        polisher::polish(segmenter::split(self::PAGE), 10, null, $missing);
+
+        $this->assertSame([], $missing);
+        ai_resolver::set_provider_for_testing(null);
+    }
 }
