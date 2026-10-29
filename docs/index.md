@@ -20,6 +20,9 @@ lang: en
 
 ---
 
+<span id="screenshots"></span>
+{% include_relative en/screenshots.md %}
+
 <span id="features"></span>
 {% include_relative en/features.md %}
 

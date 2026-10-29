@@ -1,0 +1,35 @@
+# Each entry needs an image at docs/assets/img/screenshots/<file>, plus an English and a Portuguese caption.
+# The screenshots.md pages (en/pt) loop over this list, so a new screenshot never touches the gallery markup.
+- file: landing.png
+  caption_en: "The landing of the wizard in a course: generate one activity, one section or a whole course, or restyle what already exists"
+  caption_pt: "A tela inicial do assistente num curso: gerar uma atividade, uma seção ou um curso inteiro, ou estilizar o que já existe"
+- file: briefing.png
+  caption_en: "Step 1 of the full course: the topic, the reference material, the Bloom level, the structure and the mode, with the optional wipe and its warning"
+  caption_pt: "Passo 1 do curso completo: o tema, o material de referência, o nível de Bloom, a estrutura e o modo, com a limpeza opcional e o aviso dela"
+- file: outline.png
+  caption_en: "Step 2: the outline the AI proposed, to review before anything is created. Rename, change the type of an activity, add or remove sections and activities"
+  caption_pt: "Passo 2: o roteiro que a IA propôs, para revisar antes que algo seja criado. Renomeie, mude o tipo de uma atividade, acrescente ou remova seções e atividades"
+- file: wipe-confirm.png
+  caption_en: "The confirmation before the wipe: it says that what the students did is deleted too, that the Announcements forum is kept, and that it cannot be undone"
+  caption_pt: "A confirmação antes de limpar o curso: ela diz que o que os estudantes fizeram também é apagado, que o fórum de Avisos é mantido e que não dá para desfazer"
+- file: page-tab.png
+  caption_en: "A tab in the settings of a page leads to the restyle, with that page pointed out"
+  caption_pt: "Uma aba nas configurações de uma página leva à estilização, com aquela página destacada"
+- file: restyle-list.png
+  caption_en: "The list of the pages and labels of the course, by section. The notice says what is sent to the AI, and the polish option is off until the teacher asks for it"
+  caption_pt: "A lista das páginas e rótulos do curso, por seção. O aviso diz o que é enviado à IA, e a opção de polir fica desligada até o professor pedir"
+- file: restyle-before.png
+  caption_en: "A page pasted from the web, as the teacher had it: no real headings, the titles are lines of a paragraph, and the lists are lines too"
+  caption_pt: "Uma página colada da web, como o professor a tinha: sem títulos de verdade, os títulos são linhas de um parágrafo, e as listas também são linhas"
+- file: restyle-after.png
+  caption_en: "The hidden copy after the restyle: titles, a list, a grid of the four mechanisms and a folded section, with the same words in the same order"
+  caption_pt: "A cópia oculta depois da estilização: títulos, uma lista, uma grade com os quatro mecanismos e uma seção recolhida, com as mesmas palavras na mesma ordem"
+- file: restyle-done.png
+  caption_en: "The result is a hidden copy right after the original, named with the title and (StudioLMS), with a button to open it in the editor"
+  caption_pt: "O resultado é uma cópia oculta logo depois do original, com o título e (StudioLMS), e um botão para abri-la no editor"
+- file: restyle-polish-option.png
+  caption_en: "The optional Reorganise and polish the text: the AI may rewrite, shorten and split the text, but not add facts"
+  caption_pt: "A opção Reorganizar e polir o texto: a IA pode reescrever, encurtar e dividir o texto, mas não acrescentar fatos"
+- file: restyle-polished.png
+  caption_en: "The same page polished: repetition removed, titles found, the mechanisms and the tools set out, and every number of the original kept"
+  caption_pt: "A mesma página polida: repetição removida, títulos encontrados, os mecanismos e as ferramentas organizados, e todos os números do original mantidos"

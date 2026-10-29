@@ -20,6 +20,9 @@ O **StudioLMS** (`local_studiolms`) é um assistente de IA que monta conteúdo d
 
 ---
 
+<span id="screenshots"></span>
+{% include_relative pt/screenshots.md %}
+
 <span id="features"></span>
 {% include_relative pt/features.md %}
 

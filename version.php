@@ -26,7 +26,7 @@ defined('MOODLE_INTERNAL') || die();
 
 $plugin->version = 2026102800;
 $plugin->requires = 2024100700; // Requires Moodle 4.5+ (Compatible with 5.x).
-$plugin->supported = [405, 502];
+$plugin->supported = [405, 503];
 $plugin->component = 'local_studiolms';
 $plugin->maturity = MATURITY_BETA;
 $plugin->release = 'v0.4.0';
