@@ -46,7 +46,8 @@ final class ai_context_test extends \advanced_testcase {
         $this->seen = [];
         ai_resolver::set_provider_for_testing(function (string $system, string $user, ?\context $context = null): string {
             $this->seen[] = $context;
-            return '{}';
+            // A usable plan for a section, so that the call does not end in the debugging message of a bad answer.
+            return str_contains($system, 'learning activities') ? '[{"type":"page","title":"A page"}]' : '{}';
         });
     }
 
@@ -144,11 +145,7 @@ final class ai_context_test extends \advanced_testcase {
             // The empty answer of the test provider is no outline; only the call matters here.
             $this->assertNotEmpty($this->seen);
         }
-        try {
-            \local_studiolms\external\plan_section::execute($course->id, 1, 'Botany');
-        } catch (\moodle_exception $e) {
-            $this->assertNotEmpty($this->seen);
-        }
+        \local_studiolms\external\plan_section::execute($course->id, 1, 'Botany');
 
         $this->assert_every_call_is_for(\context_course::instance($course->id));
     }
