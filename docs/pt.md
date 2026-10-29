@@ -15,7 +15,7 @@ lang: pt
 [![Last Commit](https://img.shields.io/github/last-commit/jeanlucio/moodle-local_studiolms?style=flat)](https://github.com/jeanlucio/moodle-local_studiolms/commits)
 [![Open Issues](https://img.shields.io/github/issues/jeanlucio/moodle-local_studiolms?style=flat)](https://github.com/jeanlucio/moodle-local_studiolms/issues)
 
-O **StudioLMS** (`local_studiolms`) é um assistente de IA que monta conteúdo de curso de dentro de um curso do Moodle que já existe. O professor descreve o tema, revisa o que a IA propõe, e o curso é preenchido com seções, páginas ricas, questionários, fóruns, tarefas e glossários, tudo conteúdo nativo do Moodle. Ele também pode estilizar em blocos do Studio uma página ou rótulo que você já escreveu, numa cópia oculta, sem reescrever o seu texto.
+O **StudioLMS** (`local_studiolms`) é um construtor de cursos guiado por IA para o Moodle. De dentro de um curso que já existe, o professor descreve o tema e a IA conduz a montagem: propõe uma estrutura (objetivos, seções e atividades) para o professor revisar e, depois, monta o curso como conteúdo nativo do Moodle: um plano de disciplina, páginas desenhadas com os blocos do StudioLMS, questionários, fóruns, tarefas e glossários (e, opcionalmente, a gamificação do PlayerHUD). Tudo continua editável como em qualquer curso. Ele também pode estilizar em blocos do Studio uma página ou rótulo que você já escreveu, numa cópia oculta, sem reescrever o seu texto.
 
 <p class="page-hint">👈 Use o menu lateral para ir direto a qualquer seção desta página.</p>
 
