@@ -102,6 +102,15 @@ class ai_resolver {
             return (string) (self::$testingprovider)($systemprompt, $userprompt);
         }
 
+        // Behat-only canned answer: a Behat web request cannot see the provider a test injects, so a scenario stores
+        // the answer in this config. Guarded by BEHAT_SITE_RUNNING, so it is inert in production.
+        if (defined('BEHAT_SITE_RUNNING') && BEHAT_SITE_RUNNING) {
+            $canned = get_config('local_studiolms', 'behatfakeai_response');
+            if ($canned !== false && $canned !== '') {
+                return (string) $canned;
+            }
+        }
+
         // Primary: the AI Hub resolves personal → site BYOK keys. On a successful
         // generation return its text; otherwise fall through to the next source.
         if (class_exists(\local_aihub\ai::class)) {

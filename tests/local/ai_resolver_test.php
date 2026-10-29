@@ -143,4 +143,20 @@ final class ai_resolver_test extends \advanced_testcase {
             $this->assertCount(1, $client->prompts);
         }
     }
+
+    /**
+     * The canned answer that Behat scenarios store in a config is ignored outside Behat, so it cannot replace the AI
+     * in production.
+     */
+    public function test_the_behat_canned_answer_is_inert_outside_behat(): void {
+        $this->stub_hub(false);
+        set_config('behatfakeai_response', '{"blocks":[]}', 'local_studiolms');
+
+        try {
+            ai_resolver::generate_text('system', 'user');
+            $this->fail('The canned answer must not be used outside Behat.');
+        } catch (\moodle_exception $e) {
+            $this->assertSame('noaiprovider', $e->errorcode);
+        }
+    }
 }

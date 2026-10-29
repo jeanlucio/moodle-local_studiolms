@@ -51,8 +51,8 @@ class behat_local_studiolms extends behat_base {
     /**
      * Resolves a course-scoped StudioLMS page to its URL.
      *
-     * Recognised type: "wizard" (the in-course generation wizard), identified by
-     * the course short name.
+     * Recognised types, identified by the course short name: "wizard" (the in-course generation wizard) and
+     * "restyle" (the list of pages and labels that can be restyled).
      *
      * @param string $type The page type.
      * @param string $identifier The course short name.
@@ -65,6 +65,9 @@ class behat_local_studiolms extends behat_base {
             case 'wizard':
                 $courseid = $DB->get_field('course', 'id', ['shortname' => $identifier], MUST_EXIST);
                 return new moodle_url('/local/studiolms/generate.php', ['courseid' => $courseid]);
+            case 'restyle':
+                $courseid = $DB->get_field('course', 'id', ['shortname' => $identifier], MUST_EXIST);
+                return new moodle_url('/local/studiolms/restyle.php', ['courseid' => $courseid]);
             default:
                 throw new Exception("Unrecognised local_studiolms page type '{$type}'.");
         }
