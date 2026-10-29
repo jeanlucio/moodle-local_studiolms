@@ -211,4 +211,29 @@ final class quiz_builder_test extends \advanced_testcase {
 
         $this->assertSame(1, $added);
     }
+
+    /**
+     * The default question category of a quiz is made by the core, on every version, and asking again returns the
+     * same one.
+     *
+     * @return void
+     */
+    public function test_the_default_category_of_a_quiz_is_made_by_the_core_once(): void {
+        global $DB;
+
+        $this->resetAfterTest();
+        $course = $this->getDataGenerator()->create_course();
+        $quiz = $this->getDataGenerator()->create_module('quiz', ['course' => $course->id]);
+        $context = \context_module::instance($quiz->cmid);
+        $method = new \ReflectionMethod(quiz_builder::class, 'ensure_question_category');
+        $method->setAccessible(true);
+
+        $first = $method->invoke(null, $context);
+        $second = $method->invoke(null, $context);
+
+        $this->assertNotEmpty($first->id);
+        $this->assertSame((int) $first->id, (int) $second->id);
+        $top = question_get_top_category($context->id, true);
+        $this->assertSame((int) $top->id, (int) $DB->get_field('question_categories', 'parent', ['id' => $first->id]));
+    }
 }

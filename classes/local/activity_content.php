@@ -309,6 +309,7 @@ class activity_content {
         );
         $DB->set_field('quiz', 'intro', $intro, ['id' => $quiz->id]);
         $DB->set_field('quiz', 'introformat', FORMAT_HTML, ['id' => $quiz->id]);
+        course_builder::mark_module_updated((int) $result->coursemodule);
         rebuild_course_cache($courseid, true);
     }
 

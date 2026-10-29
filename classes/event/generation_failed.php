@@ -41,6 +41,26 @@ class generation_failed extends \core\event\base {
     }
 
     /**
+     * Maps the object of the event when a course with logs is restored: the event has none.
+     *
+     * @return bool False: nothing to map.
+     */
+    public static function get_objectid_mapping(): bool {
+        return false;
+    }
+
+    /**
+     * Maps the other values of the event when a course with logs is restored.
+     *
+     * The only one is the message of the error, which is not an id.
+     *
+     * @return bool False: nothing to map.
+     */
+    public static function get_other_mapping(): bool {
+        return false;
+    }
+
+    /**
      * Returns the localised event name.
      *
      * @return string

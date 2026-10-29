@@ -99,4 +99,20 @@ final class events_test extends \advanced_testcase {
         $this->assertSame('/course/view.php?id=' . $course->id, $event->get_url()->out_as_local_url(false));
         $this->assertSame(\core\event\base::LEVEL_OTHER, $event->edulevel);
     }
+
+    /**
+     * Restoring a course with logs: the events say that none of their values is an id to map, and the generation log
+     * is left unmapped, so a restored log does not point at a record of another course.
+     *
+     * @return void
+     */
+    public function test_the_events_tell_the_restore_what_to_map(): void {
+        $this->assertSame(
+            ['db' => 'local_studiolms_generation_log', 'restore' => \core\event\base::NOT_MAPPED],
+            course_generated::get_objectid_mapping()
+        );
+        $this->assertFalse(course_generated::get_other_mapping());
+        $this->assertFalse(generation_failed::get_objectid_mapping());
+        $this->assertFalse(generation_failed::get_other_mapping());
+    }
 }

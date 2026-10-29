@@ -511,6 +511,7 @@ class gamification_setup {
         $intro = (string) $DB->get_field($cm->modname, 'intro', ['id' => $cm->instance]);
         $newintro = $shortcode . ($intro !== '' ? '<br>' . $intro : '');
         $DB->set_field($cm->modname, 'intro', $newintro, ['id' => $cm->instance]);
+        course_builder::mark_module_updated($cmid);
 
         return true;
     }

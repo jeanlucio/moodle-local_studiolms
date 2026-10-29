@@ -56,6 +56,24 @@ class course_builder {
     }
 
     /**
+     * Records that the introduction of an activity was changed after its creation, outside the update of its module.
+     *
+     * The plugin writes the introduction of a quiz, and the drop shortcode of a forum or an assignment, straight to
+     * the table once the content exists. That skips what the update of a module does, so the time of the change and
+     * the event are recorded here: the search index follows the time, and the logs and the observers follow the event.
+     *
+     * @param int $cmid The course module id.
+     * @return void
+     */
+    public static function mark_module_updated(int $cmid): void {
+        global $DB;
+
+        $cm = get_coursemodule_from_id('', $cmid, 0, false, MUST_EXIST);
+        $DB->set_field($cm->modname, 'timemodified', time(), ['id' => $cm->instance]);
+        \core\event\course_module_updated::create_from_cm($cm)->trigger();
+    }
+
+    /**
      * Lists the course modules of the news forum (Announcements) of a course.
      *
      * Moodle makes that forum itself and the course expects it to be there, so no wipe deletes it.

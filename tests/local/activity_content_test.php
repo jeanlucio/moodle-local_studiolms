@@ -381,4 +381,34 @@ final class activity_content_test extends \advanced_testcase {
         $this->assertStringContainsString('Real step', $html);
         ai_resolver::set_provider_for_testing(null);
     }
+
+    /**
+     * An introduction written after the activity was created records the change: the time moves and the update of the
+     * module is logged, so the search index and the observers see it.
+     *
+     * @return void
+     */
+    public function test_a_late_introduction_records_the_update_of_the_module(): void {
+        global $DB;
+
+        $this->resetAfterTest();
+        set_config('enable_quizinfo', 0, 'filter_studiolms');
+        $course = $this->getDataGenerator()->create_course();
+        $quiz = $this->getDataGenerator()->create_module('quiz', ['course' => $course->id]);
+        $DB->set_field('quiz', 'timemodified', 1000, ['id' => $quiz->id]);
+        $sink = $this->redirectEvents();
+
+        activity_content::write_quiz_intro(
+            (object) ['coursemodule' => $quiz->cmid, 'instance' => $quiz->id],
+            (int) $course->id,
+            'Check',
+            3
+        );
+
+        $events = array_filter($sink->get_events(), fn($e) => $e instanceof \core\event\course_module_updated);
+        $sink->close();
+        $this->assertCount(1, $events);
+        $this->assertSame((int) $quiz->cmid, (int) reset($events)->objectid);
+        $this->assertGreaterThan(1000, (int) $DB->get_field('quiz', 'timemodified', ['id' => $quiz->id]));
+    }
 }

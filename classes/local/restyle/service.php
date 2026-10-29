@@ -29,6 +29,7 @@ use context_course;
 use context_module;
 use core_courseformat\formatactions;
 use local_studiolms\local\ai_resolver;
+use local_studiolms\local\course_builder;
 use moodle_exception;
 use moodle_url;
 
@@ -78,6 +79,7 @@ class service {
         $name = get_string('restyle_copyname', 'local_studiolms', $cm->name);
         self::hide_and_rename($course, $copy, $name);
         adapter::write($copy->modname, (int) $copy->instance, $restyled);
+        course_builder::mark_module_updated((int) $copy->id);
         rebuild_course_cache($course->id, true);
 
         return (object) [

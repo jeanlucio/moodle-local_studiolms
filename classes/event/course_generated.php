@@ -43,6 +43,28 @@ class course_generated extends \core\event\base {
     }
 
     /**
+     * Maps the object of the event when a course with logs is restored.
+     *
+     * The generation log is not part of a course backup, so the id in a restored log points at nothing.
+     *
+     * @return array
+     */
+    public static function get_objectid_mapping(): array {
+        return ['db' => 'local_studiolms_generation_log', 'restore' => \core\event\base::NOT_MAPPED];
+    }
+
+    /**
+     * Maps the other values of the event when a course with logs is restored.
+     *
+     * They are the mode, the profile and a message: none of them is an id.
+     *
+     * @return bool False: nothing to map.
+     */
+    public static function get_other_mapping(): bool {
+        return false;
+    }
+
+    /**
      * Returns the localised event name.
      *
      * @return string
