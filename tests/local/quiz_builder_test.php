@@ -188,6 +188,71 @@ final class quiz_builder_test extends \advanced_testcase {
     }
 
     /**
+     * An answer the AI did not give in a way that can be read is not turned into "false": the question is left out,
+     * since a wrong key is worse than a missing question. The answers written in the language of the course are read.
+     */
+    public function test_a_true_false_question_with_an_unreadable_answer_is_left_out(): void {
+        global $DB;
+
+        ai_resolver::set_provider_for_testing(static fn(string $s, string $u): string => json_encode([
+            'questions' => [
+                ['type' => 'truefalse', 'question' => 'No answer given'],
+                ['type' => 'truefalse', 'question' => 'Answer in prose', 'answer' => 'talvez'],
+                ['type' => 'truefalse', 'question' => 'Verdadeiro written out', 'answer' => 'Verdadeiro'],
+                ['type' => 'truefalse', 'question' => 'Falso written out', 'answer' => 'Falso'],
+            ],
+        ]));
+        $course = $this->getDataGenerator()->create_course();
+        $quiz = course_builder::add_quiz($course, 0, 'Test', '<p>i</p>');
+
+        $added = quiz_builder::create($quiz->coursemodule, $quiz->instance, 'Geo', 'Test', 4);
+
+        $this->assertSame(2, $added);
+        $this->assertFalse($DB->record_exists('question', ['name' => 'No answer given']));
+        $this->assertFalse($DB->record_exists('question', ['name' => 'Answer in prose']));
+        $key = static function (string $name) use ($DB): array {
+            $question = $DB->get_record('question', ['name' => $name], '*', MUST_EXIST);
+            $answers = $DB->get_records('question_answers', ['question' => $question->id], 'id ASC', 'id, fraction');
+            return array_values(array_map(fn($a) => (float) $a->fraction, $answers));
+        };
+        // The core stores the answers of a true/false question as True, then False.
+        $this->assertSame([1.0, 0.0], $key('Verdadeiro written out'));
+        $this->assertSame([0.0, 1.0], $key('Falso written out'));
+    }
+
+    /**
+     * An option whose "correct" cannot be read puts the question out, because it could be the right one; an option
+     * with no "correct" at all is a wrong one, and "Sim" is a right one.
+     */
+    public function test_a_choice_with_an_unreadable_correct_flag_is_left_out(): void {
+        global $DB;
+
+        ai_resolver::set_provider_for_testing(static fn(string $s, string $u): string => json_encode([
+            'questions' => [
+                ['type' => 'multichoice', 'question' => 'Unreadable flag', 'options' => [
+                    ['text' => 'a', 'correct' => 'talvez'], ['text' => 'b', 'correct' => true], ['text' => 'c', 'correct' => false],
+                ]],
+                ['type' => 'multichoice', 'question' => 'Flag in portuguese', 'options' => [
+                    ['text' => 'a', 'correct' => 'Sim'], ['text' => 'b'], ['text' => 'c', 'correct' => 'Não'],
+                ]],
+            ],
+        ]));
+        $course = $this->getDataGenerator()->create_course();
+        $quiz = course_builder::add_quiz($course, 0, 'Test', '<p>i</p>');
+
+        $added = quiz_builder::create($quiz->coursemodule, $quiz->instance, 'Geo', 'Test', 2);
+
+        $this->assertSame(1, $added);
+        $this->assertFalse($DB->record_exists('question', ['name' => 'Unreadable flag']));
+        $kept = $DB->get_record('question', ['name' => 'Flag in portuguese'], '*', MUST_EXIST);
+        $fractions = array_map(
+            fn($a) => (float) $a->fraction,
+            $DB->get_records('question_answers', ['question' => $kept->id], 'id ASC', 'id, fraction')
+        );
+        $this->assertSame([1.0, 0.0, 0.0], array_values($fractions));
+    }
+
+    /**
      * Questions and fields of the wrong type are skipped instead of failing the whole quiz.
      */
     public function test_questions_with_fields_of_the_wrong_type_are_skipped(): void {

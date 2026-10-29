@@ -73,7 +73,30 @@ final class provider_test extends \advanced_testcase {
      */
     public function test_get_metadata(): void {
         $collection = provider::get_metadata(new collection('local_studiolms'));
-        $this->assertCount(3, $collection->get_collection());
+        $this->assertCount(4, $collection->get_collection());
+    }
+
+    /**
+     * What is sent to the AI source of the site is declared, with a string for the location and one for each field,
+     * and the declaration points at the AI source for the rest.
+     *
+     * @return void
+     */
+    public function test_the_text_sent_to_the_ai_source_is_declared(): void {
+        $collection = provider::get_metadata(new collection('local_studiolms'));
+        $locations = array_filter(
+            $collection->get_collection(),
+            static fn($item): bool => $item instanceof \core_privacy\local\metadata\types\external_location
+        );
+
+        $this->assertCount(1, $locations);
+        $location = reset($locations);
+        $this->assertSame('ai_provider', $location->get_name());
+        $this->assertEqualsCanonicalizing(['theme', 'reference', 'pagetext'], array_keys($location->get_privacy_fields()));
+        $this->assertTrue(get_string_manager()->string_exists($location->get_summary(), 'local_studiolms'));
+        foreach ($location->get_privacy_fields() as $stringkey) {
+            $this->assertTrue(get_string_manager()->string_exists($stringkey, 'local_studiolms'), $stringkey);
+        }
     }
 
     /**
@@ -90,6 +113,9 @@ final class provider_test extends \advanced_testcase {
 
         $collection = provider::get_metadata(new collection('local_studiolms'));
         foreach ($collection->get_collection() as $table) {
+            if (!$table instanceof \core_privacy\local\metadata\types\database_table) {
+                continue;
+            }
             $columns = array_keys($DB->get_columns($table->get_name()));
             $columns = array_values(array_diff($columns, ['id']));
             $declared = array_keys($table->get_privacy_fields());

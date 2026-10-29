@@ -351,6 +351,25 @@ final class page_builder_test extends \advanced_testcase {
     }
 
     /**
+     * The title of a heading the AI plans is text, which the block prints as it gets it, so it is escaped here once:
+     * like the headings of the other builders, an ampersand or a bracket is not left raw in the page.
+     */
+    public function test_the_title_of_a_planned_heading_is_escaped_once(): void {
+        $this->use_presets([]);
+        $plan = json_encode(['strategy' => 'blocks', 'blocks' => [
+            ['type' => 'heading', 'text' => 'Q & A: x < 10 "quoted"'],
+        ]]);
+        ai_resolver::set_provider_for_testing(fn(string $system, string $user): string => $plan);
+        $degraded = false;
+        $chosen = '';
+
+        $html = $this->render_with([], $degraded, $chosen);
+
+        $this->assertStringContainsString('Q &amp; A: x &lt; 10 &quot;quoted&quot;', $html);
+        $this->assertStringNotContainsString('&amp;amp;', $html);
+    }
+
+    /**
      * A plan naming a preset that does not exist falls back to the blocks it carries.
      */
     public function test_unknown_preset_falls_back_to_the_plan_blocks(): void {

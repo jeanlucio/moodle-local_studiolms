@@ -121,18 +121,36 @@ final class ai_json_test extends \advanced_testcase {
     }
 
     /**
+     * Yes and no are read in the languages of the courses, and what is not one of them is told apart from a no.
+     */
+    public function test_flag_or_null_reads_yes_and_no_in_the_languages_of_the_courses(): void {
+        foreach (['Sim', 'verdadeiro', 'Verdadero', 'sí', 'oui', 'vrai', 'Yes', true, 1, ' true '] as $value) {
+            $this->assertTrue(ai_json::flag_or_null($value), var_export($value, true));
+        }
+        foreach (['Não', 'nao', 'falso', 'Falso', 'faux', 'non', 'No', false, 0, '0'] as $value) {
+            $this->assertFalse(ai_json::flag_or_null($value), var_export($value, true));
+        }
+        foreach ([null, 'talvez', 'maybe', '', ['x'], 2, 'verdadeiro e falso'] as $value) {
+            $this->assertNull(ai_json::flag_or_null($value), var_export($value, true));
+        }
+        $this->assertTrue(ai_json::flag('Sim'));
+        $this->assertFalse(ai_json::flag('Falso', true));
+    }
+
+    /**
      * A boolean written as text keeps its meaning: the string "false" is not true.
      */
     public function test_flag_reads_booleans_written_as_text(): void {
         foreach ([true, 'true', 'TRUE', '1', 1, 'yes', 'on'] as $value) {
             $this->assertTrue(ai_json::flag($value), var_export($value, true));
         }
-        foreach ([false, 'false', 'False', '0', 0, 'no', 'off', ''] as $value) {
+        foreach ([false, 'false', 'False', '0', 0, 'no', 'off'] as $value) {
             $this->assertFalse(ai_json::flag($value, true), var_export($value, true));
         }
         $this->assertTrue(ai_json::flag(null, true));
         $this->assertFalse(ai_json::flag(null));
         $this->assertTrue(ai_json::flag(['x'], true));
+        $this->assertTrue(ai_json::flag('', true), 'An empty text says neither yes nor no.');
         $this->assertFalse(ai_json::flag('maybe'));
         $this->assertTrue(ai_json::flag('maybe', true));
     }

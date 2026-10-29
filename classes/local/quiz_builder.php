@@ -149,11 +149,16 @@ class quiz_builder {
      *
      * @param stdClass $form The base form data.
      * @param array $data The question definition.
-     * @return stdClass The completed form data.
+     * @return stdClass|null The completed form data, or null when the answer cannot be read.
      */
-    private static function build_truefalse(stdClass $form, array $data): stdClass {
+    private static function build_truefalse(stdClass $form, array $data): ?stdClass {
+        // An answer that cannot be read is no "false": a question with the wrong key is worse than a missing one.
+        $answer = ai_json::flag_or_null($data['answer'] ?? null);
+        if ($answer === null) {
+            return null;
+        }
         $form->penalty = 1;
-        $form->correctanswer = ai_json::flag($data['answer'] ?? null) ? '1' : '0';
+        $form->correctanswer = $answer ? '1' : '0';
         $form->feedbacktrue = ['text' => '', 'format' => FORMAT_HTML];
         $form->feedbackfalse = ['text' => '', 'format' => FORMAT_HTML];
         return $form;
@@ -203,6 +208,13 @@ class quiz_builder {
         $correct = array_values(array_filter($options, fn($option) => ai_json::flag($option['correct'] ?? null)));
         if (count($options) < 2 || empty($correct)) {
             return null;
+        }
+        // An option that says something other than yes or no could be the right one, so the question is left out;
+        // an option with no flag at all is a wrong one, as the prompt asks the AI to mark only the right ones.
+        foreach ($options as $option) {
+            if (isset($option['correct']) && ai_json::flag_or_null($option['correct']) === null) {
+                return null;
+            }
         }
 
         $numcorrect = count($correct);

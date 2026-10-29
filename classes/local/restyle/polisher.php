@@ -323,7 +323,8 @@ class polisher {
      */
     private static function items_block(string $type, array $block, bool $fits, array &$state): string {
         $items = [];
-        foreach (array_slice(ai_json::items($block['items'] ?? null), 0, self::MAX_ITEMS) as $item) {
+        $given = ai_json::items($block['items'] ?? null);
+        foreach ($given as $item) {
             $title = is_array($item) ? self::plain($item['title'] ?? null, $state) : '';
             $body = is_array($item) ? self::paragraph($item[$type === 'grid' ? 'html' : 'text'] ?? null, $state) : '';
             if ($title !== '' || $body !== '') {
@@ -332,7 +333,8 @@ class polisher {
         }
         // The steps are drawn by their titles, so a step with no title would lose its text: they become plain text.
         $titled = $type === 'grid' || count(array_filter(array_column($items, 'title'))) === count($items);
-        if ($fits && $titled && count($items) >= 2) {
+        // More items than a block holds are not cut, as the planner does not cut them: they stay as plain text.
+        if ($fits && $titled && count($items) >= 2 && count($items) <= self::MAX_ITEMS) {
             return $type === 'grid'
                 ? blocks::grid($items)
                 : blocks::steps(array_map(fn(array $item): array => [

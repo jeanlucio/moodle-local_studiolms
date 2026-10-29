@@ -81,20 +81,42 @@ class ai_json {
     }
 
     /**
+     * Returns a field of a decoded response as a boolean, or null when it says neither yes nor no.
+     *
+     * A truthiness test or a cast would make the string "false" true, which in a quiz marks a wrong answer as the
+     * right one. The words are read in the languages the courses are written in, since the AI answers in the
+     * language it is asked to write: a "Sim" or a "Falso" is an answer, and something else ("talvez") is not.
+     *
+     * @param mixed $value Field of the decoded response.
+     * @return bool|null True, false, or null when the value cannot be read as either.
+     */
+    public static function flag_or_null(mixed $value): ?bool {
+        if (is_bool($value)) {
+            return $value;
+        }
+        if (!is_scalar($value)) {
+            return null;
+        }
+        $word = \core_text::strtolower(trim((string) $value));
+        $yes = ['true', '1', 'yes', 'on', 'sim', 'verdadeiro', 'verdadera', 'verdadero', 'si', 'sí', 'oui', 'vrai'];
+        $no = ['false', '0', 'no', 'off', 'não', 'nao', 'falso', 'falsa', 'non', 'faux'];
+        if (in_array($word, $yes, true)) {
+            return true;
+        }
+        return in_array($word, $no, true) ? false : null;
+    }
+
+    /**
      * Returns a field of a decoded response as a boolean.
      *
-     * A truthiness test or a cast would make the string "false" true, which in a quiz marks a wrong
-     * answer as the right one. A value that cannot be read as a boolean is $default.
+     * A value that cannot be read as a boolean is $default.
      *
      * @param mixed $value Field of the decoded response.
      * @param bool $default Returned when the value is missing or not a boolean.
      * @return bool
      */
     public static function flag(mixed $value, bool $default = false): bool {
-        if (!is_scalar($value)) {
-            return $default;
-        }
-        return filter_var($value, FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE) ?? $default;
+        return self::flag_or_null($value) ?? $default;
     }
 
     /**

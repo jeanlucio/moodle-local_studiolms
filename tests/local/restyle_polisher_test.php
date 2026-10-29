@@ -249,6 +249,34 @@ final class restyle_polisher_test extends \advanced_testcase {
     }
 
     /**
+     * A list the AI gives with more items than a block holds is not cut: every item stays in the page, as plain text,
+     * since the planner does the same with a list that is too long, and the text of the teacher must not be lost.
+     *
+     * @return void
+     */
+    public function test_a_list_longer_than_a_block_holds_keeps_every_item(): void {
+        $this->resetAfterTest();
+        $items = [];
+        for ($i = 1; $i <= 10; $i++) {
+            $items[] = ['title' => 'Topic' . $i, 'html' => 'Word' . $i];
+        }
+        $page = '<h2>List</h2>';
+        foreach ($items as $item) {
+            $page .= '<p>' . $item['title'] . ' ' . $item['html'] . '</p>';
+        }
+        $this->ai_answers(json_encode(['blocks' => [['type' => 'grid', 'items' => $items]]]));
+
+        $html = polisher::polish(segmenter::split($page), 10);
+
+        for ($i = 1; $i <= 10; $i++) {
+            $this->assertStringContainsString('Topic' . $i, $html, 'Topic' . $i);
+            $this->assertStringContainsString('Word' . $i, $html, 'Word' . $i);
+        }
+        $this->assertSame(0, substr_count($html, 'data-slms-block-type="gridcards"'));
+        ai_resolver::set_provider_for_testing(null);
+    }
+
+    /**
      * Grids, steps, cards and accordions are built, and over the limit or with too few items they become plain text.
      *
      * @return void

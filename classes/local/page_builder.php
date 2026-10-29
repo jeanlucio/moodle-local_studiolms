@@ -489,7 +489,7 @@ class page_builder {
                     return '';
                 }
                 return block_builder::render('stylizedHeading', [
-                    'text' => $text,
+                    'text' => s($text),
                     'level' => 'h3',
                     'icon' => '',
                     'bgColor' => '#e3f2fd',

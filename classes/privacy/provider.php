@@ -91,6 +91,14 @@ class provider implements
             'timemodified' => 'privacy:metadata:local_studiolms_progress:timemodified',
         ], 'privacy:metadata:local_studiolms_progress');
 
+        // The text goes to whatever AI source the site resolved (the AI Hub or the AI subsystem of the core), which
+        // declare their own providers and what they send with it; this says what StudioLMS hands to them.
+        $collection->add_external_location_link('ai_provider', [
+            'theme'     => 'privacy:metadata:ai_provider:theme',
+            'reference' => 'privacy:metadata:ai_provider:reference',
+            'pagetext'  => 'privacy:metadata:ai_provider:pagetext',
+        ], 'privacy:metadata:ai_provider');
+
         return $collection;
     }
 
