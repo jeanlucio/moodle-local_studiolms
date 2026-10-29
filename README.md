@@ -16,326 +16,62 @@
 
 ## English
 
-**StudioLMS** (`local_studiolms`) is the AI course builder of the StudioLMS ecosystem. Working **from inside an existing course**, a teacher describes the topic (or pastes reference material), picks a mode, reviews the AI-generated outline and confirms — the course is then filled with sections, rich Studio-styled pages, activities and, optionally, PlayerHUD gamification. Everything is produced as **100% native Moodle content** — no lock-in, editable through the standard Moodle interface like any other course.
+**StudioLMS** (`local_studiolms`) is an AI assistant that builds course content from inside a Moodle course that already exists. A teacher describes the topic, reviews what the AI proposes, and the course is filled with sections, rich Studio-styled pages, quizzes, forums, assignments and glossaries (and, optionally, PlayerHUD gamification). It can also restyle a page or label you already wrote into Studio blocks, in a hidden copy, without rewriting your text. Everything is native Moodle content.
 
-It deliberately works on a course that **already exists**: editing your own course (`manageactivities`) is what an `editingteacher` actually has, whereas creating a course from scratch needs admin-level `course:create`. This makes the tool genuinely accessible to teachers.
-
----
-
-### ✨ Features
-
-* 🪄 **In-Course AI Wizard:** Launched from the course navigation ("Fill with AI"), the wizard runs in the course context — it never asks for a category or course name, because those already exist.
-* 🎚️ **Three Generation Granularities:** A card-based landing lets the teacher choose how much to generate:
-  * **Activity** — a single standalone activity (quiz, page, glossary) in an existing section (~30 s, foreground).
-  * **Section** — a full section built from section-specific reference material, reviewed section by section.
-  * **Full course** — outline → review → background generation with live progress.
-* 🧭 **Two Modes:** **Standard** (pedagogical structure) and **Gamified** (adds PlayerHUD; shown only when `block_playerhud` is installed).
-* 📑 **Native Activities Generated:**
-  * **Page** (`mod_page`) — AI content rendered with rich Studio blocks (infographics, cards, callouts, grids) when `tiny_studiolms` is installed, or clean semantic HTML as a fallback; opens an automatic "Key concepts" (Pre-training) callout sourced from the course glossary.
-  * **Label** (`mod_label`) — a styled visual heading separating activity groups; when it is generated together with the other activities of its section, it also lists them.
-  * **Quiz** (`mod_quiz`) — questões geradas por IA adicionadas ao banco de questões e vinculadas ao quiz (`multichoice`, `truefalse`, `shortanswer`), com pré-visualização sob demanda antes de confirmar. A introdução mostra as regras do quiz (questões, tentativas, tempo). Com o plugin opcional `filter_studiolms` instalado e ativo no curso, ela grava a marca `[QUIZINFO]` e as regras são calculadas a cada exibição, acompanhando mudanças e exceções por estudante. Sem o filtro, mostra os números **como estavam na hora em que o quiz foi gerado**: são texto fixo, então edite o bloco no editor se mudar depois as configurações ou as questões.
-  * **Forum** (`mod_forum`) — a rich introduction made of Studio blocks: the page title, framing text, the guiding question, three steps to take part and a tip.
-  * **Assignment** (`mod_assign`) — a rich brief: what to hand in, the steps and the evaluation criteria as a table (the AI is asked not to invent dates or points).
-  * **Glossary** (`mod_glossary`) — one course glossary created first, with auto-linking enabled and an introduction that says how to use it; its terms feed the Pre-training callouts on every page.
-* 🧩 **Editable Rich Blocks:** Generated blocks carry the `data-slms-block-type` / `data-slms-state` wrappers, so they reopen for normal editing inside the `tiny_studiolms` editor. Ready-made presets are applied when one fits; otherwise the AI generates rich blocks on the fly (hybrid strategy).
-* 🖌️ **Restyle what you already wrote:** On the landing choose **Restyle existing** (or use **Restyle with StudioLMS** in the settings of a page) to turn a page or label into Studio blocks. The activity is **duplicated**: the original is never touched and the result goes to a hidden copy right after it, named "Title (StudioLMS)". The AI only plans the structure — it answers a block type for numbered pieces of your text and never writes or rewrites a word; pictures, videos, tables and blocks you already placed are carried over as they are. It needs the `local/studiolms:restyle` capability (teachers and managers by default) and respects the course's own switch for AI tools. An optional checkbox, off by default, **Reorganise and polish the text**, lets the AI rewrite, shorten and split the text and remove repetition (it may not add facts, links or numbers that are not in the original; a result that does is refused and nothing is copied) — always into the hidden copy, for you to review before publishing.
-* 🛟 **Safe by Default:** StudioLMS **adds** content without touching what already exists. An opt-in "Clean the course first" option is destructive, clearly warned and confirmed separately.
-* ⏳ **Background Generation:** Full-course generation runs in an adhoc task with real-time progress polling and a structured final report (sections, activities by type, quiz questions, glossary terms, preset per page).
-* 🩹 **Surgical Rollback:** The course is never deleted. Each created section and module id is tracked; if any step fails, only those items are removed, leaving the course and any pre-existing content intact.
-* 🎮 **Gamified Mode (PlayerHUD):** Reuses PlayerHUD's own generators — PlayerCoin with a news-forum drop, avatar pack, coin-to-avatar trades and heuristic quests (all deterministic, no AI) — plus an AI narrative chapter and themed AI item drops. Three profiles (Conquest, Narrative, Social) tune XP, quests, ranking visibility and drops.
-* 🌐 **Content Language:** All content is generated in the teacher's interface language (`current_language()`), passed explicitly in every AI prompt.
-* 📊 **Audit & Events:** A generation log plus `course_generated` and `generation_failed` events recorded in Moodle's standard log store.
-* 🔒 **Privacy API:** Full GDPR/LGPD compliance — export and deletion of the three teacher-owned tables (generation log, draft outline, progress).
-
----
-
-### 🧠 Pedagogical Frameworks
-
-* **Bloom's Taxonomy (teacher-visible):** the wizard asks for the predominant cognitive level, which shapes the type and tone of generated activities.
-* **Backward Design (behind the scenes):** the AI generates objectives → assessments → learning activities, producing a course coherent across all three.
-* **ABC Learning Design (optional preset):** a balanced set of activity types per section.
-* **Octalysis (gamified mode):** PlayerHUD features are mapped to the eight core drives.
-
----
-
-### 🔗 Optional Integrations
-
-StudioLMS runs standalone on Moodle 4.5+ alone. Every integration is **soft** (`class_exists` / component detection) — there are **no hard `$plugin->dependencies`**.
-
-| Plugin | Role when present |
-|---|---|
-| `tiny_studiolms` | Rich visual templates for generated pages; without it, pages fall back to clean semantic HTML |
-| `block_playerhud` | Enables the gamified mode |
-| `local_aihub` | AI Hub — BYOK API keys (personal → site) |
-| `local_aiassess` | AI rubrics for assignments/forums (planned) |
-
----
-
-### 🤖 AI Resolution
-
-StudioLMS has **no key widget of its own** — there is no key to configure in it. Free-text generation is resolved in this order, every step soft:
-
-| Order | Source |
-|------|--------|
-| 1 | **`local_aihub`** — when installed and holding a BYOK key (personal → site) |
-| 2 | **Moodle `core_ai`** — called directly; no external key needed when the site already has a provider configured |
-| 3 | A clear message asks the admin to configure AI (Admin → AI) or install the hub |
-
-The whole chain lives inside StudioLMS's `ai_resolver`; **no other plugin is modified.** AI calls use batching (one call per quiz / per outline) and a retry-with-backoff for malformed JSON to stay friendly to free provider tiers.
-
----
-
-### 🎓 Educational Purpose
-
-StudioLMS is designed to:
-
-* Turn days of manual course setup into minutes
-* Give teachers — not just admins — an accessible, in-course course builder
-* Produce pedagogically structured content (not just plain text), grounded in learning science
-* Keep the output fully native and lock-in free, editable like any Moodle course
-* Optionally layer motivation through PlayerHUD gamification
-
----
-
-### 🔬 Learning Science Foundations
-
-The rich visual output is not cosmetic — each block type is grounded in established learning science.
-
-**Multimedia Learning Theory — Richard Mayer (2001):** generated pages implement seven of Mayer's principles (signalling, segmenting, spatial contiguity, coherence, redundancy, pre-training, personalization). The automatic "Key concepts" callout at the top of each page is a direct application of *pre-training*.
-
-**Cognitive Load Theory — John Sweller (1988):** organised visual blocks (cards, grids, steps) reduce *extraneous* load and free capacity for *germane* load. A single course glossary means students always know where to find definitions.
-
-**Dual Coding Theory — Allan Paivio (1971):** infographics, charts and gauges engage the visual channel while text complements through the verbal channel.
-
-**Universal Design for Learning — CAST (2002):** the same concept can be presented as text, visual, table or diagram, expanding accessibility across learning styles.
-
-**Information Mapping — Robert Horn (1970s):** each information type maps to an optimal block (procedure → steps, chronological process → timeline, comparison → comparison, quantitative facts → stats/chart/gauge, hierarchy → accordion, related items → grid cards, critical info → callout).
-
----
+📚 **[Full documentation](https://jeanlucio.github.io/moodle-local_studiolms/)**: the generation wizard, the restyle and its optional polish mode, the AI and the switch for AI tools of the course, the optional integrations, the automated tests, and security details.
 
 ### 📦 Requirements
 
 | Component | Version |
 |-----------|---------|
-| Moodle    | 4.5+    |
-| PHP       | 8.1+    |
+| Moodle    | 4.5 and later |
+| PHP       | 8.1+ |
 
----
+An AI source is needed to generate anything: the AI Hub (`local_aihub`) with a key, or a provider in Moodle's AI subsystem. Everything else is optional (`tiny_studiolms`, `filter_studiolms`, `block_playerhud`).
 
 ### 🛠️ Installation
 
 1. Download the `.zip` file or clone this repository.
-2. Extract the folder into your Moodle `local/` directory.
-3. Rename the folder to `studiolms` (if necessary).
-   Final path:
-   `your-moodle/local/studiolms/`
-4. Visit **Site administration > Notifications** to complete the database installation.
-5. Grant the `local/studiolms:generate` capability to roles that should use the wizard (Teacher and Manager by default).
-6. The **Fill with AI (Studio)** button will appear in the course navigation for authorised users.
+2. Extract the folder into your Moodle `local/` directory and name it `studiolms` (`your-moodle/local/studiolms/`).
+3. Visit **Site administration > Notifications** to finish the installation.
+4. Editing teachers and managers get `local/studiolms:generate` and `local/studiolms:restyle` by default. The **StudioLMS** item then appears in the course navigation.
 
----
+### 🔎 Third-party service disclosure
 
-### 📖 Usage
-
-1. Open the course you want to fill and click **Fill with AI (Studio)** in the course navigation (also shown as a prominent button when the course is empty).
-2. On the landing, choose a generation granularity: **Activity**, **Section** or **Full course**.
-3. **Briefing:** describe the topic (or paste reference material), choose the Bloom level, the structure, and the mode (Standard or Gamified). Optionally tick "Clean the course first".
-4. **Outline review** (full-course mode): rename, remove, reorder sections; preview a quiz's questions on demand.
-5. **Generation:** confirm and watch the live progress; for the full course this runs in the background. When done, return to the course — now populated, without touching anything that already existed.
-
-There are **no dates** in any step — the teacher edits them through the standard Moodle interface after generation.
-
----
-
-### 🔐 Security & Compliance
-
-* Access always validated in the **course context**: `require_login($course)` + `require_capability('local/studiolms:generate', context_course)`, re-checked in the web service and inside the adhoc task (`set_userid` then re-validate).
-* **No course creation:** the wizard operates on an existing course, eliminating the `course:create` attack surface entirely.
-* The destructive "Clean the course first" option additionally requires `moodle/course:manageactivities` and an explicit confirmation.
-* `require_sesskey()` on every state-changing call; all services declared in `db/services.php`.
-* Generated HTML passes through `format_text()`; AI JSON is schema-validated before processing — a validation failure ends generation with a clear error and triggers the surgical rollback.
-* The course is **never** deleted — only the items StudioLMS created are rolled back on failure.
-* Pasted reference material is validated server-side (`PARAM_TEXT`, max length). It is kept with the draft outline (`local_studiolms_outline.briefingjson`) until the course is deleted or the user's data is erased through the Privacy API; the theme is also kept in the generation log (`local_studiolms_generation_log.prompt`).
-* Privacy-aware: full GDPR/LGPD data export and deletion via the Privacy API.
-
----
-
-### 🔎 Third-party Service Disclosure
-
-StudioLMS generates course content using AI. AI is **existential** to the plugin (a course cannot be generated without it), but it relies entirely on AI that the site already provides — StudioLMS ships **no API key and no key widget of its own**.
-
-The teacher's prompt and any pasted reference material are transmitted to the resolved provider (the `local_aihub` broker or Moodle's `core_ai`) for processing. External services operate under their own terms of service and privacy policies. StudioLMS does not store raw AI responses. It does store what the teacher typed in the wizard — the theme and any pasted reference material — in its own tables (draft outline and generation log), with no automatic expiry; they are exported and erased by the Privacy API and removed when the course is deleted. Do not paste personal data into the reference field.
-
-No external communication occurs unless a generation is explicitly started.
-
----
-
-## 📄 License / Licença
-
-This project is licensed under the **GNU General Public License v3 (GPLv3)**.
-
-**Copyright:** 2026 Jean Lúcio
+StudioLMS generates content with AI, and relies entirely on the AI the site already provides: it ships **no API key and has no key screen**. The teacher's theme, any pasted reference material and, when restyling, the text of the page or label are sent to the provider the site resolved (the AI Hub or Moodle's `core_ai`), under that provider's own terms and privacy policy. Nothing is sent unless a generation or a restyle is started, and a course that has the AI tools turned off is never sent. StudioLMS does not store raw AI answers; it stores what the teacher typed in the wizard (theme and pasted material) in its own tables, exported and erased by the Privacy API. **Do not paste personal data into the reference field.**
 
 ---
 
 ## Português
 
-O **StudioLMS** (`local_studiolms`) é o gerador de cursos por IA do ecossistema StudioLMS. Atuando **de dentro de um curso já existente**, o professor descreve o tema (ou cola material de referência), escolhe o modo, revisa o outline gerado pela IA e confirma — o curso é então preenchido com seções, páginas com visual rico do Studio, atividades e, opcionalmente, gamificação PlayerHUD. Tudo é produzido como **conteúdo 100% nativo do Moodle** — sem lock-in, editável pela interface padrão como qualquer outro curso.
+O **StudioLMS** (`local_studiolms`) é um assistente de IA que monta conteúdo de curso de dentro de um curso do Moodle que já existe. O professor descreve o tema, revisa o que a IA propõe, e o curso é preenchido com seções, páginas ricas no estilo do Studio, questionários, fóruns, tarefas e glossários (e, opcionalmente, a gamificação do PlayerHUD). Ele também pode estilizar em blocos do Studio uma página ou rótulo que você já escreveu, numa cópia oculta, sem reescrever o seu texto. Tudo é conteúdo nativo do Moodle.
 
-A ferramenta atua deliberadamente sobre um curso que **já existe**: editar o próprio curso (`manageactivities`) é o que um `editingteacher` de fato tem, enquanto criar curso do zero exige o `course:create` de admin. Isso a torna genuinamente acessível ao professor.
-
----
-
-### ✨ Funcionalidades
-
-* 🪄 **Wizard de IA dentro do curso:** Aberto pela navegação do curso ("Preencher com IA"), o wizard roda no contexto do curso — nunca pergunta categoria ou nome, pois já existem.
-* 🎚️ **Três granularidades de geração:** Uma tela inicial em cards permite escolher quanto gerar:
-  * **Atividade** — uma atividade avulsa (quiz, página, glossário) numa seção existente (~30 s, primeiro plano).
-  * **Seção** — uma seção completa a partir de material de referência específico, revisada seção a seção.
-  * **Curso completo** — outline → revisão → geração em segundo plano com progresso ao vivo.
-* 🧭 **Dois modos:** **Padrão** (estrutura pedagógica) e **Gamificado** (adiciona o PlayerHUD; exibido apenas quando o `block_playerhud` está instalado).
-* 📑 **Atividades nativas geradas:**
-  * **Página** (`mod_page`) — conteúdo da IA renderizado com blocos ricos do Studio (infográficos, cards, callouts, grids) quando o `tiny_studiolms` está instalado, ou HTML semântico limpo como fallback; abre um callout automático de "Conceitos-chave" (Pre-training) com os termos do glossário do curso.
-  * **Rótulo** (`mod_label`) — um título visual estilizado separando grupos de atividades; quando é gerado junto com as outras atividades da sua seção, também as lista.
-  * **Quiz** (`mod_quiz`) — questões geradas por IA adicionadas ao banco de questões e vinculadas ao quiz (`multichoice`, `truefalse`, `shortanswer`), com pré-visualização sob demanda antes de confirmar.
-  * **Fórum** (`mod_forum`) — uma introdução rica feita de blocos do Studio: o título da página, o texto de enquadramento, a questão norteadora, três passos de participação e uma dica.
-  * **Tarefa** (`mod_assign`) — um enunciado rico: o que entregar, os passos e os critérios de avaliação numa tabela (a IA é instruída a não inventar datas nem notas).
-  * **Glossário** (`mod_glossary`) — um glossário do curso criado primeiro, com link automático habilitado e uma introdução que explica como usar; seus termos alimentam os callouts de Pre-training de cada página.
-* 🧩 **Blocos ricos editáveis:** Os blocos gerados carregam os wrappers `data-slms-block-type` / `data-slms-state`, então reabrem para edição normal no editor `tiny_studiolms`. Presets prontos são aplicados quando há um adequado; caso contrário a IA gera blocos ricos na hora (estratégia híbrida).
-* 🖌️ **Estilize o que você já escreveu:** Na tela inicial escolha **Estilizar o que já existe** (ou use **Estilizar com o StudioLMS** nas configurações de uma página) para transformar uma página ou rótulo em blocos do Studio. A atividade é **duplicada**: o original nunca é alterado e o resultado vai para uma cópia oculta logo depois dele, com o nome "Título (StudioLMS)". A IA só planeja a estrutura — ela responde um tipo de bloco para trechos numerados do seu texto e nunca escreve nem reescreve uma palavra; imagens, vídeos, tabelas e blocos que você já colocou são mantidos como estão. Exige a capacidade `local/studiolms:restyle` (professores e gerentes por padrão) e respeita o interruptor de ferramentas de IA do próprio curso. Uma caixa opcional, desligada por padrão, **Reorganizar e polir o texto**, deixa a IA reescrever, encurtar e dividir o texto e tirar repetições (sem acrescentar fatos, links ou números que não estejam no original; um resultado fora disso é recusado e nada é copiado) — sempre na cópia oculta, para revisar antes de publicar.
-* 🛟 **Seguro por padrão:** O StudioLMS **adiciona** conteúdo sem tocar no que já existe. A opção "Limpar o curso antes" é opt-in, destrutiva, exibida com aviso e confirmada à parte.
-* ⏳ **Geração em segundo plano:** A geração de curso completo roda numa adhoc task com polling de progresso em tempo real e um relatório final estruturado (seções, atividades por tipo, questões do quiz, termos do glossário, preset por página).
-* 🩹 **Rollback cirúrgico:** O curso nunca é apagado. Cada seção e cmid criado é registrado; se alguma etapa falha, apenas esses itens são removidos, deixando o curso e qualquer conteúdo preexistente intactos.
-* 🎮 **Modo Gamificado (PlayerHUD):** Reaproveita os geradores do próprio PlayerHUD — PlayerCoin com drop no fórum de avisos, pacote de avatares, trocas moeda→avatar e quests heurísticas (tudo determinístico, sem IA) — mais um capítulo narrativo por IA e drops temáticos por IA. Três perfis (Conquista, Narrativa, Social) modulam XP, quests, visibilidade do ranking e drops.
-* 🌐 **Idioma do conteúdo:** Todo o conteúdo é gerado no idioma da interface do professor (`current_language()`), passado explicitamente em cada prompt de IA.
-* 📊 **Auditoria e eventos:** Um log de gerações mais os eventos `course_generated` e `generation_failed` registrados no log padrão do Moodle.
-* 🔒 **Privacy API:** Conformidade total com LGPD/GDPR — exportação e exclusão das três tabelas do professor (log de gerações, rascunho de outline, progresso).
-
----
-
-### 🧠 Frameworks Pedagógicos
-
-* **Taxonomia de Bloom (visível ao professor):** o wizard pergunta o nível cognitivo predominante, que molda o tipo e o tom das atividades geradas.
-* **Backward Design (nos bastidores):** a IA gera objetivos → avaliações → atividades de aprendizagem, produzindo um curso coerente entre os três.
-* **ABC Learning Design (preset opcional):** um conjunto balanceado de tipos de atividade por seção.
-* **Octalysis (modo gamificado):** os recursos do PlayerHUD são mapeados aos oito drives centrais.
-
----
-
-### 🔗 Integrações Opcionais
-
-O StudioLMS funciona de forma autônoma apenas com o Moodle 4.5+. Toda integração é **soft** (`class_exists` / detecção de componente) — **não há `$plugin->dependencies` rígidas**.
-
-| Plugin | Papel quando presente |
-|---|---|
-| `tiny_studiolms` | Templates visuais ricos nas páginas geradas; sem ele, as páginas caem em HTML semântico limpo |
-| `block_playerhud` | Habilita o modo gamificado |
-| `local_aihub` | Central de IA — chaves de API BYOK (pessoal → site) |
-| `local_aiassess` | Rubricas por IA em tarefas/fóruns (planejado) |
-
----
-
-### 🤖 Resolução de IA
-
-O StudioLMS **não tem widget de chaves próprio** — não há chave para configurar nele. A geração de texto livre é resolvida nesta ordem, cada etapa soft:
-
-| Ordem | Fonte |
-|------|--------|
-| 1 | **`local_aihub`** — quando instalada e com chave BYOK (pessoal → site) |
-| 2 | **`core_ai` do Moodle** — chamada direta; nenhuma chave externa necessária quando o site já tem um provedor configurado |
-| 3 | Uma mensagem clara orienta o admin a configurar a IA (Admin → IA) ou instalar o hub |
-
-Toda a cadeia vive dentro do `ai_resolver` do StudioLMS; **nenhum outro plugin é modificado.** As chamadas usam batching (uma chamada por quiz / por outline) e retry com backoff para JSON malformado, mantendo compatibilidade com os planos gratuitos de provedores.
-
----
-
-### 🎓 Finalidade Educacional
-
-O StudioLMS foi projetado para:
-
-* Transformar dias de montagem manual de curso em minutos
-* Dar ao professor — não só ao admin — um gerador de cursos acessível, dentro do curso
-* Produzir conteúdo pedagogicamente estruturado (não apenas texto corrido), com base em ciência da aprendizagem
-* Manter o resultado totalmente nativo e sem lock-in, editável como qualquer curso do Moodle
-* Opcionalmente adicionar motivação por meio da gamificação PlayerHUD
-
----
-
-### 🔬 Fundamentos em Ciência da Aprendizagem
-
-O visual rico não é cosmético — cada tipo de bloco tem base em ciência da aprendizagem consolidada.
-
-**Teoria da Aprendizagem Multimídia — Richard Mayer (2001):** as páginas geradas implementam sete princípios de Mayer (signaling, segmenting, spatial contiguity, coherence, redundancy, pre-training, personalization). O callout automático de "Conceitos-chave" no início de cada página é uma aplicação direta do *pre-training*.
-
-**Teoria da Carga Cognitiva — John Sweller (1988):** blocos visuais organizados (cards, grids, steps) reduzem a carga *estranha* e liberam capacidade para a carga *germânica*. Um único glossário do curso garante que o aluno sempre saiba onde procurar definições.
-
-**Teoria da Codificação Dual — Allan Paivio (1971):** infográficos, gráficos, gauges e mapas mentais acionam o canal visual enquanto o texto complementa pelo canal verbal.
-
-**Universal Design for Learning — CAST (2002):** o mesmo conceito pode ser apresentado como texto, visual, tabela ou diagrama, ampliando a acessibilidade para diferentes estilos de aprendizagem.
-
-**Information Mapping — Robert Horn (décadas de 1970):** cada tipo de informação mapeia para um bloco ideal (procedimento → passos, processo cronológico → linha do tempo, comparação → comparação, fatos quantitativos → stats/gráfico/gauge, hierarquia → accordion, itens relacionados → grid de cards, informação crítica → callout).
-
----
+📚 **[Documentação completa](https://jeanlucio.github.io/moodle-local_studiolms/pt.html)**: o assistente de geração, a estilização e o modo opcional de polir, a IA e o interruptor de ferramentas de IA do curso, as integrações opcionais, os testes automatizados e os detalhes de segurança.
 
 ### 📦 Requisitos
 
 | Componente | Versão |
 |------------|--------|
-| Moodle     | 4.5+   |
-| PHP        | 8.1+   |
+| Moodle     | 4.5 ou superior |
+| PHP        | 8.1+ |
 
----
+É preciso uma fonte de IA para gerar qualquer coisa: o Hub de IA (`local_aihub`) com uma chave, ou um provedor no subsistema de IA do Moodle. Todo o resto é opcional (`tiny_studiolms`, `filter_studiolms`, `block_playerhud`).
 
 ### 🛠️ Instalação
 
 1. Baixe o arquivo `.zip` ou clone este repositório.
-2. Extraia na pasta `local/` do seu Moodle.
-3. Renomeie para `studiolms` (se necessário).
-   Caminho final:
-   `seu-moodle/local/studiolms/`
-4. Acesse **Administração do site > Notificações** para concluir a instalação do banco de dados.
-5. Conceda a capability `local/studiolms:generate` aos perfis que devem usar o wizard (Professor e Gerente por padrão).
-6. O botão **Preencher com IA (Studio)** aparecerá na navegação do curso para os usuários autorizados.
+2. Extraia a pasta no diretório `local/` do seu Moodle e dê a ela o nome `studiolms` (`seu-moodle/local/studiolms/`).
+3. Acesse **Administração do site > Notificações** para concluir a instalação.
+4. Professores com edição e gerentes recebem `local/studiolms:generate` e `local/studiolms:restyle` por padrão. O item **StudioLMS** aparece então na navegação do curso.
+
+### 🔎 Divulgação de serviço de terceiros
+
+O StudioLMS gera conteúdo com IA e depende inteiramente da IA que o site já oferece: ele **não traz chave de API nem tem tela de chave**. O tema do professor, o material de referência colado e, na estilização, o texto da página ou rótulo são enviados ao provedor que o site resolveu (o Hub de IA ou o `core_ai` do Moodle), sob os termos e a política de privacidade desse provedor. Nada é enviado a menos que uma geração ou estilização seja iniciada, e um curso com as ferramentas de IA desligadas nunca é enviado. O StudioLMS não guarda respostas brutas da IA; guarda o que o professor digitou no assistente (tema e material colado) em tabelas próprias, exportadas e apagadas pela API de Privacidade. **Não cole dados pessoais no campo de referência.**
 
 ---
 
-### 📖 Como Usar
+## 📄 License / Licença
 
-1. Abra o curso que deseja preencher e clique em **Preencher com IA (Studio)** na navegação do curso (também exibido como botão em destaque quando o curso está vazio).
-2. Na tela inicial, escolha a granularidade da geração: **Atividade**, **Seção** ou **Curso completo**.
-3. **Briefing:** descreva o tema (ou cole material de referência), escolha o nível de Bloom, a estrutura e o modo (Padrão ou Gamificado). Opcionalmente marque "Limpar o curso antes".
-4. **Revisão do outline** (modo curso completo): renomeie, remova, reordene seções; pré-visualize as questões de um quiz sob demanda.
-5. **Geração:** confirme e acompanhe o progresso ao vivo; no curso completo isso roda em segundo plano. Ao concluir, volte ao curso — agora preenchido, sem tocar em nada que já existisse.
-
-**Não há datas** em nenhum passo — o professor as edita pela interface padrão do Moodle após a geração.
-
----
-
-### 🔐 Segurança e Conformidade
-
-* Acesso sempre validado no **contexto do curso**: `require_login($course)` + `require_capability('local/studiolms:generate', context_course)`, revalidado no web service e dentro da adhoc task (`set_userid` e revalidação).
-* **Sem criação de curso:** o wizard opera sobre um curso existente, eliminando por completo a superfície de risco do `course:create`.
-* A opção destrutiva "Limpar o curso antes" exige adicionalmente `moodle/course:manageactivities` e uma confirmação explícita.
-* `require_sesskey()` em toda chamada que altera estado; todos os serviços declarados em `db/services.php`.
-* O HTML gerado passa por `format_text()`; o JSON da IA é validado por schema antes de processar — uma falha de validação encerra a geração com erro claro e dispara o rollback cirúrgico.
-* O curso **nunca** é apagado — apenas os itens que o StudioLMS criou sofrem rollback em caso de falha.
-* O material de referência colado é validado no servidor (`PARAM_TEXT`, tamanho máximo). Ele fica guardado junto do rascunho do roteiro (`local_studiolms_outline.briefingjson`) até o curso ser apagado ou os dados do usuário serem excluídos pela Privacy API; o tema também fica no log de gerações (`local_studiolms_generation_log.prompt`).
-* Privacidade: exportação e exclusão completa de dados via Privacy API (LGPD/GDPR).
-
----
-
-### 🔎 Divulgação de Serviço de Terceiros
-
-O StudioLMS gera conteúdo de curso usando IA. A IA é **existencial** ao plugin (não há como gerar um curso sem ela), mas o plugin depende inteiramente da IA que o site já fornece — o StudioLMS **não traz nenhuma chave de API nem widget de chave próprio**.
-
-O prompt do professor e qualquer material de referência colado são enviados ao provedor resolvido (o intermediário `local_aihub` ou o `core_ai` do Moodle) para processamento. Os serviços externos seguem seus próprios termos de uso e políticas de privacidade. O StudioLMS não armazena respostas brutas da IA. Ele armazena o que o professor digita no assistente — o tema e o material de referência colado — nas próprias tabelas (rascunho do roteiro e log de gerações), sem expiração automática; esses dados são exportados e apagados pela Privacy API e removidos quando o curso é excluído. Não cole dados pessoais no campo de referência.
-
-Nenhuma comunicação externa ocorre sem que uma geração seja explicitamente iniciada.
-
----
-
-## 📄 Licença
-
-Este projeto é licenciado sob a **GNU General Public License v3 (GPLv3)**.
+GNU General Public License v3 (GPLv3) or later / ou posterior. See / Veja `COPYING.txt`.
 
 **Copyright:** 2026 Jean Lúcio
