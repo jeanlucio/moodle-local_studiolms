@@ -28,5 +28,5 @@ $plugin->component = 'local_studiolms';
 $plugin->version   = 2026102900;        // The current plugin version (Date: YYYYMMDDXX).
 $plugin->requires  = 2024100700;        // Requires Moodle 4.5+.
 $plugin->supported = [405, 503];
-$plugin->maturity  = MATURITY_BETA;
-$plugin->release   = 'v0.4.0';
+$plugin->maturity  = MATURITY_STABLE;
+$plugin->release   = 'v1.0.0';
