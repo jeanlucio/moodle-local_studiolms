@@ -20,5 +20,5 @@ A IA é essencial ao plugin, mas ele depende inteiramente da IA que o site já o
 
 * **O que sai do site:** o tema do professor, o material de referência colado e, na estilização, o texto da página ou rótulo. Vai para o provedor que o site resolveu (o Hub de IA ou o `core_ai`), sob os termos e a política de privacidade desse provedor.
 * **O que é guardado:** o StudioLMS não guarda respostas brutas da IA. Ele guarda o que o professor digitou no assistente (tema e material colado) em tabelas próprias (rascunho de roteiro e registro de gerações), sem expiração automática. Elas são exportadas e apagadas pela API de Privacidade e removidas quando o curso é excluído. **Não cole dados pessoais no campo de referência.**
-* **Quando:** nada é enviado a menos que uma geração ou uma estilização seja iniciada explicitamente.
+* **Quando:** nada é enviado a menos que uma geração ou uma estilização seja iniciada explicitamente. Na primeira vez, a política de uso de IA do site é exibida (quando o site tem uma) e a resposta fica guardada pelo núcleo; sem aceitá-la nada é enviado.
 * **A saída da IA não é confiável:** ela é validada e limpa antes de ser mostrada ou salva (veja [Segurança](#security)).

@@ -20,5 +20,5 @@ AI is essential to the plugin, but it relies entirely on the AI the site already
 
 * **What leaves the site:** the teacher's theme, any pasted reference material, and, when restyling, the text of the page or label. It goes to the provider the site resolved (the AI Hub or `core_ai`), under that provider's own terms and privacy policy.
 * **What is kept:** StudioLMS does not store raw AI answers. It stores what the teacher typed in the wizard (theme and pasted material) in its own tables (draft outline and generation log), with no automatic expiry. They are exported and erased by the Privacy API and removed when the course is deleted. **Do not paste personal data into the reference field.**
-* **When:** nothing is sent unless a generation or a restyle is explicitly started.
+* **When:** nothing is sent unless a generation or a restyle is explicitly started. The first time, the AI usage policy of the site is shown (when the site has one) and the answer is kept by the core; without accepting it nothing is sent.
 * **AI output is untrusted:** it is validated and cleaned before it is shown or saved (see [Security](#security)).

@@ -5,7 +5,10 @@
   * **Atividade ou recurso:** uma atividade ou recurso de qualquer um dos seis tipos (página, rótulo, questionário, fórum, tarefa ou glossário), na seção que você escolher (roda enquanto você espera).
   * **Seção:** a IA planeja as atividades de uma seção existente (ou nova) a partir de material de referência, você revisa o plano, e a seção é montada em segundo plano.
   * **Curso completo:** roteiro, revisão e geração em segundo plano com progresso ao vivo.
-* 🧭 **Dois modos:** **Padrão** (estrutura pedagógica) e **Gamificado** (acrescenta o PlayerHUD; só aparece quando o `block_playerhud` está instalado).
+* 🧭 **Dois modos:** **Padrão** (estrutura pedagógica) e **Gamificado** (acrescenta o PlayerHUD; só aparece quando o `block_playerhud` está instalado e você pode adicionar blocos ao curso).
+* 🗺️ **Um plano que combina com o curso:** a primeira página de um curso gerado (o plano da disciplina) é escrita a partir da estrutura que você aprovou: ementa, objetivos, como o curso está organizado, as seções como etapas e uma tabela das atividades avaliativas, sem nenhum campo para preencher. A IA só acrescenta uma frase por seção.
+* 🎯 **Objetivos que o curso realmente cobre:** a estrutura pergunta à IA qual objetivo cada seção atende, pede de novo um objetivo que nenhuma seção atende e, se continuar sem seção, o deixa de fora.
+* 💡 **Termos-chave da página:** a caixa "Conceitos-chave" de uma página lista só os termos do glossário que aquela página usa.
 * 📑 **Seis tipos de atividade, todos conteúdo nativo do Moodle:**
   * **Página:** conteúdo da IA em blocos ricos do Studio (infográficos, cards, destaques, grades) quando o `tiny_studiolms` está instalado, ou HTML semântico limpo sem ele, com um destaque automático de "Conceitos-chave" tirado do glossário do curso.
   * **Rótulo:** um título estilizado que separa grupos de atividades; gerado junto com as outras atividades da seção, também as lista.
@@ -14,7 +17,7 @@
   * **Tarefa:** um enunciado rico: o que entregar, os passos e os critérios de avaliação em tabela (pede-se à IA que não invente datas nem pontos).
   * **Glossário:** um glossário do curso, criado primeiro, com vinculação automática ligada e uma introdução que diz como usá-lo. Os termos dele alimentam os destaques de "Conceitos-chave" de todas as páginas.
 * 🖌️ **Estilizar o que você já escreveu:** transforma uma página ou rótulo seu em blocos do Studio, numa cópia oculta. [Saiba mais](#restyle).
-* 🧩 **Blocos editáveis:** os blocos gerados levam os invólucros `data-slms-block-type` e `data-slms-state`, e por isso reabrem para edição normal no editor `tiny_studiolms`. Modelos prontos são usados quando algum serve; senão a IA compõe os blocos na hora.
+* 🧩 **Blocos editáveis:** os blocos gerados levam os invólucros `data-slms-block-type` e `data-slms-state`, e por isso reabrem para edição normal no editor `tiny_studiolms`. Modelos prontos são usados quando algum serve e a IA preenche todos os campos dele; senão a IA compõe os blocos na hora, com o bloco **Texto** do editor para a prosa comum, de modo que uma aula se lê como texto e não como uma pilha de caixas. Um modelo que o gerador não sabe desenhar por inteiro nunca é oferecido à IA.
 * 🛟 **Seguro por padrão:** o StudioLMS acrescenta conteúdo e não toca no que já existe. A opção "apagar antes" pede confirmação, avisa que o que os estudantes fizeram também some e nunca apaga o fórum de Avisos. Um roteiro sem seção com título é recusado antes de apagar qualquer coisa.
 * ⏳ **Geração em segundo plano:** seções e cursos completos rodam numa tarefa adhoc com progresso ao vivo e um relatório final (seções, atividades por tipo, questões, termos do glossário, modelo por página).
 * 🩹 **Reversão cirúrgica:** o curso nunca é apagado. Cada seção e módulo criado é registrado, e se uma etapa falha só eles são removidos.
