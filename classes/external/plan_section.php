@@ -32,6 +32,7 @@ use core_external\external_single_structure;
 use core_external\external_value;
 use local_studiolms\local\ai_json;
 use local_studiolms\local\ai_resolver;
+use local_studiolms\local\section_names;
 
 /**
  * Returns an AI-generated activity plan for one section without writing anything to the DB.
@@ -98,6 +99,7 @@ class plan_section extends external_api {
         $context = context_course::instance($course->id);
         self::validate_context($context);
         require_capability('local/studiolms:generate', $context);
+        ai_resolver::require_enabled_in_context($context);
 
         if ($params['sectionnum'] >= 0) {
             $secrecord = $DB->get_record(
@@ -106,9 +108,7 @@ class plan_section extends external_api {
                 '*',
                 MUST_EXIST
             );
-            $sectionname = ($secrecord->name !== '' && $secrecord->name !== null)
-                ? format_string($secrecord->name)
-                : get_string('section_number', 'local_studiolms', $params['sectionnum']);
+            $sectionname = section_names::of_record($secrecord, $context);
         } else {
             $sectionname = $params['theme'];
         }

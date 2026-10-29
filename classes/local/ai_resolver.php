@@ -54,6 +54,44 @@ class ai_resolver {
     }
 
     /**
+     * Tells whether the course (or the activity) of a context has the AI tools turned on.
+     *
+     * The switch is a setting of the course from Moodle 5.0 and is asked to core_ai; before it, and where core_ai is
+     * not there, nothing says otherwise and the answer is yes. It is the same for every AI source: a course that
+     * has the AI tools off is not sent to the AI Hub either.
+     *
+     * @param \context $context The context of the course or of an activity in it.
+     * @return bool
+     */
+    public static function is_enabled_in_context(\context $context): bool {
+        if (!class_exists(\core_ai\manager::class) || !class_exists(\core_ai\aiactions\generate_text::class)) {
+            return true;
+        }
+        try {
+            $manager = \core\di::get(\core_ai\manager::class);
+        } catch (\Throwable $e) {
+            return true;
+        }
+        if (!method_exists($manager, 'is_action_enabled_in_context')) {
+            return true;
+        }
+        return (bool) $manager->is_action_enabled_in_context($context, \core_ai\aiactions\generate_text::class);
+    }
+
+    /**
+     * Refuses to go on when the course has the AI tools turned off.
+     *
+     * @param \context $context The context of the course or of an activity in it.
+     * @return void
+     * @throws \moodle_exception When the AI tools are off in the course.
+     */
+    public static function require_enabled_in_context(\context $context): void {
+        if (!self::is_enabled_in_context($context)) {
+            throw new \moodle_exception('aidisabledincourse', 'local_studiolms');
+        }
+    }
+
+    /**
      * Returns true when any AI source in the resolution chain can be used.
      *
      * Mirrors the order of generate_text() without performing a call, so the
@@ -100,6 +138,11 @@ class ai_resolver {
             && (defined('PHPUNIT_TEST') || defined('BEHAT_SITE_RUNNING'))
         ) {
             return (string) (self::$testingprovider)($systemprompt, $userprompt);
+        }
+
+        // The switch of the course holds for every source, the AI Hub included.
+        if ($context !== null) {
+            self::require_enabled_in_context($context);
         }
 
         // Behat-only canned answer: a Behat web request cannot see the provider a test injects, so a scenario stores
@@ -177,14 +220,8 @@ class ai_resolver {
         global $USER;
 
         $manager = \core\di::get(\core_ai\manager::class);
+        // The switch of the course was checked by generate_text(); a text for no course is for the whole site.
         $context = $context ?? \context_system::instance();
-        // The per-course switch exists from Moodle 5.0; before it, there is nothing to respect.
-        if (
-            method_exists($manager, 'is_action_enabled_in_context')
-            && !$manager->is_action_enabled_in_context($context, \core_ai\aiactions\generate_text::class)
-        ) {
-            throw new \moodle_exception('aidisabledincourse', 'local_studiolms');
-        }
 
         $prompttext = $systemprompt !== '' ? ($systemprompt . "\n\n" . $userprompt) : $userprompt;
         $action = new \core_ai\aiactions\generate_text(

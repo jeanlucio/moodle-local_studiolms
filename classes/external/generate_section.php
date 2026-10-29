@@ -115,6 +115,7 @@ class generate_section extends external_api {
         $context = context_course::instance($course->id);
         self::validate_context($context);
         require_capability('local/studiolms:generate', $context);
+        ai_resolver::require_enabled_in_context($context);
         // Also covers wipe: deleting activities is governed by the same manageactivities capability.
         content_access::require_can_create(
             $context,
@@ -138,7 +139,7 @@ class generate_section extends external_api {
 
         $activities = json_decode($params['activitiesjson'], true);
         if (!is_array($activities) || empty($activities)) {
-            throw new \coding_exception('activitiesjson must be a non-empty JSON array.');
+            throw new \moodle_exception('error_noactivities', 'local_studiolms');
         }
 
         $now = time();

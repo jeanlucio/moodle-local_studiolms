@@ -24,6 +24,7 @@
 import {call as fetchMany} from 'core/ajax';
 import {get_string as getString, get_strings as getStrings} from 'core/str';
 import Config from 'core/config';
+import Notification from 'core/notification';
 
 const FORM_ID = 'local-studiolms-section-form';
 const WRAPPER_ID = 'local-studiolms-section';
@@ -236,6 +237,21 @@ const addActivityRow = wrapper => {
     wrapper.querySelector('[data-region="activity-list"]').appendChild(createActivityRow());
 };
 
+// Asks the teacher to confirm that the activities of the section will be deleted.
+const confirmSectionWipe = async() => {
+    const [title, body, button] = await getStrings([
+        {key: 'wipe_confirm_title', component: 'local_studiolms'},
+        {key: 'wipe_confirm_body_section', component: 'local_studiolms'},
+        {key: 'wipe_confirm_button', component: 'local_studiolms'},
+    ]);
+    try {
+        await Notification.saveCancelPromise(title, body, button);
+        return true;
+    } catch (error) {
+        return false;
+    }
+};
+
 const handleGenerate = async wrapper => {
     const reviewView = wrapper.querySelector('[data-region="review-view"]');
     const reviewError = reviewView.querySelector('[data-region="review-error"]');
@@ -266,6 +282,9 @@ const handleGenerate = async wrapper => {
     const theme = wrapper.dataset.pendingTheme;
     const reference = wrapper.dataset.pendingReference;
     const wipe = wrapper.dataset.pendingWipe === '1';
+    if (wipe && !await confirmSectionWipe()) {
+        return;
+    }
 
     const defaultLabel = btnLabel.textContent;
     spinner.classList.remove('d-none');

@@ -92,15 +92,47 @@ const showStep2 = async(form, response) => {
     });
 };
 
+// Gives the populate button back, after the teacher gave up or the request failed.
+const restorePopulateButton = step2Container => {
+    const button = step2Container.querySelector('[data-action="populate"]');
+    if (button !== null) {
+        button.removeAttribute('disabled');
+        const spinner = button.querySelector('[data-region="spinner"]');
+        if (spinner !== null) {
+            spinner.classList.add('d-none');
+        }
+    }
+};
+
+// Asks the teacher to confirm that what is in the course will be deleted.
+const confirmWipe = async() => {
+    const [title, body, button] = await getStrings([
+        {key: 'wipe_confirm_title', component: 'local_studiolms'},
+        {key: 'wipe_confirm_body', component: 'local_studiolms'},
+        {key: 'wipe_confirm_button', component: 'local_studiolms'},
+    ]);
+    try {
+        await Notification.saveCancelPromise(title, body, button);
+        return true;
+    } catch (error) {
+        return false;
+    }
+};
+
 // Queues the background population and shows the progress step.
 const populate = async(form, step2Container, outline) => {
+    const wipe = form.querySelector('#studiolms-wipe').checked;
+    if (wipe && !await confirmWipe()) {
+        restorePopulateButton(step2Container);
+        return;
+    }
     try {
         const response = await fetchMany([{
             methodname: 'local_studiolms_populate_course',
             args: {
                 courseid: parseInt(form.dataset.courseid, 10),
                 outlineid: outline.outlineid,
-                wipe: form.querySelector('#studiolms-wipe').checked,
+                wipe,
                 objectives: outline.objectives,
                 sections: outline.sections,
             },
@@ -111,14 +143,7 @@ const populate = async(form, step2Container, outline) => {
         Templates.replaceNodeContents(step2Container, html, js);
         Step3.init(step2Container.firstElementChild, {progressid: response.progressid});
     } catch (error) {
-        const button = step2Container.querySelector('[data-action="populate"]');
-        if (button !== null) {
-            button.removeAttribute('disabled');
-            const spinner = button.querySelector('[data-region="spinner"]');
-            if (spinner !== null) {
-                spinner.classList.add('d-none');
-            }
-        }
+        restorePopulateButton(step2Container);
         Notification.exception(error);
     }
 };

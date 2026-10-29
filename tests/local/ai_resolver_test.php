@@ -396,4 +396,45 @@ final class ai_resolver_test extends \advanced_testcase {
 
         $this->assertFalse(ai_resolver::is_available());
     }
+
+    /**
+     * A course with the AI tools off is not sent to the AI Hub either: the switch is checked before any source.
+     */
+    public function test_a_course_with_the_ai_tools_off_is_not_sent_to_the_hub(): void {
+        if (!class_exists(\core_ai\aiactions\generate_text::class)) {
+            $this->markTestSkipped('core_ai is not available.');
+        }
+        $client = $this->stub_hub(true);
+        $this->fake_core_ai(false, 'core text');
+        $course = $this->getDataGenerator()->create_course();
+        $context = \context_course::instance($course->id);
+
+        $this->assertFalse(ai_resolver::is_enabled_in_context($context));
+        try {
+            ai_resolver::generate_text('system', 'user', $context);
+            $this->fail('A course with the AI tools off must be refused.');
+        } catch (\moodle_exception $e) {
+            $this->assertSame('aidisabledincourse', $e->errorcode);
+        }
+        $this->assertSame([], $client->prompts, 'nothing reached the hub');
+        $this->assertSame('hub text', ai_resolver::generate_text('system', 'user'), 'with no course, the hub answers');
+    }
+
+    /**
+     * With the switch on, or with no switch to ask (before Moodle 5.0), the AI is enabled.
+     */
+    public function test_the_ai_is_enabled_when_the_switch_is_on_or_does_not_exist(): void {
+        if (!class_exists(\core_ai\aiactions\generate_text::class)) {
+            $this->markTestSkipped('core_ai is not available.');
+        }
+        $course = $this->getDataGenerator()->create_course();
+        $context = \context_course::instance($course->id);
+
+        $this->fake_core_ai(true, 'core text');
+        $this->assertTrue(ai_resolver::is_enabled_in_context($context));
+        ai_resolver::require_enabled_in_context($context);
+
+        $this->fake_core_ai(false, 'core text', false);
+        $this->assertTrue(ai_resolver::is_enabled_in_context($context));
+    }
 }

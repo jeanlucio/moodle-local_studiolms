@@ -46,6 +46,15 @@ $PAGE->set_heading(format_string($course->fullname));
 
 $backurl = (new moodle_url('/local/studiolms/generate.php', ['courseid' => $course->id]))->out(false);
 
+// A course that has the AI tools turned off is not offered the restyle: nothing would be generated.
+if (!\local_studiolms\local\ai_resolver::is_enabled_in_context($context)) {
+    echo $OUTPUT->header();
+    echo $OUTPUT->notification(get_string('aidisabledincourse', 'local_studiolms'), \core\output\notification::NOTIFY_WARNING);
+    echo $OUTPUT->single_button($backurl, get_string('back_to_course', 'local_studiolms'), 'get');
+    echo $OUTPUT->footer();
+    exit;
+}
+
 // Restyling needs the AI, so stop with the same guidance as the wizard instead of failing on the first click.
 if (!\local_studiolms\local\ai_resolver::is_available()) {
     $isadmin = has_capability('moodle/site:config', context_system::instance());

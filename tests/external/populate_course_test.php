@@ -219,4 +219,26 @@ final class populate_course_test extends \advanced_testcase {
         $this->assertEquals($result['progressid'], $task->get_custom_data()->progressid);
         $this->assertEquals(1, $task->get_custom_data()->wipe);
     }
+
+    /**
+     * An outline with no section, or whose sections have no title, is refused before anything is queued: with the
+     * wipe it would empty the course and end as done.
+     */
+    public function test_an_outline_with_no_titled_section_is_refused_and_queues_nothing(): void {
+        global $DB;
+
+        [$course, $teacher, $outlineid] = $this->seed('mod/glossary:addinstance');
+        $this->setUser($teacher);
+
+        foreach ([[], [['title' => '   ', 'activities' => []]]] as $sections) {
+            try {
+                populate_course::execute($course->id, $outlineid, true, ['Objective'], $sections);
+                $this->fail('An outline with no titled section must be refused.');
+            } catch (\moodle_exception $e) {
+                $this->assertSame('error_nosections', $e->errorcode);
+            }
+        }
+        $this->assertSame(0, $DB->count_records('local_studiolms_progress'));
+        $this->assertSame([], \core\task\manager::get_adhoc_tasks(generate_course_task::class));
+    }
 }

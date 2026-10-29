@@ -26,11 +26,13 @@ namespace local_studiolms\task;
 
 use context_course;
 use local_studiolms\local\activity_content;
+use local_studiolms\local\ai_resolver;
 use local_studiolms\local\content_access;
 use local_studiolms\local\course_builder;
 use local_studiolms\local\glossary_builder;
 use local_studiolms\local\page_builder;
 use local_studiolms\local\quiz_builder;
+use local_studiolms\local\section_names;
 use stdClass;
 
 /**
@@ -94,6 +96,11 @@ class generate_section_task extends \core\task\adhoc_task {
             return;
         }
 
+        if (!ai_resolver::is_enabled_in_context($context)) {
+            $this->fail(get_string('aidisabledincourse', 'local_studiolms'));
+            return;
+        }
+
         $sectionnum      = (int) $data->sectionnum;
         $this->reference = (string) ($data->reference ?? '');
         $this->bloom     = (string) ($data->bloom ?? 'general');
@@ -132,9 +139,7 @@ class generate_section_task extends \core\task\adhoc_task {
                 '*',
                 MUST_EXIST
             );
-            $sectionname = ($secrecord->name !== '' && $secrecord->name !== null)
-                ? format_string($secrecord->name)
-                : get_string('section_number', 'local_studiolms', $sectionnum);
+            $sectionname = section_names::of_record($secrecord, $context);
 
             if ($wipe && $sectionnum >= 0) {
                 $this->progress->message = get_string('section_wiping', 'local_studiolms');
@@ -145,6 +150,8 @@ class generate_section_task extends \core\task\adhoc_task {
                     'course = :cid AND section = :sid',
                     ['cid' => $this->course->id, 'sid' => $secrecord->id]
                 );
+                // The news forum (Announcements) is never wiped, as in the wipe of the whole course.
+                $cmids = array_diff(array_map('intval', $cmids), course_builder::news_forum_cmids((int) $this->course->id));
                 foreach ($cmids as $cmid) {
                     course_builder::delete_module($this->course, (int) $cmid);
                 }

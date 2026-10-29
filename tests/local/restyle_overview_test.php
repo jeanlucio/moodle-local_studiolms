@@ -107,4 +107,22 @@ final class restyle_overview_test extends \advanced_testcase {
 
         $this->assertSame([], overview::sections($course));
     }
+
+    /**
+     * The name of a section is plain text, since the template escapes it once.
+     *
+     * @return void
+     */
+    public function test_the_name_of_a_section_is_plain_text(): void {
+        global $DB;
+
+        $this->resetAfterTest();
+        $course = $this->getDataGenerator()->create_course();
+        $this->getDataGenerator()->create_module('page', ['course' => $course->id, 'section' => 1]);
+        $DB->set_field('course_sections', 'name', 'P&D', ['course' => $course->id, 'section' => 1]);
+        rebuild_course_cache($course->id, true);
+        $this->setAdminUser();
+
+        $this->assertSame('P&D', overview::sections($course)[0]['name']);
+    }
 }

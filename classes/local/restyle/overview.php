@@ -24,6 +24,8 @@
 
 namespace local_studiolms\local\restyle;
 
+use local_studiolms\local\section_names;
+
 /**
  * Builds the list shown on the restyle page: the activities that can be restyled, by section.
  */
@@ -60,7 +62,10 @@ class overview {
                 ];
             }
             if (!empty($activities)) {
-                $sections[] = ['name' => get_section_name($course, $section), 'activities' => $activities];
+                $sections[] = [
+                    'name' => section_names::from_formatted((string) get_section_name($course, $section)),
+                    'activities' => $activities,
+                ];
             }
         }
         return $sections;

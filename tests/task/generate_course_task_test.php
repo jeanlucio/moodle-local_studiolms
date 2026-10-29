@@ -604,4 +604,22 @@ final class generate_course_task_test extends \advanced_testcase {
         $this->assertCount(1, get_fast_modinfo($course)->get_instances_of('quiz'));
         $this->assertDebuggingCalled();
     }
+
+    /**
+     * An outline with no section fails before anything is wiped: the course keeps what it had and the run does not
+     * end as done.
+     *
+     * @return void
+     */
+    public function test_an_outline_with_no_section_fails_before_wiping_the_course(): void {
+        global $USER;
+        $this->setAdminUser();
+        [$course, $progressid] = $this->seed((int) $USER->id, ['objectives' => [], 'sections' => []]);
+        $label = $this->getDataGenerator()->create_module('label', ['course' => $course->id]);
+
+        $this->run_task($progressid, true);
+
+        $this->assertSame('failed', $this->progress($progressid)->status);
+        $this->assertArrayHasKey($label->cmid, get_fast_modinfo($course)->get_cms(), 'nothing was wiped');
+    }
 }

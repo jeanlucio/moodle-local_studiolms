@@ -543,4 +543,46 @@ final class generate_section_task_test extends \advanced_testcase {
         $this->assertNotEmpty(json_decode($this->progress($progressid)->warnings, true));
         $this->assertDebuggingCalled();
     }
+
+    /**
+     * Wiping the general section keeps the news forum (Announcements), as the wipe of the whole course does, and
+     * deletes the rest.
+     */
+    public function test_wiping_the_general_section_keeps_the_news_forum(): void {
+        $this->setAdminUser();
+        $course = $this->getDataGenerator()->create_course(['numsections' => 1]);
+        $news = forum_get_course_forum($course->id, 'news');
+        $label = $this->getDataGenerator()->create_module('label', ['course' => $course->id, 'section' => 0]);
+        $this->universal_ai();
+        $progressid = $this->seed_progress((int) get_admin()->id, $course->id);
+
+        $this->run_task($progressid, $course->id, 0, [['type' => 'label', 'title' => 'New']], true);
+
+        $this->assertSame('completed', $this->progress($progressid)->status);
+        $modinfo = get_fast_modinfo($course);
+        $this->assertCount(1, $modinfo->get_instances_of('forum'), 'the news forum is still there');
+        $this->assertArrayNotHasKey($label->cmid, $modinfo->get_cms(), 'the label of the section is gone');
+        $forums = $modinfo->get_instances_of('forum');
+        $this->assertSame((int) $news->id, (int) reset($forums)->instance);
+    }
+
+    /**
+     * The name of the section reaches the prompt as the teacher wrote it, not as HTML.
+     */
+    public function test_the_section_name_reaches_the_prompt_as_plain_text(): void {
+        global $DB;
+
+        $this->setAdminUser();
+        $course = $this->getDataGenerator()->create_course(['numsections' => 1]);
+        $DB->set_field('course_sections', 'name', 'P&D', ['course' => $course->id, 'section' => 1]);
+        $prompts = [];
+        $this->universal_ai($prompts);
+        $progressid = $this->seed_progress((int) get_admin()->id, $course->id);
+
+        $this->run_task($progressid, $course->id, 1, [['type' => 'page', 'title' => 'A page']], false);
+
+        $prompt = implode("\n", $prompts);
+        $this->assertStringContainsString('P&D', $prompt);
+        $this->assertStringNotContainsString('P&amp;D', $prompt);
+    }
 }

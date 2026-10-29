@@ -46,6 +46,15 @@ $PAGE->set_heading(format_string($course->fullname));
 
 $cancelurl = (new moodle_url('/course/view.php', ['id' => $course->id]))->out(false);
 
+// A course that has the AI tools turned off is not offered the wizard: nothing would be generated.
+if (!\local_studiolms\local\ai_resolver::is_enabled_in_context($context)) {
+    echo $OUTPUT->header();
+    echo $OUTPUT->notification(get_string('aidisabledincourse', 'local_studiolms'), \core\output\notification::NOTIFY_WARNING);
+    echo $OUTPUT->single_button($cancelurl, get_string('back_to_course', 'local_studiolms'), 'get');
+    echo $OUTPUT->footer();
+    exit;
+}
+
 // Pre-flight: StudioLMS cannot generate anything without AI, so stop here with
 // clear, role-aware guidance instead of letting the wizard fail at generation.
 if (!\local_studiolms\local\ai_resolver::is_available()) {
@@ -71,9 +80,7 @@ if (!\local_studiolms\local\ai_resolver::is_available()) {
 $sectionrecords = $DB->get_records('course_sections', ['course' => $course->id], 'section ASC');
 $sections = [];
 foreach ($sectionrecords as $sec) {
-    $name = ($sec->name !== '' && $sec->name !== null)
-        ? format_string($sec->name)
-        : get_string('section_number', 'local_studiolms', $sec->section);
+    $name = \local_studiolms\local\section_names::of_record($sec, $context);
     $sections[] = ['num' => (int) $sec->section, 'name' => $name];
 }
 

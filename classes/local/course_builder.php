@@ -56,6 +56,27 @@ class course_builder {
     }
 
     /**
+     * Lists the course modules of the news forum (Announcements) of a course.
+     *
+     * Moodle makes that forum itself and the course expects it to be there, so no wipe deletes it.
+     *
+     * @param int $courseid The course id.
+     * @return int[] The course module ids.
+     */
+    public static function news_forum_cmids(int $courseid): array {
+        global $DB;
+
+        return array_map('intval', $DB->get_fieldset_sql(
+            "SELECT cm.id
+               FROM {course_modules} cm
+               JOIN {modules} m ON m.id = cm.module AND m.name = :modname
+               JOIN {forum} f ON f.id = cm.instance
+              WHERE cm.course = :courseid AND f.type = :type",
+            ['modname' => 'forum', 'courseid' => $courseid, 'type' => 'news']
+        ));
+    }
+
+    /**
      * Deletes an activity through the course format actions where they provide it.
      *
      * course_delete_module() is deprecated from Moodle 5.2, when the deletion moved to cmactions::delete(). That

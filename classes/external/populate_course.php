@@ -101,6 +101,14 @@ class populate_course extends external_api {
             $types = array_merge($types, content_access::types_of($section['activities']));
         }
         content_access::require_can_create($context, $types, true);
+        ai_resolver::require_enabled_in_context($context);
+
+        // Refused before anything is queued: an outline with no section would empty the course (with wipe) and end as
+        // done. The review step drops a section with no title, so every one here must have a name.
+        $named = array_filter($params['sections'], fn(array $section): bool => trim($section['title']) !== '');
+        if (empty($named)) {
+            throw new \moodle_exception('error_nosections', 'local_studiolms');
+        }
 
         // Fail fast: the background task cannot generate without AI.
         if (!ai_resolver::is_available()) {

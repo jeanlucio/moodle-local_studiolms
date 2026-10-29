@@ -118,6 +118,15 @@ class generate_course_task extends \core\task\adhoc_task {
             $this->fail(get_string('error_populate', 'local_studiolms'));
             return;
         }
+        // Checked before anything is wiped: an outline with no section would empty the course and end as done.
+        if (empty($sections)) {
+            $this->fail(get_string('error_nosections', 'local_studiolms'));
+            return;
+        }
+        if (!ai_resolver::is_enabled_in_context($context)) {
+            $this->fail(get_string('aidisabledincourse', 'local_studiolms'));
+            return;
+        }
         $theme = $briefing['theme'] ?? '';
         $this->reference = $briefing['reference'] ?? '';
         $this->bloom = $briefing['bloom'] ?? 'general';
@@ -356,21 +365,11 @@ class generate_course_task extends \core\task\adhoc_task {
         global $DB;
 
         $modinfo = get_fast_modinfo($this->course);
-        // Loaded once, on the first forum found, so courses without forums cost no extra query.
-        $newsids = null;
+        $news = array_flip(course_builder::news_forum_cmids((int) $this->course->id));
         foreach ($modinfo->get_cms() as $cm) {
-            if ($cm->modname === 'forum') {
-                $newsids ??= array_map('intval', $DB->get_fieldset_select(
-                    'forum',
-                    'id',
-                    'course = :courseid AND type = :type',
-                    ['courseid' => $this->course->id, 'type' => 'news']
-                ));
-                if (in_array((int) $cm->instance, $newsids, true)) {
-                    continue;
-                }
+            if (!isset($news[(int) $cm->id])) {
+                course_builder::delete_module($this->course, (int) $cm->id);
             }
-            course_builder::delete_module($this->course, (int) $cm->id);
         }
 
         $sections = $DB->get_records('course_sections', ['course' => $this->course->id], 'section DESC');

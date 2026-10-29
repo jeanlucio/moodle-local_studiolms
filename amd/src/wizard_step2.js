@@ -21,6 +21,7 @@
  * @license    https://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
+import Notification from 'core/notification';
 import {get_string as getString, get_strings as getStrings} from 'core/str';
 
 // Wires the editable course review: renaming, removing and adding objectives,
@@ -47,7 +48,8 @@ export const init = (root, callbacks = {}) => {
             .map(input => input.value.trim())
             .filter(value => value !== '');
 
-        const sections = Array.from(root.querySelectorAll('[data-region="sections"] > [data-region="section"]'))
+        const sectionNodes = Array.from(root.querySelectorAll('[data-region="sections"] > [data-region="section"]'));
+        const sections = sectionNodes
             .map(section => ({
                 title: section.querySelector('[data-field="sectiontitle"]').value.trim(),
                 activities: Array.from(section.querySelectorAll('[data-region="activities"] > [data-region="activity"]'))
@@ -63,6 +65,8 @@ export const init = (root, callbacks = {}) => {
             outlineid: parseInt(root.dataset.outlineid, 10),
             objectives: objectives,
             sections: sections,
+            // Sections left with no title are dropped above; the count is kept so the teacher is told.
+            unnamed: sectionNodes.length - sections.length,
         };
     };
 
@@ -153,12 +157,23 @@ export const init = (root, callbacks = {}) => {
                 break;
             case 'populate':
                 if (typeof callbacks.onPopulate === 'function') {
+                    const outline = serialize();
+                    // An outline with no section would create nothing, and a section with no title would be left
+                    // out without a word: the teacher is told instead.
+                    if (outline.sections.length === 0 || outline.unnamed > 0) {
+                        const key = outline.sections.length === 0 ? 'error_nosections' : 'error_unnamed_sections';
+                        Notification.alert(
+                            await getString('error_populate', 'local_studiolms'),
+                            await getString(key, 'local_studiolms')
+                        );
+                        break;
+                    }
                     const spinner = trigger.querySelector('[data-region="spinner"]');
                     if (spinner !== null) {
                         spinner.classList.remove('d-none');
                     }
                     trigger.setAttribute('disabled', 'disabled');
-                    callbacks.onPopulate(serialize());
+                    callbacks.onPopulate(outline);
                 }
                 break;
         }

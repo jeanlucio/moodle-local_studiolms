@@ -196,7 +196,8 @@ final class generate_section_test extends \advanced_testcase {
             try {
                 generate_section::execute($course->id, 1, 'Theme', $json);
                 $this->fail('Rejected input expected for ' . $json);
-            } catch (\coding_exception $e) {
+            } catch (\moodle_exception $e) {
+                $this->assertSame('error_noactivities', $e->errorcode, $json);
                 $this->assertSame(0, $DB->count_records('local_studiolms_progress'), $json);
             }
         }

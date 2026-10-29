@@ -240,7 +240,8 @@ final class generate_activity_test extends \advanced_testcase {
         try {
             generate_activity::execute($course->id, 1, 'video', 'Clip', 'Theme', 'general', '');
             $this->fail('An unsupported type must be refused.');
-        } catch (\coding_exception $e) {
+        } catch (\moodle_exception $e) {
+            $this->assertSame('error_unsupportedtype', $e->errorcode);
             $this->assertSame($before, $DB->count_records('course_modules', ['course' => $course->id]));
         }
     }
