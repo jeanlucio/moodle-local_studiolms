@@ -225,6 +225,9 @@ final class gamification_setup_test extends \advanced_testcase {
     public function test_block_is_inserted_at_the_end_of_the_side_region(): void {
         global $DB;
         $this->resetAfterTest();
+        if (!gamification_setup::is_available()) {
+            $this->markTestSkipped('block_playerhud is not installed in this environment.');
+        }
         $course = $this->getDataGenerator()->create_course();
         $context = \context_course::instance($course->id);
         $DB->insert_record('block_instances', (object) [
