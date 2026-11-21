@@ -31,6 +31,13 @@ import ModalEvents from 'core/modal_events';
 let agreed = true;
 
 /**
+ * Waits until the event being handled is over.
+ *
+ * @returns {Promise<void>}
+ */
+const afterThisEvent = () => new Promise(resolve => setTimeout(resolve));
+
+/**
  * Receives from the page whether the user has already accepted the policy.
  *
  * @param {boolean} accepted True when the policy was accepted, or when the site has none.
@@ -61,10 +68,12 @@ export const ensure = async() => {
     }
 
     const modal = await PolicyModal.create();
-    // Whichever way the dialogue closes, the answer is read back from the policy module: accepting sets it at once,
-    // so it does not depend on the order in which the dialogue's own handlers run.
+    // Whichever way the dialogue closes, the answer is read back from the policy module. The accept button of the
+    // core closes the dialogue before it records the answer, both in the same click: the answer is read once that
+    // click is over, or the dialogue reads as declined and nothing is generated.
     return new Promise((resolve) => {
         modal.getRoot().on(ModalEvents.hidden, async() => {
+            await afterThisEvent();
             agreed = Boolean(await Policy.getPolicyStatus(Config.userId));
             resolve(agreed);
         });
