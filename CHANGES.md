@@ -4,6 +4,13 @@ All notable changes to this plugin are documented here.
 
 ---
 
+## [v1.0.1] — 2026-11-21
+
+### Fixed
+- Accepting the AI usage policy of Moodle starts the generation or the restyle the teacher asked for. The
+  policy dialogue could read as declined right after it was accepted, and nothing started until the teacher
+  clicked again.
+
 ## [v1.0.0] — 2026-10-29
 
 First public release.
