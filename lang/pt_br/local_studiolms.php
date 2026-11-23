@@ -23,7 +23,6 @@
  */
 
 defined('MOODLE_INTERNAL') || die();
-// phpcs:disable moodle.Files.LineLength
 
 $string['activity_assign'] = 'Tarefa';
 $string['activity_forum'] = 'Fórum';
